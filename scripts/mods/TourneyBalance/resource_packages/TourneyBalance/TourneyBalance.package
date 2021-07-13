@@ -1,0 +1,11 @@
+mod = [
+	"TourneyBalance"
+]
+
+package = [
+	"resource_packages/TourneyBalance/TourneyBalance"
+]
+
+lua = [
+	"scripts/mods/TourneyBalance/*"
+]

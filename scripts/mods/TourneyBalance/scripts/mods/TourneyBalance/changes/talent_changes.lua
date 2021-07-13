@@ -45,8 +45,14 @@ function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, 
             new_talent_buff.buffs[1].name = buff_name
         end
     end
-    TalentBuffTemplates[hero_name][buff_name] = new_talent_buff
-    BuffTemplates[buff_name] = new_talent_buff
+
+    local original_buff = TalentBuffTemplates[hero_name][buff_name]
+    if original_buff ~= nil then
+        TalentBuffTemplates[hero_name][buff_name] = merge(original_buff, new_talent_buff)
+        BuffTemplates[buff_name] = merge(original_buff, new_talent_buff)
+    else
+        mod:echo("Error modifying talent buff: " .. tostring(buff_name))
+    end
 end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
@@ -74,21 +80,6 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
 
     Talents[hero_name][old_talent_id] = merge(old_talent_data, new_talent_data)
 end
-
-
--- Shade Talents
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
-    multiplier = 0, -- -0.45
-})
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_crit", {
-    duration = 6, --4
-})
-mod:modify_talent("we_shade", 6, 1, {
-    description = "rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2",
-    description_values = {},
-})
-mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
-
 
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {

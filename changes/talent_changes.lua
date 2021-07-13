@@ -83,7 +83,7 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_q
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_crit", {
     duration = 6, --4
 })
-mod:modify_talent("we_shade", 6, 1, {
+mod:modify_talent("wood_elf", 6, 1, {
     description = "rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2",
     description_values = {},
 })
@@ -94,7 +94,7 @@ mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
     amount_to_add = 2 -- 3
 })
-mod:modify_talent("we_thornsister", 5, 2, {
+mod:modify_talent("wood_elf", 5, 2, {
     description_values = {
         {
             value = 2
@@ -111,7 +111,7 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_avatar", {
         }
     }
 })
-mod:modify_talent("we_thornsister", 4, 3, {
+mod:modify_talent("wood_elf", 4, 3, {
     description = "rebaltourn_kerillian_thorn_sister_avatar_desc",
 })
 mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radiance grants Kerillian 20%% extra attack speed and move speed for 10 seconds.")
@@ -121,17 +121,17 @@ mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radianc
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05 -- -0.1
 })
-mod:modify_talent("bw_adept", 5, 2, {
+mod:modify_talent("bright_wizard", 5, 2, {
     description_values = {
         {
             value_type = "percent",
             value = -0.05 --TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.multiplier
         },
         {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
+            value = TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
         },
         {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
+            value = TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
         }
     },
 })

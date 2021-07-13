@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../../README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../TourneyBalance.mod" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bundleV2/TourneyBalance.mod" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bundleV2/f029e3f32e288984.mod_bundle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_334_win32.physx_metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_334_win32_64bit.physx_metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_341_win32.physx_metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_341_win32_64bit.physx_metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../itemV2.cfg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../item_preview.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../resource_packages/TourneyBalance/TourneyBalance.package" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance.lua" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance_data.lua" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance_localization.lua" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/talent_changes.lua" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/thp_stagger_changes.lua" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/weapon_changes.lua" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectId" id="1vH0Zq6dEduvzmVrOw4StGq9hsI" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="" />
+      <created>1626203764633</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1626203764633</updated>
+    </task>
+    <servers />
+  </component>
+</project>
