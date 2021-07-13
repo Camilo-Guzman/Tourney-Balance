@@ -25,6 +25,9 @@ mod.on_enabled = function (self)
 	return
 end
 
+--Ability cooldown changes
+ActivatedAbilitySettings.bw_2[1].cooldown = 60
+
 --Footknight Talents
 --mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
 --	range = 20
