@@ -83,18 +83,37 @@ end
 
 
 -- Shade Talents
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
-    multiplier = 0, -- -0.45
-})
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_crit", {
-    duration = 6, --4
-})
-mod:modify_talent("we_shade", 6, 1, {
-    description = "rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2",
-    description_values = {},
-})
-mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
+--mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
+--    multiplier = 0, -- -0.45
+--})
+--mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_crit", {
+--    duration = 6, --4
+--})
+--mod:modify_talent("we_shade", 6, 1, {
+--    description = "rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2",
+--    description_values = {},
+--})
 
+local function updateValues()
+	local we = TalentBuffTemplates.wood_elf
+	we.kerillian_shade_activated_ability_quick_cooldown_buff.buffs[1].multiplier = 0
+	we.kerillian_shade_activated_ability_quick_cooldown_crit.buffs[1].duration = 6
+	for _, buffs in pairs(TalentBuffTemplates) do
+		table.merge_recursive(BuffTemplates, buffs)
+	end
+
+	return
+
+end
+
+mod.on_enabled = function (self)
+	mod:echo("enable")
+	updateValues()
+
+	return 
+end
+
+mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
 
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
