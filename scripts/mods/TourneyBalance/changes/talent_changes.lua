@@ -45,8 +45,14 @@ function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, 
             new_talent_buff.buffs[1].name = buff_name
         end
     end
-    TalentBuffTemplates[hero_name][buff_name] = new_talent_buff
-    BuffTemplates[buff_name] = new_talent_buff
+
+    local original_buff = TalentBuffTemplates[hero_name][buff_name]
+    if original_buff ~= nil then
+        TalentBuffTemplates[hero_name][buff_name] = merge(original_buff, new_talent_buff)
+        BuffTemplates[buff_name] = merge(original_buff, new_talent_buff)
+    else
+        mod:echo("Error modifying talent buff: " .. tostring(buff_name))
+    end
 end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
