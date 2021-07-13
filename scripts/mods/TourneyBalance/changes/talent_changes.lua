@@ -121,7 +121,7 @@ mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radianc
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05 -- -0.1
 })
-mod:modify_talent("bright_wizard", 5, 2, {
+mod:modify_talent("bw_adept", 5, 2, {
     description_values = {
         {
             value_type = "percent",
