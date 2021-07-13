@@ -798,6 +798,25 @@ function mod.add_talent_buff_template(self, hero_name, buff_name, buff_data, ext
     NetworkLookup.buff_templates[index] = buff_name
     NetworkLookup.buff_templates[buff_name] = index
 end
+function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, extra_data)   
+    local new_talent_buff = {
+        buffs = {
+            merge({ name = buff_name }, buff_data),
+        },
+    }
+    if extra_data then
+        new_talent_buff = merge(new_talent_buff, extra_data)
+    elseif type(buff_data[1]) == "table" then
+        new_talent_buff = {
+            buffs = buff_data,
+        }
+        if new_talent_buff.buffs[1].name == nil then
+            new_talent_buff.buffs[1].name = buff_name
+        end
+    end
+    TalentBuffTemplates[hero_name][buff_name] = new_talent_buff
+    BuffTemplates[buff_name] = new_talent_buff
+end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
         buffs = {
@@ -986,7 +1005,7 @@ mod:add_text("smiter_name", "Smiter")
 mod:add_text("enhanced_power_name", "Enhanced Power")
 mod:add_text("assassin_name", "Assassin")
 mod:add_text("bulwark_name", "Bulwark")
-mod:add_text("rebaltourn_tank_unbalance_desc", "When you stagger an enemy you deal 10%% more damage from all sources for 5 seconds.\n\nDeal 20%% more damage to staggered enemies, increased to 40%% against targets afflicted by more than one stagger effect.")
+mod:add_text("rebaltourn_tank_unbalance_desc", "Enemies you stagger take 10%% more damage from all sources for 5 seconds.\n\nDeal 20%% more damage to staggered enemies, increased to 40%% against targets afflicted by more than one stagger effect.")
 mod:add_text("rebaltourn_finesse_unbalance_desc", "Deal 20%% more damage to staggered enemies.\n\nEach hit against a staggered enemy adds another count of stagger. Headshots instead inflict 40%% bonus damage, as do strikes against enemies afflicted by more than one stagger effect.")
 
 -- Replacing THP & Stagger Talents

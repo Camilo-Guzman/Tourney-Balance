@@ -45,14 +45,8 @@ function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, 
             new_talent_buff.buffs[1].name = buff_name
         end
     end
-
-    local original_buff = TalentBuffTemplates[hero_name][buff_name]
-    if original_buff ~= nil then
-        TalentBuffTemplates[hero_name][buff_name] = merge(original_buff, new_talent_buff)
-        BuffTemplates[buff_name] = merge(original_buff, new_talent_buff)
-    else
-        mod:echo("Error modifying talent buff: " .. tostring(buff_name))
-    end
+    TalentBuffTemplates[hero_name][buff_name] = new_talent_buff
+    BuffTemplates[buff_name] = new_talent_buff
 end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
@@ -81,11 +75,26 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
     Talents[hero_name][old_talent_id] = merge(old_talent_data, new_talent_data)
 end
 
+
+-- Shade Talents
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
+    multiplier = 0, -- -0.45
+})
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_crit", {
+    duration = 6, --4
+})
+mod:modify_talent("wood_elf", 6, 1, {
+    description = "rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2",
+    description_values = {},
+})
+mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
+
+
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
     amount_to_add = 2 -- 3
 })
-mod:modify_talent("we_thornsister", 5, 2, {
+mod:modify_talent("wood_elf", 5, 2, {
     description_values = {
         {
             value = 2
@@ -102,7 +111,7 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_avatar", {
         }
     }
 })
-mod:modify_talent("we_thornsister", 4, 3, {
+mod:modify_talent("wood_elf", 4, 3, {
     description = "rebaltourn_kerillian_thorn_sister_avatar_desc",
 })
 mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radiance grants Kerillian 20%% extra attack speed and move speed for 10 seconds.")
@@ -112,17 +121,17 @@ mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radianc
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05 -- -0.1
 })
-mod:modify_talent("bw_adept", 5, 2, {
+mod:modify_talent("bright_wizard", 5, 2, {
     description_values = {
         {
             value_type = "percent",
             value = -0.05 --TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.multiplier
         },
         {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
+            value = TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
         },
         {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
+            value = TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
         }
     },
 })
