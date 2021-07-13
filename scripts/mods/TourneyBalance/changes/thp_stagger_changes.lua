@@ -798,25 +798,6 @@ function mod.add_talent_buff_template(self, hero_name, buff_name, buff_data, ext
     NetworkLookup.buff_templates[index] = buff_name
     NetworkLookup.buff_templates[buff_name] = index
 end
-function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, extra_data)   
-    local new_talent_buff = {
-        buffs = {
-            merge({ name = buff_name }, buff_data),
-        },
-    }
-    if extra_data then
-        new_talent_buff = merge(new_talent_buff, extra_data)
-    elseif type(buff_data[1]) == "table" then
-        new_talent_buff = {
-            buffs = buff_data,
-        }
-        if new_talent_buff.buffs[1].name == nil then
-            new_talent_buff.buffs[1].name = buff_name
-        end
-    end
-    TalentBuffTemplates[hero_name][buff_name] = new_talent_buff
-    BuffTemplates[buff_name] = new_talent_buff
-end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
         buffs = {
