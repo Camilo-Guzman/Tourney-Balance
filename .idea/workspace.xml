@@ -1,25 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../TourneyBalance.mod" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../bundleV2/TourneyBalance.mod" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../bundleV2/f029e3f32e288984.mod_bundle" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_334_win32.physx_metadata" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_334_win32_64bit.physx_metadata" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_341_win32.physx_metadata" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../core/physx_metadata/physx_341_win32_64bit.physx_metadata" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../itemV2.cfg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../item_preview.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../resource_packages/TourneyBalance/TourneyBalance.package" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance.lua" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance_data.lua" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/TourneyBalance_localization.lua" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/talent_changes.lua" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/thp_stagger_changes.lua" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../scripts/mods/TourneyBalance/changes/weapon_changes.lua" beforeDir="false" />
-    </list>
+    <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
