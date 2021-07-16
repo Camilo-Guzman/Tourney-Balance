@@ -945,7 +945,7 @@ mod:add_proc_function("rebaltourn_unbalance_debuff_on_stagger", function (player
 	local buff_type = params[7]
 
 	if Unit.alive(player_unit) and (is_dummy or Unit.alive(hit_unit)) and buff_type == "MELEE_1H" or buff_type == "MELEE_2H" then
-		local buff_extension = ScriptUnit.extension(player_unit, "buff_system")
+		local buff_extension = ScriptUnit.extension(hit_unit, "buff_system")
 
 		if buff_extension then
 			buff_extension:add_buff("rebaltourn_tank_unbalance_buff")
@@ -963,11 +963,10 @@ mod:add_buff_template("rebaltourn_tank_unbalance", {
 mod:add_buff_template("rebaltourn_tank_unbalance_buff", {
 	refresh_durations = true,
 	name = "tank_unbalance_buff",
-	stat_buff = "power_level",
+	stat_buff = "unbalanced_damage_taken",
 	max_stacks = 1,
 	duration = 5,
-	multiplier = 0.1,
-	icon = "icons_placeholder",
+	bonus = 0.15,
 })
 mod:add_buff_template("rebaltourn_finesse_unbalance", {
 	max_display_multiplier = 0.4,
