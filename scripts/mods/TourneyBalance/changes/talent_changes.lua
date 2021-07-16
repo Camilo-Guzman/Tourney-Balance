@@ -116,8 +116,9 @@ mod:add_proc_function("kerillian_shade_stealth_on_backstab_kill", function (play
         local buff_extension = ScriptUnit.extension(player_unit, "buff_system")
         local status_extension = ScriptUnit.extension(player_unit, "status_system")
         local buffs_to_add = {
-            "kerillian_shade_passive_stealth_on_backstab_kill_checker_1",
-			"kerillian_shade_passive_stealth_on_backstab_kill_checker_2",
+            "kerillian_shade_passive_stealth_on_backstab_kill_buff_1",
+			"kerillian_shade_passive_stealth_on_backstab_kill_buff_2",
+            "kerillian_shade_passive_stealth_on_backstab_kill_buff_3",
             "kerillian_shade_passive_stealth_on_backstab_kill_cooldown",
         }
 
@@ -156,7 +157,7 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
     event_buff = true,
     buff_func = "kerillian_shade_stealth_on_backstab_kill"
 })
-mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_checker_1", {
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_buff_1", {
     max_stacks = 1,
     duration = 0.1,
     delayed_buff_name = "kerillian_shade_activated_ability_short",
@@ -164,7 +165,7 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
     is_cooldown = true,
     --icon = "kerillian_shade_passive_stealth_on_backstab_kill"
 })
-mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_checker_2", {
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_buff_2", {
     max_stacks = 1,
     duration = 0.1,
     delayed_buff_name = "kerillian_shade_end_activated_ability",
@@ -172,6 +173,14 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
     is_cooldown = true,
     --icon = "kerillian_shade_passive_stealth_on_backstab_kill"
 })
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_buff_3", {
+    name = "kerillian_shade_activated_ability_short_1",
+    refresh_durations = true,
+    continuous_effect = "fx/screenspace_shade_skill_01",
+    max_stacks = 1,
+    icon = "kerillian_shade_passive_stealth_on_backstab_kill",
+    duration = 3,
+}, {deactivation_effect = "fx/screenspace_shade_skill_02"})
 mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_cooldown", {
     max_stacks = 1,
     duration = 2.9,
@@ -182,7 +191,9 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
 })
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_short", {
     duration = 2.9,
-})
+    icon = nil,
+    continuous_effect = nil,
+}, {deactivation_effect = nil})
 
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
