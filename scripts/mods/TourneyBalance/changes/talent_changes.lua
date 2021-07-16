@@ -195,6 +195,7 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_s
     continuous_effect = nil,
 }, {deactivation_effect = nil})
 
+
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
     amount_to_add = 2 -- 3
