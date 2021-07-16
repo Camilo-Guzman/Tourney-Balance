@@ -60,9 +60,6 @@ function mod.modify_talent_buff_template(self, hero_name, buff_name, buff_data, 
 
     TalentBuffTemplates[hero_name][buff_name] = merged_buff
     BuffTemplates[buff_name] = merged_buff
-    mod:echo(buff_name)
-    mod:echo(original_buff.buffs[1].stat_buff)
-    mod:echo(merged_buff.buffs[1].stat_buff)
 end
 function mod.add_buff_template(self, buff_name, buff_data)   
     local new_talent_buff = {
@@ -105,6 +102,64 @@ mod:modify_talent("we_shade", 6, 1, {
 })
 mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
 
+-- Vanish Cooldown WIP
+--[[mod:add_proc_function("kerillian_shade_stealth_on_backstab_kill", function (player, buff, params)
+    local player_unit = player.player_unit
+    local local_player = player.local_player
+    local bot_player = player.bot_player
+    local killing_blow_table = params[1]
+    local backstab_multiplier = killing_blow_table[DamageDataIndex.BACKSTAB_MULTIPLIER]
+
+    if Unit.alive(player_unit) and backstab_multiplier and backstab_multiplier > 1 then
+        local buff_extension = ScriptUnit.extension(player_unit, "buff_system")
+        local status_extension = ScriptUnit.extension(player_unit, "status_system")
+        local buffs_to_add = {
+            "kerillian_shade_activated_ability_short",
+			"kerillian_shade_end_activated_ability",
+            "kerillian_shade_passive_stealth_on_backstab_kill_cooldown",
+        }
+        local remove_buff_template = buff_extension:get_buff_type("kerillian_shade_passive_stealth_on_backstab_kill")
+        local remove_buff_id = remove_buff_template.id
+
+        if local_player or (Managers.state.network.is_server and bot_player) then
+            status_extension:set_invisible(true)
+            status_extension:set_noclip(true)
+
+            local network_manager = Managers.state.network
+            local network_transmit = network_manager.network_transmit
+
+            buff_extension:remove_buff(remove_buff_id)
+            
+            for i = 1, #buffs_to_add, 1 do
+                local buff_name = buffs_to_add[i]
+                local unit_object_id = network_manager:unit_game_object_id(player_unit)
+                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+                if Managers.state.network.is_server then
+                    buff_extension:add_buff(buff_name, {
+                        attacker_unit = player_unit
+                    })
+                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+                else
+                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+                end
+            end   
+        end
+    end
+end)
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill", {
+    event = "on_kill",
+    event_buff = true,
+    buff_func = "kerillian_shade_stealth_on_backstab_kill"
+})
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_cooldown", {
+    max_stacks = 1,
+    duration = 3,
+    is_cooldown = true,
+    delayed_buff_name = "kerillian_shade_passive_stealth_on_backstab_kill",
+    buff_after_delay = true,
+    icon = "kerillian_shade_passive_stealth_on_backstab_kill"
+})]]
 
 -- SotT Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
