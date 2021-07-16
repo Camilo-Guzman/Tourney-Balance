@@ -92,3 +92,57 @@ DamageProfileTemplates.dr_deus_01_explosion.armor_modifier.attack = {
 ExplosionTemplates.magma.aoe.duration = 3
 PlayerUnitStatusSettings.overcharge_values.magma_charged_2 = 16
 PlayerUnitStatusSettings.overcharge_values.magma_charged = 14
+
+--Burning Head
+DamageProfileTemplates.fire_spear_trueflight.armor_modifier_near.attack = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.armor_modifier_near.impact = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.armor_modifier_far.attack = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.armor_modifier_far.impact = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.critical_strike.attack_armor_power_modifer  = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.critical_strike.impact_armor_power_modifer  = {
+	1.5,
+	1.5,
+	2.5,
+	0.25,
+	1.5,
+	0.75
+}
+DamageProfileTemplates.fire_spear_trueflight.cleave_distribution.attack = 0.5
+DamageProfileTemplates.fire_spear_trueflight.cleave_distribution.impact = 0.5
+
+

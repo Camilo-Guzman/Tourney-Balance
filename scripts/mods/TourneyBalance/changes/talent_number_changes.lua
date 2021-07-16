@@ -10,6 +10,10 @@ local function updateValues()
 	local we = TalentBuffTemplates.wood_elf
 	we.kerillian_shade_activated_ability_quick_cooldown_buff.buffs[1].multiplier = 0
 	we.kerillian_shade_activated_ability_quick_cooldown_crit.buffs[1].duration = 6
+	local wh = TalentBuffTemplates.witch_hunter
+	wh.victor_bountyhunter_activated_ability_blast_shotgun.buffs[1].duration = -0.6
+	wh.victor_bountyhunter_activated_ability_reset_cooldown_on_stacks.buffs[1].multiplier = 0.6
+	wh.victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_buff.buffs[1].multiplier = 0.6
 	for _, buffs in pairs(TalentBuffTemplates) do
 		table.merge_recursive(BuffTemplates, buffs)
 	end
@@ -18,6 +22,8 @@ local function updateValues()
 
 end
 
+
+--Passive changes
 mod.on_enabled = function (self)
 	mod:echo("enable")
 	updateValues()
@@ -27,6 +33,17 @@ end
 
 --Ability cooldown changes
 ActivatedAbilitySettings.bw_2[1].cooldown = 60
+
+
+PassiveAbilitySettings.wh_2.buffs =  {
+	"victor_bountyhunter_passive_crit_buff",
+	"victor_bountyhunter_passive_crit_buff_removal",
+	"victor_bountyhunter_passive_reload_speed",
+	"victor_bountyhunter_passive_increased_ammunition",
+	"victor_bountyhunter_ability_cooldown_on_hit",
+	"victor_bountyhunter_ability_cooldown_on_damage_taken",
+	"victor_bountyhunter_activate_passive_on_melee_kill"
+}
 
 --Footknight Talents
 --mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
