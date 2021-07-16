@@ -87,3 +87,8 @@ DamageProfileTemplates.dr_deus_01_explosion.armor_modifier.attack = {
 	1,
 	0.25
 }
+
+--Coruscation
+ExplosionTemplates.magma.aoe.duration = 3
+PlayerUnitStatusSettings.overcharge_values.magma_charged_2 = 16
+PlayerUnitStatusSettings.overcharge_values.magma_charged = 14
