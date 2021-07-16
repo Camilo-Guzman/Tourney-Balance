@@ -104,7 +104,7 @@ mod:modify_talent("we_shade", 6, 1, {
 })
 mod:add_text("rebaltourn_kerillian_shade_activated_ability_quick_cooldown_desc_2", "After leaving stealth, Kerillian gains 100%% melee critical strike chance for 6 seconds, but no longer gains a damage bonus on attacking.")
 
--- Vanish Cooldown WIP
+-- Vanish Cooldown
 mod:add_proc_function("kerillian_shade_stealth_on_backstab_kill", function (player, buff, params)
     local player_unit = player.player_unit
     local local_player = player.local_player
@@ -162,7 +162,7 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
     delayed_buff_name = "kerillian_shade_activated_ability_short",
     buff_after_delay = true,
     is_cooldown = true,
-    icon = "kerillian_shade_passive_stealth_on_backstab_kill"
+    --icon = "kerillian_shade_passive_stealth_on_backstab_kill"
 })
 mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_checker_2", {
     max_stacks = 1,
@@ -170,15 +170,18 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_bac
     delayed_buff_name = "kerillian_shade_end_activated_ability",
     buff_after_delay = true,
     is_cooldown = true,
-    icon = "kerillian_shade_passive_stealth_on_backstab_kill"
+    --icon = "kerillian_shade_passive_stealth_on_backstab_kill"
 })
 mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill_cooldown", {
     max_stacks = 1,
-    duration = 3,
+    duration = 2.9,
     is_cooldown = true,
     delayed_buff_name = "kerillian_shade_passive_stealth_on_backstab_kill",
     buff_after_delay = true,
     icon = "kerillian_shade_passive_stealth_on_backstab_kill"
+})
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_short", {
+    duration = 2.9,
 })
 
 -- SotT Talents
