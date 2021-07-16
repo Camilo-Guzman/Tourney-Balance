@@ -938,7 +938,7 @@ mod:add_buff_template("rebaltourn_power_level_unbalance", {
 	stat_buff = "power_level",
 	multiplier = 0.1 -- 0.075
 }) 
-mod:add_proc_function("rebalthp_unbalance_debuff_on_stagger", function (player, buff, params)
+mod:add_proc_function("rebaltourn_unbalance_debuff_on_stagger", function (player, buff, params)
 	local player_unit = player.player_unit
 	local hit_unit = params[1]
 	local is_dummy = Unit.get_data(hit_unit, "is_dummy")
@@ -948,19 +948,19 @@ mod:add_proc_function("rebalthp_unbalance_debuff_on_stagger", function (player, 
 		local buff_extension = ScriptUnit.extension(hit_unit, "buff_system")
 
 		if buff_extension then
-			buff_extension:add_buff("rebalthp_tank_unbalance_buff")
+			buff_extension:add_buff("rebaltourn_tank_unbalance_buff")
 		end
 	end
 end )
-mod:add_buff_template("rebalthp_tank_unbalance", {
+mod:add_buff_template("rebaltourn_tank_unbalance", {
 	max_display_multiplier = 0.4,
 	name = "tank_unbalance",
 	event_buff = true,
-	buff_func = "rebalthp_unbalance_debuff_on_stagger",
+	buff_func = "rebaltourn_unbalance_debuff_on_stagger",
 	event = "on_stagger",
 	display_multiplier = 0.2
 })
-mod:add_buff_template("rebalthp_tank_unbalance_buff", {
+mod:add_buff_template("rebaltourn_tank_unbalance_buff", {
 	refresh_durations = true,
 	name = "tank_unbalance_buff",
 	stat_buff = "unbalanced_damage_taken",
