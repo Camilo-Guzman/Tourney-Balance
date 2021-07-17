@@ -19,7 +19,12 @@ end
 -- Ability Cooldown Changes
 -- Battle Wizard
 ActivatedAbilitySettings.bw_2[1].cooldown = 60
+--Grail Knight
+ActivatedAbilitySettings.es_4[1].cooldown = 60
 
 -- Passives Changes
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
+
+-- Pyro
+table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
