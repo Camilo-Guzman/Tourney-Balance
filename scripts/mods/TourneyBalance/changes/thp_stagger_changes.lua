@@ -895,7 +895,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 			heal_amount = 0.6
 		end
 
-		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and is_corpse then
+		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
 			DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
 		end
 	end
