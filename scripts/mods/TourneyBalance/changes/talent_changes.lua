@@ -139,6 +139,151 @@ mod:modify_talent("es_knight", 5, 3, {
     },
 })
 
+--Made Widecharge the standard Footknight ult
+mod:hook(CareerAbilityESKnight, "_run_ability", function(func, self)
+	self:_stop_priming()
+
+	local owner_unit = self._owner_unit
+	local is_server = self._is_server
+	local status_extension = self._status_extension
+	local career_extension = self._career_extension
+	local buff_extension = self._buff_extension
+	local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+	local network_manager = self._network_manager
+	local network_transmit = network_manager.network_transmit
+	local owner_unit_id = network_manager:unit_game_object_id(owner_unit)
+	local buff_name = "markus_knight_activated_ability"
+
+	buff_extension:add_buff(buff_name, {
+		attacker_unit = owner_unit
+	})
+
+	if talent_extension:has_talent("markus_knight_ability_invulnerability", "empire_soldier", true) then
+		buff_name = "markus_knight_ability_invulnerability_buff"
+
+		buff_extension:add_buff(buff_name, {
+			attacker_unit = owner_unit
+		})
+
+		local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+		if is_server then
+			network_transmit:send_rpc_clients("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
+		else
+			network_transmit:send_rpc_server("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
+		end
+	end
+
+	status_extension:set_noclip(true)
+
+	local hold_duration = 0.03
+	local windup_duration = 0.15
+	status_extension.do_lunge = {
+		animation_end_event = "foot_knight_ability_charge_hit",
+		allow_rotation = false,
+		falloff_to_speed = 5,
+		first_person_animation_end_event = "foot_knight_ability_charge_hit",
+		dodge = true,
+		first_person_animation_event = "foot_knight_ability_charge_start",
+		first_person_hit_animation_event = "charge_react",
+		damage_start_time = 0.3,
+		duration = 1.5,
+		initial_speed = 20,
+		animation_event = "foot_knight_ability_charge_start",
+		lunge_events = self._lunge_events,
+		speed_function = function (lunge_time, duration)
+			local end_duration = 0.25
+			local rush_time = lunge_time - hold_duration - windup_duration
+			local rush_duration = duration - hold_duration - windup_duration - end_duration
+			local start_speed = 0
+			local windup_speed = -3
+			local end_speed = 20
+			local rush_speed = 15
+			local normal_move_speed = 2
+
+			if rush_time <= 0 and hold_duration > 0 then
+				local t = -rush_time / (hold_duration + windup_duration)
+
+				return math.lerp(0, -1, t)
+			elseif rush_time < windup_duration then
+				local t_value = rush_time / windup_duration
+				local interpolation_value = math.cos((t_value + 1) * math.pi * 0.5)
+
+				return math.min(math.lerp(windup_speed, start_speed, interpolation_value), rush_speed)
+			elseif rush_time < rush_duration then
+				local t_value = rush_time / rush_duration
+				local acceleration = math.min(rush_time / (rush_duration / 3), 1)
+				local interpolation_value = math.cos(t_value * math.pi * 0.5)
+				local offset = nil
+				local step_time = 0.25
+
+				if rush_time > 8 * step_time then
+					offset = 0
+				elseif rush_time > 7 * step_time then
+					offset = (rush_time - 1.4) / step_time
+				elseif rush_time > 6 * step_time then
+					offset = (rush_time - 6 * step_time) / step_time
+				elseif rush_time > 5 * step_time then
+					offset = (rush_time - 5 * step_time) / step_time
+				elseif rush_time > 4 * step_time then
+					offset = (rush_time - 4 * step_time) / step_time
+				elseif rush_time > 3 * step_time then
+					offset = (rush_time - 3 * step_time) / step_time
+				elseif rush_time > 2 * step_time then
+					offset = (rush_time - 2 * step_time) / step_time
+				elseif step_time < rush_time then
+					offset = (rush_time - step_time) / step_time
+				else
+					offset = rush_time / step_time
+				end
+
+				local offset_multiplier = 1 - offset * 0.4
+				local speed = offset_multiplier * acceleration * acceleration * math.lerp(end_speed, rush_speed, interpolation_value)
+
+				return speed
+			else
+				local t_value = (rush_time - rush_duration) / end_duration
+				local interpolation_value = 1 + math.cos((t_value + 1) * math.pi * 0.5)
+
+				return math.lerp(normal_move_speed, end_speed, interpolation_value)
+			end
+		end,
+		damage = {
+			offset_forward = 2.4,
+			height = 1.8,
+			depth_padding = 0.6,
+			hit_zone_hit_name = "full",
+			ignore_shield = false,
+			collision_filter = "filter_explosion_overlap_no_player",
+			interrupt_on_max_hit_mass = true,
+			power_level_multiplier = 1,
+			interrupt_on_first_hit = false,
+			damage_profile = "markus_knight_charge",
+			width = 2,
+			allow_backstab = false,
+			stagger_angles = {
+				max = 80,
+				min = 25
+			},
+			on_interrupt_blast = {
+				allow_backstab = false,
+				radius = 3,
+				power_level_multiplier = 1,
+				hit_zone_hit_name = "full",
+				damage_profile = "markus_knight_charge_blast",
+				ignore_shield = false,
+				collision_filter = "filter_explosion_overlap_no_player"
+			}
+		}
+	}
+
+	status_extension.do_lunge.damage.width = 5
+	status_extension.do_lunge.damage.interrupt_on_max_hit_mass = false
+
+
+	career_extension:start_activated_ability_cooldown()
+	self:_play_vo()
+end)
 
 -- Shade Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
@@ -274,24 +419,10 @@ mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radianc
 
 -- Bounty Hunter Talents
 
--- Not sure what this does...
+-- Indisctiminate blast cdr upped to 60% (Doesnt work and i dont understand why...
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun", {
-    duration = -0.6
-})
-
-mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
-    multiplier = 0.6
-})
-mod:modify_talent("wh_bountyhunter", 6, 1, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.6 --BuffTemplates.victor_bountyhunter_activated_ability_passive_cooldown_reduction.multiplier
-        },
-        {
-            value = 10 --BuffTemplates.victor_bountyhunter_activated_ability_passive_cooldown_reduction.cooldown
-        }
-    },
+	required_target_number = 2
+    multiplier = -0.6 -- -0.25
 })
 
 
