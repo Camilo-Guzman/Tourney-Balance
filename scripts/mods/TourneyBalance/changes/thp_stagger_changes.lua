@@ -889,13 +889,13 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 		local stagger_calulation = stagger_type or stagger_value
 		local heal_amount = stagger_value * multiplier
 		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
-		local not_corpse = death_extension.death_is_done == nil
+		local is_corpse = death_extension.death_is_done == false
 
 		if is_push then
 			heal_amount = 0.6
 		end
 
-		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not_corpse then
+		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
 			DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
 		end
 	end
