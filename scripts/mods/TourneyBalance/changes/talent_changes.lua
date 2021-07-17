@@ -91,6 +91,55 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
     Talents[hero_name][old_talent_id] = merge(old_talent_data, new_talent_data)
 end
 
+-- Footknight Talents
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
+    range = 20
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
+    duration = 15
+})
+mod:modify_talent("es_knight", 2, 2, {
+    description_values = {
+        {
+            value_type = "percent",
+            value = BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
+        },
+        {
+            value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
+        }
+    },
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
+    duration = 5
+})
+mod:modify_talent("es_knight", 2, 3, {
+    description_values = {
+        {
+            value_type = "percent",
+            value = BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
+        },
+        {
+            value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
+        }
+    },
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
+    duration = 0.75,
+    multiplier = 3,
+})
+mod:modify_talent("es_knight", 5, 3, {
+    description_values = {
+        {
+            value_type = "baked_percent",
+            value = 3 --BuffTemplates.markus_knight_cooldown_buff.multiplier
+        },
+        {
+            value = 0.75 --BuffTemplates.markus_knight_cooldown_buff.duration
+        }
+    },
+})
+
+
 -- Shade Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
     multiplier = 0, -- -0.45
@@ -152,7 +201,7 @@ mod:add_proc_function("kerillian_shade_stealth_on_backstab_kill", function (play
         end
     end
 end)
-mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill", {
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_on_backstab_kill", {
     event = "on_kill",
     event_buff = true,
     buff_func = "kerillian_shade_stealth_on_backstab_kill"
@@ -223,6 +272,29 @@ mod:modify_talent("we_thornsister", 4, 3, {
 mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radiance grants Kerillian 20%% extra attack speed and move speed for 10 seconds.")
 
 
+-- Bounty Hunter Talents
+
+-- Not sure what this does...
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun", {
+    duration = -0.6
+})
+
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
+    multiplier = 0.6
+})
+mod:modify_talent("wh_bountyhunter", 6, 1, {
+    description_values = {
+        {
+            value_type = "percent",
+            value = 0.6 --BuffTemplates.victor_bountyhunter_activated_ability_passive_cooldown_reduction.multiplier
+        },
+        {
+            value = 10 --BuffTemplates.victor_bountyhunter_activated_ability_passive_cooldown_reduction.cooldown
+        }
+    },
+})
+
+
 -- Battle Wizard Talents
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05 -- -0.1
@@ -231,7 +303,7 @@ mod:modify_talent("bw_adept", 5, 2, {
     description_values = {
         {
             value_type = "percent",
-            value = -0.05 --TalentBuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.multiplier
+            value = -0.05 --BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.multiplier
         },
         {
             value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
