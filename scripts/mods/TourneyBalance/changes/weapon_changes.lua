@@ -88,6 +88,24 @@ DamageProfileTemplates.dr_deus_01_explosion.armor_modifier.attack = {
 	0.25
 }
 
+--Masterwork Pistol
+DamageProfileTemplates.shot_sniper_pistol.armor_modifier_near.attack =  { 
+	1,
+	1.2, 
+	1, 
+	1, 
+	0.75, 
+	0 
+}
+DamageProfileTemplates.shot_sniper_pistol.critical_strike.attack_armor_power_modifer  =  { 
+	1,
+	1.2, 
+	1, 
+	1, 
+	0.75, 
+	0 
+}
+
 --Removed Grenadier from proccing on Trollhammer
 mod:hook(ActionGrenadeThrower, "client_owner_post_update", function(func, self, dt, t, world, can_damage)
 	if self.state == "waiting_to_shoot" and self.time_to_shoot <= t then
