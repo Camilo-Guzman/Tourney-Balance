@@ -285,6 +285,38 @@ mod:hook(CareerAbilityESKnight, "_run_ability", function(func, self)
 	self:_play_vo()
 end)
 
+--Engineer Talents
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_stacking_damage_reduction_buff", {
+	max_stacks = 4, -- 3
+	multiplier = -0.10 -- -0.05
+})
+mod:modify_talent("dr_engineer", 5, 1, {
+    description_values = {
+        {
+			value = 5 --BuffTemplates.bardin_engineer_stacking_damage_reduction.update_frequency
+		},
+		{
+			value = 4 --BuffTemplates.bardin_engineer_stacking_damage_reduction_buff.max_stacks
+		},
+		{
+			value_type = "percent",
+			value = -0.10 --BuffTemplates.bardin_engineer_stacking_damage_reduction_buff.multiplier
+		}
+	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long_attack_speed", {
+	multiplier = 0.05
+})
+mod:modify_talent("dr_engineer", 4, 3, {
+		description_values = {
+		{
+			value_type = "percent",
+			value = 0.05 --BuffTemplates.bardin_engineer_pump_buff_long_attack_speed.multiplier
+		}
+	},
+})
+
+
 -- Shade Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
     multiplier = 0, -- -0.45
@@ -421,7 +453,7 @@ mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radianc
 
 -- Indisctiminate blast cdr upped to 60% (Doesnt work and i dont understand why...
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun", {
-	required_target_number = 2
+	required_target_number = 1,
     multiplier = -0.6 -- -0.25
 })
 
