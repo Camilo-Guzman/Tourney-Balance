@@ -36,5 +36,5 @@ mod:dofile("scripts/mods/TourneyBalance/changes/talent_changes")
 -- Weapon Changes
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
 
--- Talent Number Changes
-mod:dofile("scripts/mods/TourneyBalance/changes/talent_number_changes")
+-- Career Changes (Passives, Ultimates, etc.)
+mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
