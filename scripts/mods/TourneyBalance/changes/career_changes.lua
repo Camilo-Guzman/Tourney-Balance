@@ -271,6 +271,7 @@ mod:hook_origin(ActionCareerBWScholar, "client_owner_start_action", function (se
 			local owner_unit = self.owner_unit
 			local owner_unit_id = network_manager:unit_game_object_id(owner_unit)
 			local buff_name = "sienna_scholar_activated_ability_dump_overcharge_buff"
+			local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
 
 			buff_extension:add_buff(buff_name, {
 				attacker_unit = owner_unit

@@ -166,7 +166,7 @@ mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function 
     end
 
     if buff_extension:has_buff_type(buff_to_add) then
-        if disabled_allies == 0 then
+        if disabled_allies < previous_disabled_allies then
             local buff_id = buff.buff_id
 
             if buff_id then
@@ -469,6 +469,11 @@ mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_
     bonus = 0.5
 })
 mod:modify_talent("bw_adept", 2, 3, {
+    buffs = {
+        "sienna_scholar_crit_chance_above_health_threshold",
+        "sienna_scholar_crit_chance_above_health_threshold_2",
+        "sienna_scholar_crit_chance_above_health_threshold_3"
+,    },
     description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
     description_values = {},
 })
