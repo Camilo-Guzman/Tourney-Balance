@@ -410,7 +410,7 @@ mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_a
     stat_buff = nil
 })
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
-    multiplier = -0.6, -- -0.25
+    multiplier = -0.4, -- -0.25
     stat_buff = "activated_cooldown",
 })
 mod:modify_talent("wh_bountyhunter", 6, 3, {
@@ -446,23 +446,23 @@ mod:modify_talent("bw_adept", 5, 2, {
 mod:modify_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
     bonus = 0.15 -- 0.1
 })
-mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_2", {
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_2", {
     buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_2_buff",
 	update_func = "activate_buff_on_health_percent",
 	activation_health = 0.65
 })
-mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_2_buff", {
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_2_buff", {
     max_stacks = 1,
     icon = "sienna_scholar_crit_chance_above_health_threshold",
     stat_buff = "critical_strike_chance",
     bonus = 0.1
 })
-mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_3", {
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_3", {
     buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_3_buff",
 	update_func = "activate_buff_on_health_percent",
 	activation_health = 0.5
 })
-mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_3_buff", {
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_3_buff", {
     max_stacks = 1,
     icon = "sienna_scholar_crit_chance_above_health_threshold",
     stat_buff = "critical_strike_chance",
@@ -474,7 +474,7 @@ mod:modify_talent("bw_adept", 2, 3, {
 })
 mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health")
 
-mod:add_talent_buff_template("bw_scholar", "sienna_scholar_activated_ability_dump_overcharge_buff", {
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_dump_overcharge_buff", {
     max_stacks = 1,
     icon = "sienna_scholar_activated_ability_dump_overcharge",
     stat_buff = "critical_strike_chance",
