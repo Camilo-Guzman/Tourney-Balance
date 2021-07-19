@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="" />
+    <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/bundleV2/f029e3f32e288984.mod_bundle" beforeDir="false" afterPath="$PROJECT_DIR$/bundleV2/f029e3f32e288984.mod_bundle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/talent_changes.lua" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/talent_changes.lua" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/weapon_changes.lua" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/weapon_changes.lua" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
