@@ -13,8 +13,8 @@ DamageProfileTemplates.thorn_wall_explosion_improved_damage.armor_modifier.attac
 
 -- Moonbow
 Weapons.we_deus_01_template_1.actions.action_one.default.drain_amount = 7
-Weapons.we_deus_01_template_1.actions.action_one.shoot_charged.drain_amount = 9
-Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.drain_amount = 11
+Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.drain_amount = 9
+Weapons.we_deus_01_template_1.actions.action_one.shoot_charged.drain_amount = 11
 DamageProfileTemplates.we_deus_01_small_explosion.armor_modifier.attack = {
 	0.5,
 	0.25,
