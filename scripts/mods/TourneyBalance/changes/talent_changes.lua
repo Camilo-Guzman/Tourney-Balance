@@ -102,7 +102,7 @@ mod:modify_talent("es_knight", 2, 2, {
     description_values = {
         {
             value_type = "percent",
-            value = BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
+            value = 0.15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
         },
         {
             value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
@@ -116,7 +116,7 @@ mod:modify_talent("es_knight", 2, 3, {
     description_values = {
         {
             value_type = "percent",
-            value = BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
+            value = 0.15 --BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
         },
         {
             value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
