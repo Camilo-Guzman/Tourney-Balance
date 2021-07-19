@@ -92,9 +92,6 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
 end
 
 -- Footknight Talents
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
-    range = 20
-})
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
     duration = 15
 })
@@ -138,151 +135,49 @@ mod:modify_talent("es_knight", 5, 3, {
         }
     },
 })
+mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
+    if not Managers.state.network.is_server then
+        return
+    end
 
---Made Widecharge the standard Footknight ult
-mod:hook(CareerAbilityESKnight, "_run_ability", function(func, self)
-	self:_stop_priming()
+    local side = Managers.state.side.side_by_unit[owner_unit]
+    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+    local num_units = #player_and_bot_units
+    local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+    local buff_system = Managers.state.entity:system("buff_system")
+    local template = buff.template
+    local buff_to_add = template.buff_to_add
+    local disabled_allies = 0
+    local previous_disabled_allies = buff.previous_disabled_allies
 
-	local owner_unit = self._owner_unit
-	local is_server = self._is_server
-	local status_extension = self._status_extension
-	local career_extension = self._career_extension
-	local buff_extension = self._buff_extension
-	local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
-	local network_manager = self._network_manager
-	local network_transmit = network_manager.network_transmit
-	local owner_unit_id = network_manager:unit_game_object_id(owner_unit)
-	local buff_name = "markus_knight_activated_ability"
+    if not buff.previous_disabled_allies then
+        buff.previous_disabled_allies = 0
+        previous_disabled_allies = 0
+    end
 
-	buff_extension:add_buff(buff_name, {
-		attacker_unit = owner_unit
-	})
+    for i = 1, num_units, 1 do
+        local unit = player_and_bot_units[i]
+        local status_extension = ScriptUnit.extension(unit, "status_system")
+        local is_disabled = status_extension:is_disabled()
 
-	if talent_extension:has_talent("markus_knight_ability_invulnerability", "empire_soldier", true) then
-		buff_name = "markus_knight_ability_invulnerability_buff"
+        if is_disabled then
+            disabled_allies = disabled_allies + 1
+        end
+    end
 
-		buff_extension:add_buff(buff_name, {
-			attacker_unit = owner_unit
-		})
+    if buff_extension:has_buff_type(buff_to_add) then
+        if disabled_allies == 0 then
+            local buff_id = buff.buff_id
 
-		local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+            if buff_id then
+                buff_system:remove_controlled_buff(owner_unit, buff_id)
 
-		if is_server then
-			network_transmit:send_rpc_clients("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
-		else
-			network_transmit:send_rpc_server("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
-		end
-	end
-
-	status_extension:set_noclip(true)
-
-	local hold_duration = 0.03
-	local windup_duration = 0.15
-	status_extension.do_lunge = {
-		animation_end_event = "foot_knight_ability_charge_hit",
-		allow_rotation = false,
-		falloff_to_speed = 5,
-		first_person_animation_end_event = "foot_knight_ability_charge_hit",
-		dodge = true,
-		first_person_animation_event = "foot_knight_ability_charge_start",
-		first_person_hit_animation_event = "charge_react",
-		damage_start_time = 0.3,
-		duration = 1.5,
-		initial_speed = 20,
-		animation_event = "foot_knight_ability_charge_start",
-		lunge_events = self._lunge_events,
-		speed_function = function (lunge_time, duration)
-			local end_duration = 0.25
-			local rush_time = lunge_time - hold_duration - windup_duration
-			local rush_duration = duration - hold_duration - windup_duration - end_duration
-			local start_speed = 0
-			local windup_speed = -3
-			local end_speed = 20
-			local rush_speed = 15
-			local normal_move_speed = 2
-
-			if rush_time <= 0 and hold_duration > 0 then
-				local t = -rush_time / (hold_duration + windup_duration)
-
-				return math.lerp(0, -1, t)
-			elseif rush_time < windup_duration then
-				local t_value = rush_time / windup_duration
-				local interpolation_value = math.cos((t_value + 1) * math.pi * 0.5)
-
-				return math.min(math.lerp(windup_speed, start_speed, interpolation_value), rush_speed)
-			elseif rush_time < rush_duration then
-				local t_value = rush_time / rush_duration
-				local acceleration = math.min(rush_time / (rush_duration / 3), 1)
-				local interpolation_value = math.cos(t_value * math.pi * 0.5)
-				local offset = nil
-				local step_time = 0.25
-
-				if rush_time > 8 * step_time then
-					offset = 0
-				elseif rush_time > 7 * step_time then
-					offset = (rush_time - 1.4) / step_time
-				elseif rush_time > 6 * step_time then
-					offset = (rush_time - 6 * step_time) / step_time
-				elseif rush_time > 5 * step_time then
-					offset = (rush_time - 5 * step_time) / step_time
-				elseif rush_time > 4 * step_time then
-					offset = (rush_time - 4 * step_time) / step_time
-				elseif rush_time > 3 * step_time then
-					offset = (rush_time - 3 * step_time) / step_time
-				elseif rush_time > 2 * step_time then
-					offset = (rush_time - 2 * step_time) / step_time
-				elseif step_time < rush_time then
-					offset = (rush_time - step_time) / step_time
-				else
-					offset = rush_time / step_time
-				end
-
-				local offset_multiplier = 1 - offset * 0.4
-				local speed = offset_multiplier * acceleration * acceleration * math.lerp(end_speed, rush_speed, interpolation_value)
-
-				return speed
-			else
-				local t_value = (rush_time - rush_duration) / end_duration
-				local interpolation_value = 1 + math.cos((t_value + 1) * math.pi * 0.5)
-
-				return math.lerp(normal_move_speed, end_speed, interpolation_value)
-			end
-		end,
-		damage = {
-			offset_forward = 2.4,
-			height = 1.8,
-			depth_padding = 0.6,
-			hit_zone_hit_name = "full",
-			ignore_shield = false,
-			collision_filter = "filter_explosion_overlap_no_player",
-			interrupt_on_max_hit_mass = true,
-			power_level_multiplier = 1,
-			interrupt_on_first_hit = false,
-			damage_profile = "markus_knight_charge",
-			width = 2,
-			allow_backstab = false,
-			stagger_angles = {
-				max = 80,
-				min = 25
-			},
-			on_interrupt_blast = {
-				allow_backstab = false,
-				radius = 3,
-				power_level_multiplier = 1,
-				hit_zone_hit_name = "full",
-				damage_profile = "markus_knight_charge_blast",
-				ignore_shield = false,
-				collision_filter = "filter_explosion_overlap_no_player"
-			}
-		}
-	}
-
-	status_extension.do_lunge.damage.width = 5
-	status_extension.do_lunge.damage.interrupt_on_max_hit_mass = false
-
-
-	career_extension:start_activated_ability_cooldown()
-	self:_play_vo()
+                buff.buff_id = nil
+            end
+        end
+    elseif disabled_allies > 0 and disabled_allies > previous_disabled_allies then
+        buff.buff_id = buff_system:add_buff(owner_unit, buff_to_add, owner_unit, true)
+    end
 end)
 
 --Engineer Talents
@@ -315,7 +210,64 @@ mod:modify_talent("dr_engineer", 4, 3, {
 		}
 	},
 })
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_power_on_max_pump_buff", {
+    duration = nil --10
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
+    max_stack_data = {
+        buffs_to_add = {
+            "bardin_engineer_pump_exhaustion_buff"
+        },
+        --[[talent_buffs_to_add = {
+            bardin_engineer_power_on_max_pump = {
+                buff_to_add = "bardin_engineer_power_on_max_pump_buff",
+                rpc_sync = true
+            }
+        }]]
+    },
+    update_func = "bardin_engineer_power_on_max_pump"
+})
+mod:add_buff_function("bardin_engineer_power_on_max_pump", function (unit, buff, params)
+    if Unit.alive(unit) then
+        local buff_to_add_name = "bardin_engineer_power_on_max_pump_buff"
+        local buff_name = "bardin_engineer_pump_buff"
+        local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+        if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
+            buff_name = "bardin_engineer_pump_buff_long"
+        end
 
+        local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+        local current_stacks = buff_extension:num_buff_type(buff_name)
+        local max_stacks = BuffTemplates[buff_name].buffs[1].max_stacks
+
+        if current_stacks == max_stacks then
+            local buff_system = Managers.state.entity:system("buff_system")
+            local buff_id = buff_system:add_buff(buff_to_add_name)
+
+            if not buff.buff_ids then
+                buff.buff_ids = {
+                    buff_id
+                }
+            else
+                buff.buff_ids[#buff.buff_ids + 1] = buff_id
+            end
+        elseif current_stacks < max_stacks then
+			local buff_ids = buff.buff_ids
+
+			if buff_ids then
+				local buff_system = Managers.state.entity:system("buff_system")
+
+				for i = 1, #buff_ids, 1 do
+					local buff_id = buff_ids[i]
+
+					buff_system:remove_buff(buff_id)
+				end
+
+				buff.buff_ids = nil
+			end
+        end
+    end
+end)
 
 -- Shade Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {
@@ -445,16 +397,27 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_avatar", {
 })
 mod:modify_talent("we_thornsister", 4, 3, {
     description = "rebaltourn_kerillian_thorn_sister_avatar_desc",
+    description_values = {},
 })
 mod:add_text("rebaltourn_kerillian_thorn_sister_avatar_desc", "Consuming Radiance grants Kerillian 20%% extra attack speed and move speed for 10 seconds.")
 
 
 -- Bounty Hunter Talents
 
--- Indisctiminate blast cdr upped to 60% (Doesnt work and i dont understand why...
+-- Indisctiminate blast cdr upped to 60%
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun", {
-	required_target_number = 1,
-    multiplier = -0.6 -- -0.25
+    multiplier = nil, -- -0.25
+    stat_buff = nil
+})
+mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
+    multiplier = -0.6, -- -0.25
+    stat_buff = "activated_cooldown",
+})
+mod:modify_talent("wh_bountyhunter", 6, 3, {
+    buffs = {
+        "victor_bountyhunter_activated_ability_blast_shotgun",
+        "victor_bountyhunter_activated_ability_blast_shotgun_cdr",
+    },
 })
 
 
@@ -475,4 +438,46 @@ mod:modify_talent("bw_adept", 5, 2, {
             value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
         }
     },
+})
+
+
+-- Pyromancer Talents
+-- Should probs increase by 5% stacks, but this is easier
+mod:modify_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
+    bonus = 0.15 -- 0.1
+})
+mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_2", {
+    buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_2_buff",
+	update_func = "activate_buff_on_health_percent",
+	activation_health = 0.65
+})
+mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_2_buff", {
+    max_stacks = 1,
+    icon = "sienna_scholar_crit_chance_above_health_threshold",
+    stat_buff = "critical_strike_chance",
+    bonus = 0.1
+})
+mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_3", {
+    buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_3_buff",
+	update_func = "activate_buff_on_health_percent",
+	activation_health = 0.5
+})
+mod:add_talent_buff_template("bw_scholar", "sienna_scholar_crit_chance_above_health_threshold_3_buff", {
+    max_stacks = 1,
+    icon = "sienna_scholar_crit_chance_above_health_threshold",
+    stat_buff = "critical_strike_chance",
+    bonus = 0.5
+})
+mod:modify_talent("bw_adept", 2, 3, {
+    description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
+    description_values = {},
+})
+mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health")
+
+mod:add_talent_buff_template("bw_scholar", "sienna_scholar_activated_ability_dump_overcharge_buff", {
+    max_stacks = 1,
+    icon = "sienna_scholar_activated_ability_dump_overcharge",
+    stat_buff = "critical_strike_chance",
+    bonus = 0.3,
+    duration = 10,
 })
