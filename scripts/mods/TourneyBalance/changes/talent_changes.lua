@@ -483,7 +483,7 @@ mod:modify_talent("bw_adept", 5, 2, {
 -- Pyromancer Talents
 -- Should probs increase by 5% stacks, but this is easier
 mod:modify_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
-    bonus = 0.15 -- 0.1
+    bonus = 0.05 -- 0.1
 })
 mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_2", {
     buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_2_buff",
@@ -494,7 +494,7 @@ mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_
     max_stacks = 1,
     icon = "sienna_scholar_crit_chance_above_health_threshold",
     stat_buff = "critical_strike_chance",
-    bonus = 0.1
+    bonus = 0.05
 })
 mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_3", {
     buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_3_buff",
@@ -505,14 +505,14 @@ mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_
     max_stacks = 1,
     icon = "sienna_scholar_crit_chance_above_health_threshold",
     stat_buff = "critical_strike_chance",
-    bonus = 0.5
+    bonus = 0.05
 })
-mod:modify_talent("bw_adept", 2, 3, {
+mod:modify_talent("bw_scholar", 2, 3, {
     buffs = {
         "sienna_scholar_crit_chance_above_health_threshold",
         "sienna_scholar_crit_chance_above_health_threshold_2",
         "sienna_scholar_crit_chance_above_health_threshold_3"
-,    },
+    },
     description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
     description_values = {},
 })
