@@ -90,6 +90,25 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
 
     Talents[hero_name][old_talent_id] = merge(old_talent_data, new_talent_data)
 end
+function mod.add_buff(self, owner_unit, buff_name)
+    if Managers.state.network ~= nil then
+        local network_manager = Managers.state.network
+        local network_transmit = network_manager.network_transmit
+
+        local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+        local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+        local is_server = Managers.player.is_server
+
+        if is_server then
+            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+
+            buff_extension:add_buff(buff_name)
+            network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+        else
+            network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+        end
+    end
+end
 
 -- Footknight Talents
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
@@ -268,6 +287,26 @@ mod:add_buff_function("bardin_engineer_power_on_max_pump", function (unit, buff,
         end
     end
 end)
+--Increased Super-Armor damage with Gromril-Plated Shot
+DamageProfileTemplates.engineer_ability_shot_armor_pierce.armor_modifier_near.attack = {
+	1,
+	1,
+	1,
+	1,
+	0.5,
+	0.4
+}
+DamageProfileTemplates.engineer_ability_shot_armor_pierce.armor_modifier_far.attack = {
+	1,
+	1,
+	1,
+	1,
+	0.5,
+	0.4
+}
+--Gromril Shots spread + longer range
+Weapons.bardin_engineer_career_skill_weapon_special.default_spread_template = "repeating_handgun"
+Weapons.bardin_engineer_career_skill_weapon_special.actions.action_one.armor_pierce_fire.range = 100
 
 -- Shade Talents
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown_buff", {

@@ -38,3 +38,20 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
 
 -- Career Changes (Passives, Ultimates, etc.)
 mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
+
+
+local function updateValues()
+	for _, buffs in pairs(TalentBuffTemplates) do
+		table.merge_recursive(BuffTemplates, buffs)
+	end
+
+	return
+
+end
+
+mod.on_enabled = function (self)
+	mod:echo("enable")
+	updateValues()
+
+	return
+end

@@ -1,70 +1,9 @@
 local mod = get_mod("TourneyBalance")
 
-local function updateValues()
-	for _, buffs in pairs(TalentBuffTemplates) do
-		table.merge_recursive(BuffTemplates, buffs)
-	end
-
-	return
-
-end
-
-mod.on_enabled = function (self)
-	mod:echo("enable")
-	updateValues()
-
-	return
-end
-
--- Ability Cooldown Changes
--- Battle Wizard
-ActivatedAbilitySettings.bw_2[1].cooldown = 60
---Grail Knight
-ActivatedAbilitySettings.es_4[1].cooldown = 60
-
--- Passives Changes
--- Footknight
+-- Footknight Changes
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
     range = 20
 })
-
--- Engineer
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
-    remove_buff_stack_data = {
-        {
-            buff_to_remove = "bardin_engineer_pump_buff",
-            num_stacks = 1
-        },
-        {
-            buff_to_remove = "bardin_engineer_pump_buff_long",
-            num_stacks = 1
-        }
-    }
-})
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks", {
-    remove_buff_stack_data = {
-        {
-            buff_to_remove = "bardin_engineer_pump_buff",
-            num_stacks = 1
-        },
-        {
-            buff_to_remove = "bardin_engineer_pump_buff_long",
-            num_stacks = 1
-        }
-    }
-})
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
-    duration = 20
-})
-
--- Bounty Hunter
-table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
-
--- Pyro
-table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
-
--- Ultimate Changes
--- Footknight
 --Made Widecharge the standard Footknight ult
 mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 	self:_stop_priming()
@@ -212,46 +151,168 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 end)
 
 
+-- Grail Knight Changes
+ActivatedAbilitySettings.es_4[1].cooldown = 60
+
+
 -- Engineer
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
+	event = "on_kill",
+    remove_buff_stack_data = {
+        {
+            buff_to_remove = "bardin_engineer_pump_buff",
+            num_stacks = 1
+        },
+        {
+            buff_to_remove = "bardin_engineer_pump_buff_long",
+            num_stacks = 1
+        }
+    }
+})
+mod:add_proc_function("bardin_engineer_remove_pump_stacks_on_fire", function(player, buff, params)
+    local player_unit = player.player_unit
+
+    local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
+    local wielded_slot = inventory_extension:get_wielded_slot_name()
+    if wielded_slot == "slot_career_skill_weapon" then
+		ProcFunctions.bardin_engineer_remove_pump_stacks(player, buff, params)
+  end
+end)
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks", {
+    remove_buff_stack_data = {
+        {
+            buff_to_remove = "bardin_engineer_pump_buff",
+            num_stacks = 1
+        },
+        {
+            buff_to_remove = "bardin_engineer_pump_buff_long",
+            num_stacks = 1
+        }
+    }
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
+    duration = 20,
+	remove_buff_func = "bardin_engineer_pump_buff_remove",
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long", {
+	remove_buff_func = "bardin_engineer_pump_buff_remove",
+})
+mod:add_buff_function("bardin_engineer_pump_buff_apply", function (unit, buff, params)
+	local buff_name = "bardin_engineer_pump_buff"
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+	if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
+		buff_name = "bardin_engineer_pump_buff_long"
+	end
+	local current_stacks = buff_extension:num_buff_type(buff_name)
+
+	if current_stacks then
+		buff.current_stacks = current_stacks
+	end
+end)
+mod:add_buff_function("bardin_engineer_pump_buff_remove", function (unit, buff, params)
+	local buff_name = "bardin_engineer_pump_buff"
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+	if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
+		buff_name = "bardin_engineer_pump_buff_long"
+	end
+	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+	local current_stacks = buff_extension:num_buff_type(buff_name)
+	if current_stacks then
+		
+		for i=1, current_stacks-1 do
+			mod:add_buff(unit, buff_name)
+		end
+	end
+end)
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
-	local talent_extension = ScriptUnit.has_extension(action_user, "talent_system")
-	local career_extension = ScriptUnit.has_extension(action_user, "career_system")
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	local needs_reload = career_extension:current_ability_cooldown(1) > 0
-
-	return true --needs_reload and can_reload
+	
+	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.chain_condition_func = function (action_user, input_extension)
-	local talent_extension = ScriptUnit.has_extension(action_user, "talent_system")
-	local career_extension = ScriptUnit.has_extension(action_user, "career_system")
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	local needs_reload = career_extension:current_ability_cooldown(1) > 0
-
-	return true --needs_reload and can_reload
+	
+	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon_special.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
-	local talent_extension = ScriptUnit.has_extension(action_user, "talent_system")
-	local career_extension = ScriptUnit.has_extension(action_user, "career_system")
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	local needs_reload = career_extension:current_ability_cooldown(1) > 0
-
-	return true --needs_reload and can_reload
+	
+	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon_special.actions.weapon_reload.default.chain_condition_func = function (action_user, input_extension)
-	local talent_extension = ScriptUnit.has_extension(action_user, "talent_system")
-	local career_extension = ScriptUnit.has_extension(action_user, "career_system")
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	local needs_reload = career_extension:current_ability_cooldown(1) > 0
-
-	return true --needs_reload and can_reload
+	
+	return can_reload
 end
+mod:hook_origin(ActionCareerDREngineerCharge, "client_owner_post_update", function (self, dt, t, world, can_damage)
+	local buff_extension = self.buff_extension
+	local current_action = self.current_action
+	local interval = current_action.ability_charge_interval
+	local charge_timer = self.ability_charge_timer + dt
+
+	if interval <= charge_timer then
+		local recharge_instances = math.floor(charge_timer / interval)
+		charge_timer = charge_timer - recharge_instances * interval
+		local wwise_world = self.wwise_world
+		local buff_to_add = self._buff_to_add
+		local num_stacks = buff_extension:num_buff_type(buff_to_add)
+		local buff_type = buff_extension:get_buff_type(buff_to_add)
+
+		if buff_type then
+			if not self.last_pump_time then
+				self.last_pump_time = t
+			end
+
+			local buff_template = buff_type.template
+
+			if t - self.last_pump_time > 10 and buff_template.max_stacks <= num_stacks then
+				Managers.state.achievement:trigger_event("clutch_pump", self.owner_unit)
+			end
+
+			self.last_pump_time = t
+		end
+
+		WwiseWorld.set_global_parameter(wwise_world, "engineer_charge", num_stacks + recharge_instances)
+
+		for i = 1, recharge_instances, 1 do
+			buff_extension:add_buff(buff_to_add)
+		end
+	end
+
+	self.ability_charge_timer = charge_timer
+end)
+mod:hook(SimpleInventoryExtension, "extensions_ready", function (self, world, unit)
+    local additional_inventory = self.initial_inventory.additional_items
+
+    local has_bombardier = self.buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
+	additional_inventory = additional_inventory or {}
+    if has_bombardier and additional_inventory then
+        table.append(self.initial_inventory.additional_items, {
+            slot_name = "slot_grenade",
+            item_name = "grenade_frag_02"
+        })
+		table.append(self.initial_inventory.additional_items, {
+            slot_name = "slot_grenade",
+            item_name = "grenade_fire_02"
+        })
+	end
+end)
+
+
+-- Bounty Hunter
+table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
+
+
+-- Battle Wizard Changes
+ActivatedAbilitySettings.bw_2[1].cooldown = 60
 
 
 -- Pyro
+table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
 mod:hook_origin(ActionCareerBWScholar, "client_owner_start_action", function (self, new_action, t, chain_action_data, power_level, action_init_data)
 	ActionCareerBWScholar.super.client_owner_start_action(self, new_action, t, chain_action_data, power_level, action_init_data)
 
