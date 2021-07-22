@@ -204,16 +204,16 @@ mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
     icon = "markus_knight_ability_hit_target_damage_taken",
     stat_buff = "increased_weapon_damage_heavy_attack",
     multiplier = 0.5,
-    duration = 10,
+    duration = 6,
 })
 mod:modify_talent("es_knight", 6, 2, {
     buffs = {
         "markus_knight_heavy_buff",
     },
-    description = "markus_knight_heavy_buff_desc",
+    description = "rebaltourn_markus_knight_heavy_buff_desc",
     description_values = {},
 })
-mod:add_text("markus_knight_heavy_buff_desc", "Power of heavies is increased by 50.0%% for 5 seconds")
+mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases the Power of heavies by 50.0%% for 6 seconds")
 
 --Engineer Talents
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_stacking_damage_reduction_buff", {
@@ -474,7 +474,27 @@ mod:modify_talent("wh_bountyhunter", 6, 3, {
         "victor_bountyhunter_activated_ability_blast_shotgun_cdr",
     },
 })
-
+mod:modify_talent("wh_bountyhunter", 4, 1, {
+    description = "rebaltourn_victor_bountyhunter_blessed_combat_desc",
+    description_values = {}
+})
+mod:add_text("rebaltourn_victor_bountyhunter_blessed_combat_desc", "Melee strikes makes up to the next 6 ranged shots deal 15%% more damage. Ranged hits makes up to the next 6 melee strikes deal 15%% more damage.")
+PassiveAbilitySettings.wh_2.perks = {
+	{
+		display_name = "career_passive_name_wh_2b",
+		description = "career_passive_desc_wh_2b_2"
+	},
+	{
+		display_name = "career_passive_name_wh_2c",
+		description = "career_passive_desc_wh_2c_2"
+	},
+	{
+		display_name = "rebaltourn_career_passive_name_wh_2d",
+		description = "rebaltourn_career_passive_desc_wh_2d_2"
+	}
+}
+mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
+mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
 
 -- Battle Wizard Talents
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
@@ -532,13 +552,17 @@ mod:modify_talent("bw_scholar", 2, 3, {
     description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
     description_values = {},
 })
-mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health")
+mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health.")
 
 mod:modify_talent("bw_scholar", 5, 2, {
 	buffs = {
 		"traits_ranged_remove_overcharge_on_crit"
 	},
+	description = "rebaltourn_traits_ranged_remove_overcharge_on_crit_desc",
+	description_values = {},
 })
+mod:add_text("rebaltourn_traits_ranged_remove_overcharge_on_crit_desc", "Ranged critical hits refund the overcharge cost of the attack.")
+
 
 mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_dump_overcharge_buff", {
     max_stacks = 1,
@@ -547,3 +571,21 @@ mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_
     bonus = 0.3,
     duration = 10,
 })
+mod:modify_talent("bw_scholar", 6, 1, {
+	description = "rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc",
+	description_values = {},
+})
+mod:add_text("rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc", "The Burning Head also removes all overcharge and grants 30%% increased crit chance for 10 seconds.")
+
+PassiveAbilitySettings.wh_2.perks = {
+	{
+		display_name = "career_passive_name_bw_1b",
+		description = "career_passive_desc_bw_1b_2"
+	},
+	{
+		display_name = "rebaltourn_career_passive_name_bw_1c",
+		description = "rebaltourn_areer_passive_desc_bw_1c_2"
+	}
+}
+mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
+mod:add_text("rebaltourn_areer_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
