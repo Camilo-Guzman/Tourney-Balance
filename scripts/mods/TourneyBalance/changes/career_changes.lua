@@ -1,10 +1,10 @@
 local mod = get_mod("TourneyBalance")
 
--- Footknight Changes
+-- Passive Changes
+-- Footknight
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
     range = 20
 })
-<<<<<<< HEAD
 
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
@@ -42,8 +42,9 @@ table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_pa
 table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
 
 -- Ultimate Changes
-=======
---Made Widecharge the standard Footknight ult
+
+-- Footknight
+-- Made Widecharge the standard Footknight ult
 mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 	self:_stop_priming()
 
@@ -64,6 +65,22 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 
 	if talent_extension:has_talent("markus_knight_ability_invulnerability", "empire_soldier", true) then
 		buff_name = "markus_knight_ability_invulnerability_buff"
+
+		buff_extension:add_buff(buff_name, {
+			attacker_unit = owner_unit
+		})
+
+		local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+		if is_server then
+			network_transmit:send_rpc_clients("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
+		else
+			network_transmit:send_rpc_server("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
+		end
+	end
+	
+	if talent_extension:has_talent("markus_knight_wide_charge", "empire_soldier", true) then
+		buff_name = "markus_knight_heavy_buff"
 
 		buff_extension:add_buff(buff_name, {
 			attacker_unit = owner_unit
@@ -189,12 +206,9 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 	self:_play_vo()
 end)
 
-
 -- Grail Knight Changes
 ActivatedAbilitySettings.es_4[1].cooldown = 60
 
-
->>>>>>> pr/10
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
 	event = "on_kill",
@@ -325,22 +339,22 @@ mod:hook_origin(ActionCareerDREngineerCharge, "client_owner_post_update", functi
 
 	self.ability_charge_timer = charge_timer
 end)
-mod:hook(SimpleInventoryExtension, "extensions_ready", function (self, world, unit)
-    local additional_inventory = self.initial_inventory.additional_items
-
-    local has_bombardier = self.buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
-	additional_inventory = additional_inventory or {}
-    if has_bombardier and additional_inventory then
-        table.append(self.initial_inventory.additional_items, {
-            slot_name = "slot_grenade",
-            item_name = "grenade_frag_02"
-        })
-		table.append(self.initial_inventory.additional_items, {
-            slot_name = "slot_grenade",
-            item_name = "grenade_fire_02"
-        })
-	end
-end)
+--mod:hook(SimpleInventoryExtension, "extensions_ready", function (self, world, unit)
+--    local additional_inventory = self.initial_inventory.additional_items
+--
+--    local has_bombardier = self.buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
+--	additional_inventory = additional_inventory or {}
+--    if has_bombardier and additional_inventory then
+--        table.append(self.initial_inventory.additional_items, {
+--            slot_name = "slot_grenade",
+--            item_name = "grenade_frag_02"
+--        })
+--		table.append(self.initial_inventory.additional_items, {
+--            slot_name = "slot_grenade",
+--            item_name = "grenade_fire_02"
+--        })
+--	end
+--end)
 
 
 -- Bounty Hunter
