@@ -534,6 +534,12 @@ mod:modify_talent("bw_scholar", 2, 3, {
 })
 mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health")
 
+mod:modify_talent("bw_scholar", 5, 2, {
+	buffs = {
+		"traits_ranged_remove_overcharge_on_crit"
+	},
+})
+
 mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_dump_overcharge_buff", {
     max_stacks = 1,
     icon = "sienna_scholar_activated_ability_dump_overcharge",
