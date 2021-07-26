@@ -887,7 +887,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 		local multiplier = buff.multiplier
 		local is_push = damage_profile.is_push
 		local stagger_calulation = stagger_type or stagger_value
-		local heal_amount = stagger_value * multiplier
+		local heal_amount = stagger_calulation * multiplier --stagger_value * multiplier
 		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
 		local is_corpse = death_extension.death_is_done == false
 
