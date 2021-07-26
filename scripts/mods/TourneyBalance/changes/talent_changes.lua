@@ -154,50 +154,50 @@ mod:modify_talent("es_knight", 5, 3, {
         }
     },
 })
-mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
-    if not Managers.state.network.is_server then
-        return
-    end
-
-    local side = Managers.state.side.side_by_unit[owner_unit]
-    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
-    local num_units = #player_and_bot_units
-    local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-    local buff_system = Managers.state.entity:system("buff_system")
-    local template = buff.template
-    local buff_to_add = template.buff_to_add
-    local disabled_allies = 0
-    local previous_disabled_allies = buff.previous_disabled_allies
-
-    if not buff.previous_disabled_allies then
-        buff.previous_disabled_allies = 0
-        previous_disabled_allies = 0
-    end
-
-    for i = 1, num_units, 1 do
-        local unit = player_and_bot_units[i]
-        local status_extension = ScriptUnit.extension(unit, "status_system")
-        local is_disabled = status_extension:is_disabled()
-
-        if is_disabled then
-            disabled_allies = disabled_allies + 1
-        end
-    end
-
-    if buff_extension:has_buff_type(buff_to_add) then
-        if disabled_allies < previous_disabled_allies then
-            local buff_id = buff.buff_id
-
-            if buff_id then
-                buff_system:remove_controlled_buff(owner_unit, buff_id)
-
-                buff.buff_id = nil
-            end
-        end
-    elseif disabled_allies > 0 and disabled_allies > previous_disabled_allies then
-        buff.buff_id = buff_system:add_buff(owner_unit, buff_to_add, owner_unit, true)
-    end
-end)
+--mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
+--    if not Managers.state.network.is_server then
+--        return
+--    end
+--
+--    local side = Managers.state.side.side_by_unit[owner_unit]
+--    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+--    local num_units = #player_and_bot_units
+--    local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+--    local buff_system = Managers.state.entity:system("buff_system")
+--    local template = buff.template
+--    local buff_to_add = template.buff_to_add
+--    local disabled_allies = 0
+--    local previous_disabled_allies = buff.previous_disabled_allies
+--
+--    if not buff.previous_disabled_allies then
+--        buff.previous_disabled_allies = 0
+--        previous_disabled_allies = 0
+--    end
+--
+--    for i = 1, num_units, 1 do
+--        local unit = player_and_bot_units[i]
+--        local status_extension = ScriptUnit.extension(unit, "status_system")
+--        local is_disabled = status_extension:is_disabled()
+--
+--        if is_disabled then
+--            disabled_allies = disabled_allies + 1
+--        end
+--    end
+--
+--    if buff_extension:has_buff_type(buff_to_add) then
+--        if disabled_allies < previous_disabled_allies then
+--            local buff_id = buff.buff_id
+--
+--            if buff_id then
+--                buff_system:remove_controlled_buff(owner_unit, buff_id)
+--
+--                buff.buff_id = nil
+--            end
+--        end
+--    elseif disabled_allies > 0 and disabled_allies > previous_disabled_allies then
+--        buff.buff_id = buff_system:add_buff(owner_unit, buff_to_add, owner_unit, true)
+--    end
+--end)
 
 mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
     max_stacks = 1,
@@ -476,7 +476,7 @@ mod:modify_talent("wh_bountyhunter", 6, 3, {
 })
 mod:modify_talent("wh_bountyhunter", 4, 1, {
     description = "rebaltourn_victor_bountyhunter_blessed_combat_desc",
-    description_values = {}
+    description_values = {},
 })
 mod:add_text("rebaltourn_victor_bountyhunter_blessed_combat_desc", "Melee strikes makes up to the next 6 ranged shots deal 15%% more damage. Ranged hits makes up to the next 6 melee strikes deal 15%% more damage.")
 PassiveAbilitySettings.wh_2.perks = {
@@ -577,7 +577,7 @@ mod:modify_talent("bw_scholar", 6, 1, {
 })
 mod:add_text("rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc", "The Burning Head also removes all overcharge and grants 30%% increased crit chance for 10 seconds.")
 
-PassiveAbilitySettings.wh_2.perks = {
+PassiveAbilitySettings.bw_1.perks = {
 	{
 		display_name = "career_passive_name_bw_1b",
 		description = "career_passive_desc_bw_1b_2"
