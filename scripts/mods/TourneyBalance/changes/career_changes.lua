@@ -233,62 +233,20 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_sta
     remove_buff_stack_data = {
         {
             buff_to_remove = "bardin_engineer_pump_buff",
-            num_stacks = 1
+            num_stacks = 0
         },
         {
             buff_to_remove = "bardin_engineer_pump_buff_long",
-            num_stacks = 1
+            num_stacks = 0
         }
     }
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
-	remove_buff_func = "bardin_engineer_pump_buff_remove",
-	apply_buff_func = "bardin_engineer_pump_buff_apply",
+	on_remove_stack_down = true,
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long", {
-	remove_buff_func = "bardin_engineer_pump_buff_remove",
-	apply_buff_func = "bardin_engineer_pump_buff_apply",
+	on_remove_stack_down = true,
 })
-mod.bardin_engineer_pump_buff_old_stack_amount = 0
-mod:add_buff_function("bardin_engineer_pump_buff_apply", function (unit, buff, params)
-	local buff_name = "bardin_engineer_pump_buff"
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-	if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
-		buff_name = "bardin_engineer_pump_buff_long"
-	end
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-	local current_stacks = buff_extension:num_buff_type(buff_name)
-
-	if mod.bardin_engineer_pump_buff_old_stack_amount == "zero" then
-		mod.bardin_engineer_pump_buff_old_stack_amount = 0
-	else
-		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks + 1
-	end
-end)
-mod:add_buff_function("bardin_engineer_pump_buff_remove", function (unit, buff, params)
-	local buff_name = "bardin_engineer_pump_buff"
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-	if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
-		buff_name = "bardin_engineer_pump_buff_long"
-	end
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-	local current_stacks = buff_extension:num_buff_type(buff_name)
-	local old_stack_amount = mod.bardin_engineer_pump_buff_old_stack_amount
-
-	if current_stacks == 4 and old_stack_amount == 5 then
-		mod:add_buff(unit, buff_name)
-		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
-	elseif current_stacks == 3 and old_stack_amount == 4 then
-		mod:add_buff(unit, buff_name)
-		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
-	elseif current_stacks == 2 and old_stack_amount == 3 then
-		mod:add_buff(unit, buff_name)
-		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
-	elseif current_stacks == 1 and old_stack_amount == 2 then
-		mod:add_buff(unit, buff_name)
-		mod.bardin_engineer_pump_buff_old_stack_amount = "zero"
-	end
-end)
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
