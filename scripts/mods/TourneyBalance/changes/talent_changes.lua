@@ -217,6 +217,27 @@ mod:modify_talent("es_knight", 6, 2, {
 mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases the Power of heavies by 50.0%% for 6 seconds")
 
 --Engineer Talents
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_melee_power_free_shot_stat", {
+	multiplier = 0.20 -- 0.10
+})
+mod:modify_talent("dr_engineer", 2, 3, {
+    description_values = {
+		{
+			value_type = "percent",
+			value = 0.2 --BuffTemplates.bardin_engineer_melee_power_free_shot_stat.multiplier
+		},
+		{
+			value = 5 --BuffTemplates.bardin_engineer_melee_power_free_shot_counter.max_stacks
+		},
+		{
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.multiplier
+		},
+		{
+			value = 10 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.duration
+		}
+	},
+})
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_stacking_damage_reduction_buff", {
 	max_stacks = 4, -- 3
 	multiplier = -0.10 -- -0.05
