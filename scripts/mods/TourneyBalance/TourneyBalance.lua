@@ -40,19 +40,6 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
 mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
 
 -- on_remove_stack_down
-mod:hook_origin(TalentExtension, "_clear_buffs_from_talents", function (self)
-	local buff_extension = self.buff_extension
-	local talent_buff_ids = self._talent_buff_ids
-	local num_talent_buff_ids = #talent_buff_ids
-
-	for i = 1, num_talent_buff_ids, 1 do
-		local id = talent_buff_ids[i]
-
-		buff_extension:remove_buff(id, nil, nil, true)
-	end
-
-	table.clear(self._talent_buff_ids)
-end)
 mod:hook_origin(BuffExtension, "remove_buff", function (self, id, buff_type, delayed, full_remove)
 	local buffs = self._buffs
 	local num_buffs = #buffs
