@@ -269,21 +269,22 @@ mod:add_buff_function("bardin_engineer_power_on_max_pump", function (unit, buff,
         if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
             buff_name = "bardin_engineer_pump_buff_long"
         end
+        if talent_extension:has_talent("bardin_engineer_power_on_max_pump") then
+            local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+            local current_stacks = buff_extension:num_buff_type(buff_name)
+            local max_stacks = 5 --tonumber(BuffTemplates[buff_name].buffs[1].max_stacks)
+            local has_buff = buff_extension:has_buff_type(buff_to_add_name)
 
-        local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-        local current_stacks = buff_extension:num_buff_type(buff_name)
-        local max_stacks = 5 --tonumber(BuffTemplates[buff_name].buffs[1].max_stacks)
-        local has_buff = buff_extension:has_buff_type(buff_to_add_name)
-
-        if current_stacks == max_stacks and not has_buff then
-            buff_extension:add_buff(buff_to_add_name)
-        elseif current_stacks < max_stacks and has_buff then
-            local remove_buff_template = buff_extension:get_buff_type(buff_to_add_name)
-            if remove_buff_template then
-                local remove_buff_id = remove_buff_template.id
-                buff_extension:remove_buff(remove_buff_id)
+            if current_stacks == max_stacks and not has_buff then
+                buff_extension:add_buff(buff_to_add_name)
+            elseif current_stacks < max_stacks and has_buff then
+                local remove_buff_template = buff_extension:get_buff_type(buff_to_add_name)
+                if remove_buff_template then
+                    local remove_buff_id = remove_buff_template.id
+                    buff_extension:remove_buff(remove_buff_id)
+                end
             end
-		end
+        end
     end
 end)
 --Increased Super-Armor damage with Gromril-Plated Shot
