@@ -31,9 +31,6 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_sta
         }
     }
 })
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
-    duration = 20
-})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
@@ -245,22 +242,27 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_sta
     }
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
-    duration = 20,
 	remove_buff_func = "bardin_engineer_pump_buff_remove",
+	apply_buff_func = "bardin_engineer_pump_buff_apply",
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long", {
 	remove_buff_func = "bardin_engineer_pump_buff_remove",
+	apply_buff_func = "bardin_engineer_pump_buff_apply",
 })
+mod.bardin_engineer_pump_buff_old_stack_amount = 0
 mod:add_buff_function("bardin_engineer_pump_buff_apply", function (unit, buff, params)
 	local buff_name = "bardin_engineer_pump_buff"
 	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
 	if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
 		buff_name = "bardin_engineer_pump_buff_long"
 	end
+	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
 	local current_stacks = buff_extension:num_buff_type(buff_name)
 
-	if current_stacks then
-		buff.current_stacks = current_stacks
+	if mod.bardin_engineer_pump_buff_old_stack_amount == "zero" then
+		mod.bardin_engineer_pump_buff_old_stack_amount = 0
+	else
+		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks + 1
 	end
 end)
 mod:add_buff_function("bardin_engineer_pump_buff_remove", function (unit, buff, params)
@@ -271,11 +273,20 @@ mod:add_buff_function("bardin_engineer_pump_buff_remove", function (unit, buff, 
 	end
 	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
 	local current_stacks = buff_extension:num_buff_type(buff_name)
-	if current_stacks then
-		
-		for i=1, current_stacks-1 do
-			mod:add_buff(unit, buff_name)
-		end
+	local old_stack_amount = mod.bardin_engineer_pump_buff_old_stack_amount
+
+	if current_stacks == 4 and old_stack_amount == 5 then
+		mod:add_buff(unit, buff_name)
+		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
+	elseif current_stacks == 3 and old_stack_amount == 4 then
+		mod:add_buff(unit, buff_name)
+		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
+	elseif current_stacks == 2 and old_stack_amount == 3 then
+		mod:add_buff(unit, buff_name)
+		mod.bardin_engineer_pump_buff_old_stack_amount = current_stacks
+	elseif current_stacks == 1 and old_stack_amount == 2 then
+		mod:add_buff(unit, buff_name)
+		mod.bardin_engineer_pump_buff_old_stack_amount = "zero"
 	end
 end)
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
@@ -339,23 +350,92 @@ mod:hook_origin(ActionCareerDREngineerCharge, "client_owner_post_update", functi
 
 	self.ability_charge_timer = charge_timer
 end)
---mod:hook(SimpleInventoryExtension, "extensions_ready", function (self, world, unit)
---    local additional_inventory = self.initial_inventory.additional_items
---
---    local has_bombardier = self.buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
---	additional_inventory = additional_inventory or {}
---    if has_bombardier and additional_inventory then
---        table.append(self.initial_inventory.additional_items, {
---            slot_name = "slot_grenade",
---            item_name = "grenade_frag_02"
---        })
---		table.append(self.initial_inventory.additional_items, {
---            slot_name = "slot_grenade",
---            item_name = "grenade_fire_02"
---        })
---	end
---end)
 
+local function add_item(is_server, player_unit, pickup_type)
+	local player_manager = Managers.player
+	local player = player_manager:owner(player_unit)
+
+	if player then
+		local local_bot_or_human = not player.remote
+
+		if local_bot_or_human then
+			local network_manager = Managers.state.network
+			local network_transmit = network_manager.network_transmit
+			local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
+			local career_extension = ScriptUnit.extension(player_unit, "career_system")
+			local pickup_settings = AllPickups[pickup_type]
+			local slot_name = pickup_settings.slot_name
+			local item_name = pickup_settings.item_name
+			local slot_data = inventory_extension:get_slot_data(slot_name)
+			local can_store_additional_item = inventory_extension:can_store_additional_item(slot_name)
+
+			if slot_data and not can_store_additional_item then
+				local item_data = slot_data.item_data
+				local item_template = BackendUtils.get_item_template(item_data)
+				local pickup_item_to_spawn = nil
+
+				if item_template.name == "wpn_side_objective_tome_01" then
+					pickup_item_to_spawn = "tome"
+				elseif item_template.name == "wpn_grimoire_01" then
+					pickup_item_to_spawn = "grimoire"
+				end
+
+				if pickup_item_to_spawn then
+					local pickup_spawn_type = "dropped"
+					local pickup_name_id = NetworkLookup.pickup_names[pickup_item_to_spawn]
+					local pickup_spawn_type_id = NetworkLookup.pickup_spawn_types[pickup_spawn_type]
+					local position = POSITION_LOOKUP[player_unit]
+					local rotation = Unit.local_rotation(player_unit, 0)
+
+					network_transmit:send_rpc_server("rpc_spawn_pickup", pickup_name_id, position, rotation, pickup_spawn_type_id)
+				end
+			end
+
+			local item_data = ItemMasterList[item_name]
+			local unit_template = nil
+			local extra_extension_init_data = {}
+
+			if can_store_additional_item and slot_data then
+				inventory_extension:store_additional_item(slot_name, item_data)
+			else
+				inventory_extension:destroy_slot(slot_name)
+				inventory_extension:add_equipment(slot_name, item_data, unit_template, extra_extension_init_data)
+			end
+
+			local go_id = Managers.state.unit_storage:go_id(player_unit)
+			local slot_id = NetworkLookup.equipment_slots[slot_name]
+			local item_id = NetworkLookup.item_names[item_name]
+			local weapon_skin_id = NetworkLookup.weapon_skins["n/a"]
+
+			if is_server then
+				network_transmit:send_rpc_clients("rpc_add_equipment", go_id, slot_id, item_id, weapon_skin_id)
+			else
+				network_transmit:send_rpc_server("rpc_add_equipment", go_id, slot_id, item_id, weapon_skin_id)
+			end
+
+			local wielded_slot_name = inventory_extension:get_wielded_slot_name()
+
+			if wielded_slot_name == slot_name then
+				CharacterStateHelper.stop_weapon_actions(inventory_extension, "picked_up_object")
+				CharacterStateHelper.stop_career_abilities(career_extension, "picked_up_object")
+				inventory_extension:wield(slot_name)
+			end
+		end
+	end
+end
+
+mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, optional_rotation, is_initial_spawn, ammo_melee, ammo_ranged, healthkit, potion, grenade, ability_cooldown_percent_int, additional_items, initial_buff_names)
+	local unit = func(self, optional_position, optional_rotation, is_initial_spawn, ammo_melee, ammo_ranged, healthkit, potion, grenade, ability_cooldown_percent_int, additional_items, initial_buff_names)
+	
+	local is_server = self.is_server
+	local buff_extension = 	ScriptUnit.has_extension(unit, "buff_system")
+	local has_bombardier = buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
+	if has_bombardier then
+		add_item(is_server, unit, "frag_grenade_t2")
+		add_item(is_server, unit, "fire_grenade_t2")
+	end
+	return unit
+end)
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
