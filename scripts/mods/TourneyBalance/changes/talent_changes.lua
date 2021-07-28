@@ -110,6 +110,7 @@ function mod.add_buff(self, owner_unit, buff_name)
     end
 end
 
+
 -- Footknight Talents
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
     duration = 15
@@ -245,9 +246,7 @@ mod:modify_talent("dr_engineer", 4, 3, {
 		}
 	},
 })
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_power_on_max_pump_buff", {
-    duration = nil --10
-})
+BuffTemplates.bardin_engineer_power_on_max_pump_buff.buffs[1].duration = nil
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
     max_stack_data = {
         buffs_to_add = {
@@ -273,34 +272,18 @@ mod:add_buff_function("bardin_engineer_power_on_max_pump", function (unit, buff,
 
         local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
         local current_stacks = buff_extension:num_buff_type(buff_name)
-        local max_stacks = BuffTemplates[buff_name].buffs[1].max_stacks
+        local max_stacks = 5 --tonumber(BuffTemplates[buff_name].buffs[1].max_stacks)
+        local has_buff = buff_extension:has_buff_type(buff_to_add_name)
 
-        if current_stacks == max_stacks then
-            local buff_system = Managers.state.entity:system("buff_system")
-            local buff_id = buff_system:add_buff(buff_to_add_name)
-
-            if not buff.buff_ids then
-                buff.buff_ids = {
-                    buff_id
-                }
-            else
-                buff.buff_ids[#buff.buff_ids + 1] = buff_id
+        if current_stacks == max_stacks and not has_buff then
+            buff_extension:add_buff(buff_to_add_name)
+        elseif current_stacks < max_stacks and has_buff then
+            local remove_buff_template = buff_extension:get_buff_type(buff_to_add_name)
+            if remove_buff_template then
+                local remove_buff_id = remove_buff_template.id
+                buff_extension:remove_buff(remove_buff_id)
             end
-        elseif current_stacks < max_stacks then
-			local buff_ids = buff.buff_ids
-
-			if buff_ids then
-				local buff_system = Managers.state.entity:system("buff_system")
-
-				for i = 1, #buff_ids, 1 do
-					local buff_id = buff_ids[i]
-
-					buff_system:remove_buff(buff_id)
-				end
-
-				buff.buff_ids = nil
-			end
-        end
+		end
     end
 end)
 --Increased Super-Armor damage with Gromril-Plated Shot
