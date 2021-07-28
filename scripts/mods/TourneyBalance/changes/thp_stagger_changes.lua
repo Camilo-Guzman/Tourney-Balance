@@ -833,7 +833,7 @@ mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (playe
 
 	local player_unit = player.player_unit
 	local heal_amount_crit = 1.5
-	local heal_amount_hs = 3.5
+	local heal_amount_hs = 3
 	local has_procced = buff.has_procced
 	local hit_unit = params[1]
 	local hit_zone_name = params[3]
