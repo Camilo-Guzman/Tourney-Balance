@@ -267,6 +267,16 @@ mod:modify_talent("dr_engineer", 4, 3, {
 		}
 	},
 })
+mod:modify_talent("dr_engineer", 4, 1, {
+		description = "rebaltourn_bardin_engineer_pump_buff_desc",
+		description_values = {
+		{
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.bardin_engineer_pump_buff.multiplier
+		}
+	},
+})
+mod:add_text("rebaltourn_bardin_engineer_pump_buff_desc", "Upon reaching 5 stacks of Pressure Bardin gains 15%% power")
 BuffTemplates.bardin_engineer_power_on_max_pump_buff.buffs[1].duration = nil
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
     max_stack_data = {
@@ -589,8 +599,8 @@ PassiveAbilitySettings.bw_1.perks = {
 	},
 	{
 		display_name = "rebaltourn_career_passive_name_bw_1c",
-		description = "rebaltourn_areer_passive_desc_bw_1c_2"
+		description = "rebaltourn_career_passive_desc_bw_1c_2"
 	}
 }
 mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
-mod:add_text("rebaltourn_areer_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
+mod:add_text("rebaltourn_career_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
