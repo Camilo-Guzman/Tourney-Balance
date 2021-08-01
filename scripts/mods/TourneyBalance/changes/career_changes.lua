@@ -5,7 +5,35 @@ local mod = get_mod("TourneyBalance")
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
     range = 20
 })
-
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive_range", {
+    buff_to_add = "markus_knight_passive_defence_aura_range",
+	update_func = "activate_buff_on_distance",
+	remove_buff_func = "remove_aura_buff",
+	range = 40
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_guard_defence", {
+	buff_to_add = "markus_knight_guard_defence_buff",
+	stat_buff = "damage_taken",
+	update_func = "activate_buff_on_closest_distance",
+	remove_buff_func = "remove_aura_buff",
+	range = 20
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_guard", {
+	buff_to_add = "markus_knight_passive_power_increase_buff",
+	stat_buff = "power_level",
+	remove_buff_func = "remove_aura_buff",
+	icon = "markus_knight_passive_power_increase",
+	update_func = "activate_buff_on_closest_distance",
+	range = 20
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity", {
+	buff_to_add = "markus_knight_damage_taken_ally_proximity_buff",
+	range = 20,
+	update_func = "activate_party_buff_stacks_on_ally_proximity",
+	chunk_size = 1,
+	max_stacks = 3,
+	remove_buff_func = "remove_party_buff_stacks"
+})
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
     remove_buff_stack_data = {
@@ -31,6 +59,25 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_sta
         }
     }
 })
+mod:hook_origin(ActionCareerDREngineer, "_fake_activate_ability", function(self, t)
+	local buff_extension = self.buff_extension
+
+	if buff_extension then
+		self._ammo_expended = self._ammo_expended + self._shot_cost * self._num_projectiles_per_shot
+
+		if buff_extension:has_buff_perk("free_ability") then
+			buff_extension:trigger_procs("on_ability_activated", self.owner_unit, 1)
+			buff_extension:trigger_procs("on_ability_cooldown_started")
+
+			self._free_ammo_t = t + 4
+		elseif self._ammo_expended > self.career_extension:get_max_ability_cooldown() / 2 then
+			buff_extension:trigger_procs("on_ability_activated", self.owner_unit, 1)
+			buff_extension:trigger_procs("on_ability_cooldown_started")
+
+			self._ammo_expended = 0
+		end
+	end
+end)
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
