@@ -1221,3 +1221,14 @@ for i=1, #talent_third_row[2] do
 		}
 	})
 end
+
+-- Trait Changes
+function mod.modify_trait(self, name, new_data)
+	local old_data = WeaponTraits.traits[name]
+
+    WeaponTraits.traits[name] = merge(old_data, new_data)
+end
+mod:modify_trait("necklace_heal_self_on_heal_other", {
+	buff_name = "conqueror",
+	advanced_description = "conqueror_desc_3",
+})
