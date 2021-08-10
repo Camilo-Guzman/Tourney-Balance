@@ -193,7 +193,7 @@ local function updateValues()
 end
 
 mod.on_enabled = function (self)
-	mod:echo("enable")
+	mod:echo("Tourney balance enabled")
 	updateValues()
 
 	return
