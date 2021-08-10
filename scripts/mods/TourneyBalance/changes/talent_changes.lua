@@ -603,5 +603,25 @@ PassiveAbilitySettings.bw_1.perks = {
 		description = "rebaltourn_career_passive_desc_bw_1c_2"
 	}
 }
+mod:add_talent_buff_template("bright_wizard", "sienna_adept_double_ult_buff", {
+    stat_buff = "activated_cooldown",
+	multiplier = 0.5
+})
+
+mod:modify_talent("bw_adept", 6, 3, {
+	description = "sienna_adept_ability_trail_double_desc",
+	name = "sienna_adept_ability_trail_double",
+	num_ranks = 1,
+	icon = "sienna_adept_activated_ability_dump_overcharge",
+	description_values = {
+		{
+			value = 10
+		}
+	},
+	buffs = {
+        "sienna_adept_double_ult_buff"
+    }
+})
+
 mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
 mod:add_text("rebaltourn_career_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
