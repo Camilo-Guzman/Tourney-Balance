@@ -214,9 +214,30 @@ mod:modify_talent("es_knight", 6, 2, {
     description = "rebaltourn_markus_knight_heavy_buff_desc",
     description_values = {},
 })
-mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases the Power of heavies by 50.0%% for 6 seconds")
+mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases the Power of heavies by 50.0%% for 6 seconds.")
 
 --Engineer Talents
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_melee_power_free_shot_stat", {
+	multiplier = 0.20 -- 0.10
+})
+mod:modify_talent("dr_engineer", 2, 3, {
+    description_values = {
+		{
+			value_type = "percent",
+			value = 0.2 --BuffTemplates.bardin_engineer_melee_power_free_shot_stat.multiplier
+		},
+		{
+			value = 5 --BuffTemplates.bardin_engineer_melee_power_free_shot_counter.max_stacks
+		},
+		{
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.multiplier
+		},
+		{
+			value = 10 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.duration
+		}
+	},
+})
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_stacking_damage_reduction_buff", {
 	max_stacks = 4, -- 3
 	multiplier = -0.10 -- -0.05
@@ -246,6 +267,22 @@ mod:modify_talent("dr_engineer", 4, 3, {
 		}
 	},
 })
+mod:modify_talent("dr_engineer", 5, 2, {
+	description = "rebaltourn_bardin_engineer_upgraded_grenades_desc",
+	description_values = {},
+})
+mod:add_text("rebaltourn_bardin_engineer_upgraded_grenades_desc", "Bardin's Bombs gain the effect of both regular Bombs and Incendiary Bombs. You also start the mission with 2 bombs.")
+
+mod:modify_talent("dr_engineer", 4, 1, {
+		description = "rebaltourn_bardin_engineer_pump_buff_desc",
+		description_values = {
+		{
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.bardin_engineer_pump_buff.multiplier
+		}
+	},
+})
+mod:add_text("rebaltourn_bardin_engineer_pump_buff_desc", "Upon reaching 5 stacks of Pressure Bardin gains 15%% power.")
 BuffTemplates.bardin_engineer_power_on_max_pump_buff.buffs[1].duration = nil
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
     max_stack_data = {
@@ -484,21 +521,16 @@ mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the co
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05 -- -0.1
 })
-mod:modify_talent("bw_adept", 5, 2, {
+mod:modify_talent("bw_adept", 5, 1, {
+    description = "rebaltourn_sienna_adept_damage_reduction_on_ignited_enemy_desc",
     description_values = {
         {
             value_type = "percent",
             value = -0.05 --BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.multiplier
-        },
-        {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.duration
-        },
-        {
-            value = BuffTemplates.sienna_adept_damage_reduction_on_ignited_enemy_buff.max_stacks
         }
     },
 })
-
+mod:add_text("rebaltourn_sienna_adept_damage_reduction_on_ignited_enemy_desc", "Igniting an enemy reduces damage taken by 5%% for 5 seconds. Stacks up to 3 times.")
 
 -- Pyromancer Talents
 -- Should probs increase by 5% stacks, but this is easier
@@ -568,8 +600,8 @@ PassiveAbilitySettings.bw_1.perks = {
 	},
 	{
 		display_name = "rebaltourn_career_passive_name_bw_1c",
-		description = "rebaltourn_areer_passive_desc_bw_1c_2"
+		description = "rebaltourn_career_passive_desc_bw_1c_2"
 	}
 }
 mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
-mod:add_text("rebaltourn_areer_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
+mod:add_text("rebaltourn_career_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
