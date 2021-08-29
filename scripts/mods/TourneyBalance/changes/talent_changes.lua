@@ -202,8 +202,8 @@ mod:modify_talent("es_knight", 5, 3, {
 
 mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
     max_stacks = 1,
+    stat_buff = "power_level_melee",
     icon = "markus_knight_ability_hit_target_damage_taken",
-    stat_buff = "increased_weapon_damage_heavy_attack",
     multiplier = 0.5,
     duration = 6,
 })
@@ -214,7 +214,7 @@ mod:modify_talent("es_knight", 6, 2, {
     description = "rebaltourn_markus_knight_heavy_buff_desc",
     description_values = {},
 })
-mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases the Power of heavies by 50.0%% for 6 seconds.")
+mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0%% for 6 seconds.")
 
 --Engineer Talents
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_melee_power_free_shot_stat", {
