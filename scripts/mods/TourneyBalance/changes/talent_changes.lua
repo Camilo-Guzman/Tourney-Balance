@@ -532,6 +532,18 @@ mod:modify_talent("bw_adept", 5, 1, {
 })
 mod:add_text("rebaltourn_sienna_adept_damage_reduction_on_ignited_enemy_desc", "Igniting an enemy reduces damage taken by 5%% for 5 seconds. Stacks up to 3 times.")
 
+mod:add_talent_buff_template("bright_wizard", "rebaltourn_sienna_adept_increase_activated_ability_cooldown", {
+    stat_buff = "activated_cooldown",
+    multiplier = 2.025,
+})
+mod:modify_talent("bw_adept", 5, 3, {
+    description = "rebaltourn_sienna_adept_ability_trail_double_desc",
+    buffs = {
+        "rebaltourn_sienna_adept_increase_activated_ability_cooldown",
+    }
+})
+mod:add_text("rebaltourn_sienna_adept_ability_trail_double_desc", "Fire Walk can be activated a second time within 10 seconds. Cooldown of Fire Walk is increased to 90 seconds.")
+
 -- Pyromancer Talents
 -- Should probs increase by 5% stacks, but this is easier
 mod:modify_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
