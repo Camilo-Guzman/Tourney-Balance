@@ -34,6 +34,7 @@ mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_al
 	max_stacks = 3,
 	remove_buff_func = "remove_party_buff_stacks"
 })
+
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
     remove_buff_stack_data = {
@@ -78,6 +79,11 @@ mod:hook_origin(ActionCareerDREngineer, "_fake_activate_ability", function(self,
 		end
 	end
 end)
+
+--Sister of the Thorn
+mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
+    multiplier = 0.5
+})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
@@ -441,6 +447,14 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 	end
 	return unit
 end)
+--Sister of the Thorn
+ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
+
+--Shade
+--Revert Crit removal from ult
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown", {
+	perk = "guaranteed_crit",
+})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
@@ -448,7 +462,6 @@ table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_pa
 
 -- Battle Wizard Changes
 ActivatedAbilitySettings.bw_2[1].cooldown = 60
-
 
 -- Pyro
 table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
