@@ -450,6 +450,7 @@ end)
 --Sister of the Thorn
 ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
 
+
 --Shade
 --Revert Crit removal from ult
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown", {
