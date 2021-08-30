@@ -534,7 +534,7 @@ mod:add_talent_buff_template("bright_wizard", "rebaltourn_sienna_adept_increase_
     stat_buff = "activated_cooldown",
     multiplier = 2.025,
 })
-mod:modify_talent("bw_adept", 5, 3, {
+mod:modify_talent("bw_adept", 6, 3, {
     description = "rebaltourn_sienna_adept_ability_trail_double_desc",
     buffs = {
         "rebaltourn_sienna_adept_increase_activated_ability_cooldown",
