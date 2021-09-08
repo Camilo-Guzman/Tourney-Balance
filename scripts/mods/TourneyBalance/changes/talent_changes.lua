@@ -530,17 +530,42 @@ mod:modify_talent("bw_adept", 5, 1, {
 })
 mod:add_text("rebaltourn_sienna_adept_damage_reduction_on_ignited_enemy_desc", "Igniting an enemy reduces damage taken by 5%% for 5 seconds. Stacks up to 3 times.")
 
-mod:add_talent_buff_template("bright_wizard", "rebaltourn_sienna_adept_increase_activated_ability_cooldown", {
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_cooldown_reduction_on_burning_enemy_killed", {
+    cooldown_reduction = 0.02 --0.03
+})
+mod:modify_talent("bw_adept", 5, 2, {
+    description = "rebaltourn_sienna_adept_cooldown_reduction_on_burning_enemy_killed_desc",
+    description_values = {
+        {
+            value_type = "percent",
+            value = 0.02 --BuffTemplates.sienna_adept_cooldown_reduction_on_burning_enemy_killed.cooldown_reduction
+        }
+    },
+})
+mod:add_text("rebaltourn_sienna_adept_cooldown_reduction_on_burning_enemy_killed_desc", "Killing a burning enemy reduces the cooldown of Fire Walk by 2%%. 0.5 second cooldown.")
+
+mod:modify_talent("bw_adept", 6, 1, {
+    description = "rebaltourn_sienna_adept_activated_ability_cooldown_desc",
+})
+
+mod:add_text("rebaltourn_sienna_adept_activated_ability_cooldown_desc", "Reduces the cooldown of Fire Walk by 50%%.")
+
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_cooldown", {
+    multiplier = -0.5 -- -0.3
+})
+
+mod:modify_talent("bw_adept", 6, 2, {
+    description = "rebaltourn_sienna_adept_activated_ability_explosion_desc",
+	buffs = {
+        "sienna_adept_activated_ability_explosion_buff"
+    },
+})
+mod:add_text("rebaltourn_sienna_adept_activated_ability_explosion_desc", "Fire Walk explosion radius and burn damage increased. No longer leaves a burning trail. Cooldown of Fire Walk reduced by 30%%.")
+
+mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_explosion_buff", {
     stat_buff = "activated_cooldown",
-    multiplier = 2.025,
+	multiplier = -0.3
 })
-mod:modify_talent("bw_adept", 6, 3, {
-    description = "rebaltourn_sienna_adept_ability_trail_double_desc",
-    buffs = {
-        "rebaltourn_sienna_adept_increase_activated_ability_cooldown",
-    }
-})
-mod:add_text("rebaltourn_sienna_adept_ability_trail_double_desc", "Fire Walk can be activated a second time within 10 seconds. Cooldown of Fire Walk is increased to 90 seconds.")
 
 -- Pyromancer Talents
 -- Should probs increase by 5% stacks, but this is easier

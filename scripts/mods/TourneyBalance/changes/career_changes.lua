@@ -462,7 +462,7 @@ table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_pa
 
 
 -- Battle Wizard Changes
-ActivatedAbilitySettings.bw_2[1].cooldown = 60
+ActivatedAbilitySettings.bw_2[1].cooldown = 90
 
 -- Pyro
 table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
