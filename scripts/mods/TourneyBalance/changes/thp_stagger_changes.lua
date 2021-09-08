@@ -894,6 +894,18 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 		if is_push then
 			heal_amount = 0.6
 		end
+		
+        local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
+        local equipment = inventory_extension:equipment()
+		local slot_data = equipment.slots.slot_melee
+	
+		if slot_data then
+			local item_data = slot_data.item_data
+			local item_name = item_data.name
+			if item_name == "wh_2h_billhook" and heal_amount == 9 then
+				heal_amount = 2
+			end
+		end
 
 		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
 			DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
