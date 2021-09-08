@@ -206,6 +206,7 @@ mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
     icon = "markus_knight_ability_hit_target_damage_taken",
     multiplier = 0.5,
     duration = 6,
+    refresh_durations = true,
 })
 mod:modify_talent("es_knight", 6, 2, {
     buffs = {
