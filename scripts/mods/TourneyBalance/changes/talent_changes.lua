@@ -622,6 +622,7 @@ mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_
     stat_buff = "critical_strike_chance",
     bonus = 0.3,
     duration = 10,
+    refresh_durations = true,
 })
 mod:modify_talent("bw_scholar", 6, 1, {
 	description = "rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc",
