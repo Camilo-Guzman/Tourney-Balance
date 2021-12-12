@@ -40,37 +40,34 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
 mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
 
 -- on_remove_stack_down
-mod:hook_origin(BuffExtension, "remove_buff", function (self, id, buff_type, delayed, full_remove)
+mod:hook_origin(BuffExtension, "remove_buff", function (self, id, skip_net_sync)
 	local buffs = self._buffs
 	local num_buffs = #buffs
 	local end_time = Managers.time:time("game")
 	local num_buffs_removed = 0
 	local i = 1
+	buff_extension_function_params.t = end_time
+	buff_extension_function_params.end_time = end_time
 
 	while num_buffs >= i do
 		local buff = buffs[i]
-		local template = buff.template
 		buff_extension_function_params.bonus = buff.bonus
 		buff_extension_function_params.multiplier = buff.multiplier
 		buff_extension_function_params.value = buff.value
-		buff_extension_function_params.t = end_time
-		buff_extension_function_params.end_time = end_time
 		buff_extension_function_params.attacker_unit = buff.attacker_unit
 
-		if (id and buff.id == id) or (buff.parent_id and id and buff.parent_id == id) or (buff_type and buff.buff_type == buff_type) then
+		if (id and buff.id == id) or (buff.parent_id and id and buff.parent_id == id) then
+			local template = buff.template
             local on_remove_stack_down = template.on_remove_stack_down
-			if delayed then
-				buff.duration = 0
-				i = i + 1
-            elseif on_remove_stack_down and not full_remove then
-                self:_remove_sub_buff(buff, i, buff_extension_function_params)
+			if on_remove_stack_down then
+                self:_remove_sub_buff(buff, i, buff_extension_function_params, false)
 
 				local new_buff_count = #buffs
 				num_buffs_removed = num_buffs_removed + num_buffs - new_buff_count
 				num_buffs = new_buff_count
                 self._buffs[i].start_time = Managers.time:time("game")
             else
-				self:_remove_sub_buff(buff, i, buff_extension_function_params)
+				self:_remove_sub_buff(buff, i, buff_extension_function_params, false)
 
 				local new_buff_count = #buffs
 				num_buffs_removed = num_buffs_removed + num_buffs - new_buff_count
@@ -84,6 +81,12 @@ mod:hook_origin(BuffExtension, "remove_buff", function (self, id, buff_type, del
 	if num_buffs == 0 then
 		Managers.state.entity:system("buff_system"):set_buff_ext_active(self._unit, false)
 	end
+	
+	if not skip_net_sync then
+		self:_remove_buff_synced(id)
+	end
+
+	self:_free_sync_id(id)
 
 	return num_buffs_removed
 end)
@@ -94,17 +97,26 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
 	local num_buffs = #buffs
 	local i = 1
 	local buff_extension_function_params = buff_extension_function_params
-    local on_remove_stack_down_done = {}
+	buff_extension_function_params.t = t
+	local queue = self._remove_buff_queue
+
+	if queue then
+		self._remove_buff_queue = nil
+
+		for i = 1, #queue, 1 do
+			self:remove_buff(queue[i])
+		end
+	end
+
+	local on_remove_stack_down_done = {}
 
 	while i <= num_buffs do
 		local buff = buffs[i]
-		local template = buff.template
-
+		local template = buff.templateig
 		local end_time = buff.duration and buff.start_time + buff.duration
 		buff_extension_function_params.bonus = buff.bonus
 		buff_extension_function_params.multiplier = buff.multiplier
 		buff_extension_function_params.value = buff.value
-		buff_extension_function_params.t = t
 		buff_extension_function_params.end_time = end_time
 		buff_extension_function_params.attacker_unit = buff.attacker_unit
 		buff_extension_function_params.source_attacker_unit = buff.source_attacker_unit
@@ -115,7 +127,7 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
             if on_remove_stack_down and on_remove_stack_down_done[buff_name] == nil then
                 local current_stacks = self:num_buff_type(buff_name)
 
-                self:_remove_sub_buff(buff, i, buff_extension_function_params)
+                self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
                 on_remove_stack_down_done[buff_name] = true
 
                 if current_stacks == 1 then
@@ -134,7 +146,7 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
             elseif on_remove_stack_down and on_remove_stack_down_done[buff_name] then
                 buff.start_time = t
             else
-                self:_remove_sub_buff(buff, i, buff_extension_function_params)
+                self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
 
                 if template.buff_after_delay and not buff.aborted then
                     local delayed_buff_name = buff.delayed_buff_name
@@ -180,7 +192,7 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
 	if num_buffs == 0 then
 		Managers.state.entity:system("buff_system"):set_buff_ext_active(unit, false)
 	end
-end)
+end)--]]
 
 
 local function updateValues()
