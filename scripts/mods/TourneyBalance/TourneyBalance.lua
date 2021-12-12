@@ -49,16 +49,16 @@ mod:hook_origin(BuffExtension, "remove_buff", function (self, id, skip_net_sync)
 	buff_extension_function_params.t = end_time
 	buff_extension_function_params.end_time = end_time
 
-	while num_buffs >= i do
+	while i <= num_buffs do
 		local buff = buffs[i]
+		local template = buff.template
 		buff_extension_function_params.bonus = buff.bonus
 		buff_extension_function_params.multiplier = buff.multiplier
 		buff_extension_function_params.value = buff.value
 		buff_extension_function_params.attacker_unit = buff.attacker_unit
 
 		if (id and buff.id == id) or (buff.parent_id and id and buff.parent_id == id) then
-			local template = buff.template
-            local on_remove_stack_down = template.on_remove_stack_down
+			local on_remove_stack_down = template.on_remove_stack_down
 			if on_remove_stack_down then
                 self:_remove_sub_buff(buff, i, buff_extension_function_params, false)
 
@@ -112,7 +112,7 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
 
 	while i <= num_buffs do
 		local buff = buffs[i]
-		local template = buff.templateig
+		local template = buff.template
 		local end_time = buff.duration and buff.start_time + buff.duration
 		buff_extension_function_params.bonus = buff.bonus
 		buff_extension_function_params.multiplier = buff.multiplier
@@ -146,19 +146,19 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
             elseif on_remove_stack_down and on_remove_stack_down_done[buff_name] then
                 buff.start_time = t
             else
-                self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
+				self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
 
-                if template.buff_after_delay and not buff.aborted then
-                    local delayed_buff_name = buff.delayed_buff_name
-
-                    if buff.delayed_buff_params then
-                        local delayed_buff_params = buff.delayed_buff_params
-
-                        self:add_buff(delayed_buff_name, delayed_buff_params)
-                    else
-                        self:add_buff(delayed_buff_name)
-                    end
-                end
+				if template.buff_after_delay and not buff.aborted then
+					local delayed_buff_name = buff.delayed_buff_name
+	
+					if buff.delayed_buff_params then
+						local delayed_buff_params = buff.delayed_buff_params
+	
+						self:add_buff(delayed_buff_name, delayed_buff_params)
+					else
+						self:add_buff(delayed_buff_name)
+					end
+				end
             end
 		else
 			local update_func = template.update_func
@@ -192,7 +192,7 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
 	if num_buffs == 0 then
 		Managers.state.entity:system("buff_system"):set_buff_ext_active(unit, false)
 	end
-end)--]]
+end)
 
 
 local function updateValues()
