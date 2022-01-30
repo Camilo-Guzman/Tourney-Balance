@@ -970,7 +970,10 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 			if item_name == "wh_2h_billhook" and heal_amount == 9 then
 				heal_amount = 2
 			end
-		end
+		 	if item_name == "bw_flame_sword" and attack_type == "heavy_attack" and heal_amount == 1 then
+				heal_amount = 2
+		 	end
+    	end
 
 		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
 			DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
@@ -1074,6 +1077,7 @@ local talent_first_row = {
 		"dr_ironbreaker",
 		"wh_zealot",
 		"bw_unchained",
+		"wh_priest",
 	},
 	{
 		"es_huntsman",
@@ -1205,6 +1209,7 @@ local talent_third_row = {
 		"we_maidenguard",
 		"bw_adept",
 		"bw_unchained",
+		"wh_priest",
 	},
 }
 for i=1, #talent_third_row[1] do
