@@ -112,6 +112,8 @@ mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, contex
 		end
 	end
 
+	local on_remove_stack_down_done = {}
+
 	for i = 1, self._num_buffs, 1 do
 		local buff = buffs[i]
 
