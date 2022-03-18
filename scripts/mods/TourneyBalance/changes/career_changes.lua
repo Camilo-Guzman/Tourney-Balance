@@ -5,11 +5,17 @@ local mod = get_mod("TourneyBalance")
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
     range = 20
 })
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive_defence_aura", {
+    multiplier = -0.1
+})
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive_range", {
     buff_to_add = "markus_knight_passive_defence_aura_range",
 	update_func = "activate_buff_on_distance",
 	remove_buff_func = "remove_aura_buff",
 	range = 40
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive_defence_aura_range", {
+    multiplier = -0.1
 })
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_guard_defence", {
 	buff_to_add = "markus_knight_guard_defence_buff",
@@ -33,6 +39,9 @@ mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_al
 	chunk_size = 1,
 	max_stacks = 3,
 	remove_buff_func = "remove_party_buff_stacks"
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
+	multiplier = -0.033
 })
 
 -- Engineer
@@ -81,9 +90,9 @@ mod:hook_origin(ActionCareerDREngineer, "_fake_activate_ability", function(self,
 end)
 
 --Sister of the Thorn
-mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
-    multiplier = 0.5
-})
+--mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
+--    multiplier = 0.5
+--})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
@@ -448,14 +457,14 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 	return unit
 end)
 --Sister of the Thorn
-ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
+--ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
 
 
 --Shade
 --Revert Crit removal from ult
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown", {
-	perk = "guaranteed_crit",
-})
+--mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown", {
+--	perk = "guaranteed_crit",
+--})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")

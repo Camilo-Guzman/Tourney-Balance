@@ -669,7 +669,7 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 
 			if hit_zone_name == "head" and has_crit_head_shot_killing_blow_perk then
 				killing_blow_triggered = true
-			elseif backstab_multiplier and backstab_multiplier > 1 and has_crit_backstab_killing_blow_perk then
+			elseif backstab_multiplier and backstab_multiplier > 1 and has_crit_backstab_killing_blow_perk and damage_profile.charge_value == "heavy_attack" then
 				killing_blow_triggered = true
 			end
 
