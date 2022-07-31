@@ -1,0 +1,6 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/BeastmenMore/BeastmenMore.package", "BeastmenMore", "mod", 492
+"resource_packages/BeastmenMore/BeastmenMore.package", "scripts/mods/BeastmenMore/BeastmenMore_localization", "lua", 157
+"resource_packages/BeastmenMore/BeastmenMore.package", "scripts/mods/BeastmenMore/BeastmenMore_data", "lua", 229
+"resource_packages/BeastmenMore/BeastmenMore.package", "scripts/mods/BeastmenMore/BeastmenMore", "lua", 11306
+"resource_packages/BeastmenMore/BeastmenMore.package", "resource_packages/BeastmenMore/BeastmenMore", "package", 85

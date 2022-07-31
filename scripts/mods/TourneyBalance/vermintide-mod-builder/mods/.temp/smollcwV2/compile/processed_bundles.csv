@@ -1,0 +1,6 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/smollcw/smollcw.package", "smollcw", "mod", 442
+"resource_packages/smollcw/smollcw.package", "scripts/mods/smollcw/smollcw", "lua", 17449
+"resource_packages/smollcw/smollcw.package", "scripts/mods/smollcw/smollcw_data", "lua", 209
+"resource_packages/smollcw/smollcw.package", "scripts/mods/smollcw/smollcw_localization", "lua", 142
+"resource_packages/smollcw/smollcw.package", "resource_packages/smollcw/smollcw", "package", 85

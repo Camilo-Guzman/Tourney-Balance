@@ -1,0 +1,13 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/Game Sux/Game Sux.package", "Game Sux", "mod", 452
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Game Sux_data", "lua", 213
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/victor_changes", "lua", 123
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/kruber_changes", "lua", 13236
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/kerillian_changes", "lua", 126
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/bardin_changes", "lua", 123
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/thp_stagger_changes", "lua", 31500
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Game Sux_localization", "lua", 145
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Game Sux", "lua", 1504
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/weapon_Changes", "lua", 5356
+"resource_packages/Game Sux/Game Sux.package", "scripts/mods/Game Sux/Changes/sienna_changes", "lua", 123
+"resource_packages/Game Sux/Game Sux.package", "resource_packages/Game Sux/Game Sux", "package", 197

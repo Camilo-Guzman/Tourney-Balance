@@ -1,0 +1,6 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/Spicy Onslaught/Spicy Onslaught.package", "Spicy Onslaught", "mod", 522
+"resource_packages/Spicy Onslaught/Spicy Onslaught.package", "scripts/mods/Spicy Onslaught/Spicy Onslaught", "lua", 411360
+"resource_packages/Spicy Onslaught/Spicy Onslaught.package", "scripts/mods/Spicy Onslaught/Spicy Onslaught_data", "lua", 95
+"resource_packages/Spicy Onslaught/Spicy Onslaught.package", "scripts/mods/Spicy Onslaught/Spicy Onslaught_localization", "lua", 166
+"resource_packages/Spicy Onslaught/Spicy Onslaught.package", "resource_packages/Spicy Onslaught/Spicy Onslaught", "package", 85

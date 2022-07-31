@@ -1,0 +1,7 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "OnlyWeaponBalance", "mod", 542
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "scripts/mods/OnlyWeaponBalance/OnlyWeaponBalance_localization", "lua", 172
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "scripts/mods/OnlyWeaponBalance/OnlyWeaponBalance", "lua", 2308
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "scripts/mods/OnlyWeaponBalance/OnlyWeaponBalance_data", "lua", 249
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "scripts/mods/OnlyWeaponBalance/changes/weapon_changes", "lua", 37592
+"resource_packages/OnlyWeaponBalance/OnlyWeaponBalance.package", "resource_packages/OnlyWeaponBalance/OnlyWeaponBalance", "package", 101

@@ -1,0 +1,7 @@
+"bundle", "resource", "type", "bytes"
+"resource_packages/CareerRebalance/CareerRebalance.package", "CareerRebalance", "mod", 522
+"resource_packages/CareerRebalance/CareerRebalance.package", "scripts/mods/CareerRebalance/CareerRebalance_localization", "lua", 166
+"resource_packages/CareerRebalance/CareerRebalance.package", "scripts/mods/CareerRebalance/Code", "lua", 5264
+"resource_packages/CareerRebalance/CareerRebalance.package", "scripts/mods/CareerRebalance/CareerRebalance_data", "lua", 241
+"resource_packages/CareerRebalance/CareerRebalance.package", "scripts/mods/CareerRebalance/CareerRebalance", "lua", 4026
+"resource_packages/CareerRebalance/CareerRebalance.package", "resource_packages/CareerRebalance/CareerRebalance", "package", 101
