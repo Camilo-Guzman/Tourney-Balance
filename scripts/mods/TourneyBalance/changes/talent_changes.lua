@@ -305,8 +305,12 @@ mod:hook_origin(WeaponSpreadExtension, "update", function (self, unit, input, dt
 	local owner_inventory_extension = self.owner_inventory_extension
 	local equipment = owner_inventory_extension:equipment()
 	local slot_data = equipment.slots.slot_ranged
-	local item_data = slot_data.item_data
-	local item_name = item_data.name
+	local item_name = nil
+	if slot_data then
+		local item_data = slot_data.item_data
+		item_name = item_data.name
+	end
+
 	local new_pitch = nil
 	local new_yaw = nil
 
@@ -1140,6 +1144,7 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
     local network_manager = Managers.state.network
     local network_transmit = network_manager.network_transmit
     local heal_type_id = NetworkLookup.heal_types.career_skill
+    local time_between_heals = buff_template.time_between_heals
 
     if next_heal_tick < t and Unit.alive(unit) then
         local talent_extension = ScriptUnit.extension(unit, "talent_system")
@@ -1186,7 +1191,7 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
 
                     heal_amount = heal_amount / 3
 
-                    buff_template.time_between_heals = 6
+                    time_between_heals = 6
 
                     local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
 
@@ -1210,7 +1215,7 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
             end
         end
 
-        buff.next_heal_tick = t + buff_template.time_between_heals
+        buff.next_heal_tick = t + time_between_heals
     end
 end)
 
