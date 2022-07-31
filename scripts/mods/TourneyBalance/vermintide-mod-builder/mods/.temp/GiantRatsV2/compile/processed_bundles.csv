@@ -1,6 +1,0 @@
-"bundle", "resource", "type", "bytes"
-"resource_packages/GiantRats/GiantRats.package", "GiantRats", "mod", 462
-"resource_packages/GiantRats/GiantRats.package", "scripts/mods/GiantRats/GiantRats", "lua", 3205
-"resource_packages/GiantRats/GiantRats.package", "scripts/mods/GiantRats/GiantRats_data", "lua", 494
-"resource_packages/GiantRats/GiantRats.package", "scripts/mods/GiantRats/GiantRats_localization", "lua", 148
-"resource_packages/GiantRats/GiantRats.package", "resource_packages/GiantRats/GiantRats", "package", 85

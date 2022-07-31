@@ -1,6 +1,0 @@
-"bundle", "resource", "type", "bytes"
-"resource_packages/DutchSpice/DutchSpice.package", "DutchSpice", "mod", 472
-"resource_packages/DutchSpice/DutchSpice.package", "scripts/mods/DutchSpice/DutchSpice_data", "lua", 221
-"resource_packages/DutchSpice/DutchSpice.package", "scripts/mods/DutchSpice/DutchSpice", "lua", 496431
-"resource_packages/DutchSpice/DutchSpice.package", "scripts/mods/DutchSpice/DutchSpice_localization", "lua", 151
-"resource_packages/DutchSpice/DutchSpice.package", "resource_packages/DutchSpice/DutchSpice", "package", 85

@@ -1,6 +1,0 @@
-"bundle", "resource", "type", "bytes"
-"resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest.package", "SpicyOnslaughtTest", "mod", 552
-"resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest.package", "scripts/mods/SpicyOnslaughtTest/SpicyOnslaughtTest", "lua", 438248
-"resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest.package", "scripts/mods/SpicyOnslaughtTest/SpicyOnslaughtTest_data", "lua", 253
-"resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest.package", "scripts/mods/SpicyOnslaughtTest/SpicyOnslaughtTest_localization", "lua", 175
-"resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest.package", "resource_packages/SpicyOnslaughtTest/SpicyOnslaughtTest", "package", 85

@@ -1,6 +1,0 @@
-"bundle", "resource", "type", "bytes"
-"resource_packages/SpicyEnemies/SpicyEnemies.package", "SpicyEnemies", "mod", 492
-"resource_packages/SpicyEnemies/SpicyEnemies.package", "scripts/mods/SpicyEnemies/SpicyEnemies_data", "lua", 229
-"resource_packages/SpicyEnemies/SpicyEnemies.package", "scripts/mods/SpicyEnemies/SpicyEnemies_localization", "lua", 157
-"resource_packages/SpicyEnemies/SpicyEnemies.package", "scripts/mods/SpicyEnemies/SpicyEnemies", "lua", 1702
-"resource_packages/SpicyEnemies/SpicyEnemies.package", "resource_packages/SpicyEnemies/SpicyEnemies", "package", 85

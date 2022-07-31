@@ -1,6 +1,0 @@
-"bundle", "resource", "type", "bytes"
-"resource_packages/Onslaughttest/Onslaughttest.package", "Onslaughttest", "mod", 502
-"resource_packages/Onslaughttest/Onslaughttest.package", "scripts/mods/Onslaughttest/Onslaughttest_data", "lua", 233
-"resource_packages/Onslaughttest/Onslaughttest.package", "scripts/mods/Onslaughttest/Onslaughttest", "lua", 413750
-"resource_packages/Onslaughttest/Onslaughttest.package", "scripts/mods/Onslaughttest/Onslaughttest_localization", "lua", 160
-"resource_packages/Onslaughttest/Onslaughttest.package", "resource_packages/Onslaughttest/Onslaughttest", "package", 85
