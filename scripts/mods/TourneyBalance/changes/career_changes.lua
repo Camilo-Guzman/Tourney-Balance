@@ -599,6 +599,17 @@ DamageProfileTemplates.arrow_sniper_trueflight = {
     },
 	max_friendly_damage = 0
 }
+Weapons.kerillian_waywatcher_career_skill_weapon.actions.action_career_hold.prioritized_breeds = {
+    skaven_warpfire_thrower = 1,
+    chaos_vortex_sorcerer = 1,
+    skaven_gutter_runner = 1,
+    skaven_pack_master = 1,
+    skaven_poison_wind_globadier = 1,
+    chaos_corruptor_sorcerer = 1,
+    skaven_ratling_gunner = 1,
+    beastmen_standard_bearer = 1,
+}
+
 
 --Removed bloodshot and ult interaction
 mod:hook_origin(ActionCareerWEWaywatcher, "client_owner_post_update", function (self, dt, t, world, can_damage)

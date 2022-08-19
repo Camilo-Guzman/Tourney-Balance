@@ -331,38 +331,38 @@ mod:hook_origin(WeaponSpreadExtension, "update", function (self, unit, input, dt
 	local lerp_speed_yaw = (zooming and self.spread_lerp_speed_yaw_zoom) or self.spread_lerp_speed_yaw
 
 	if self.hit_aftermath then
-	 self.hit_timer = self.hit_timer - dt
-	 local rand = Math.random(0.5, 1)
-	 lerp_speed_pitch = rand
-	 lerp_speed_yaw = rand
+		self.hit_timer = self.hit_timer - dt
+		local rand = Math.random(0.5, 1)
+		lerp_speed_pitch = rand
+		lerp_speed_yaw = rand
 
-	 if self.hit_timer <= 0 then
-		self.hit_aftermath = false
-	 end
+		if self.hit_timer <= 0 then
+			self.hit_aftermath = false
+		end
 	end
 
 	if moving then
-	 if crouching then
-		if zooming then
-		   new_state = "zoomed_crouch_moving"
+		if crouching then
+			if zooming then
+				new_state = "zoomed_crouch_moving"
+			else
+				new_state = "crouch_moving"
+			end
+		elseif zooming then
+			new_state = "zoomed_moving"
 		else
-		   new_state = "crouch_moving"
+			new_state = "moving"
 		end
-	 elseif zooming then
-		new_state = "zoomed_moving"
-	 else
-		new_state = "moving"
-	 end
 	elseif crouching then
-	 if zooming then
-		new_state = "zoomed_crouch_still"
-	 else
-		new_state = "crouch_still"
-	 end
+		if zooming then
+			new_state = "zoomed_crouch_still"
+		else
+			new_state = "crouch_still"
+		end
 	elseif zooming then
-	 new_state = "zoomed_still"
+		new_state = "zoomed_still"
 	else
-	 new_state = "still"
+		new_state = "still"
 	end
 
 	if moving and not item_name == "es_blunderbuss" then
@@ -386,17 +386,23 @@ mod:hook_origin(WeaponSpreadExtension, "update", function (self, unit, input, dt
 
 	if hit then
 		local spread_settings = immediate_spread_settings.being_hit
-		if not item_name == "es_blunderbuss" then
-		immediate_pitch = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_pitch, "reduced_spread_hit")
-		immediate_yaw = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_yaw, "reduced_spread_hit")
+		if item_name == "es_blunderbuss" then
+			immediate_pitch = spread_settings.immediate_pitch
+			immediate_yaw = spread_settings.immediate_yaw
+		else
+			immediate_pitch = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_pitch, "reduced_spread_hit")
+			immediate_yaw = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_yaw, "reduced_spread_hit")
 		end
 		self.hit_aftermath = true
 		self.hit_timer = 1.5
-		end
+	end
 
 	if self.shooting then
 		local spread_settings = immediate_spread_settings.shooting
-		if not item_name == "es_blunderbuss" then
+		if item_name == "es_blunderbuss" then
+			immediate_pitch = spread_settings.immediate_pitch
+			immediate_yaw = spread_settings.immediate_yaw
+		else
 			immediate_pitch = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_pitch, "reduced_spread_shot")
 			immediate_yaw = owner_buff_extension:apply_buffs_to_value(spread_settings.immediate_yaw, "reduced_spread_shot")
 		end

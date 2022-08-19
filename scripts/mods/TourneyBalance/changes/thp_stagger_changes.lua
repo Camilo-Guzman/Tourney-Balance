@@ -832,7 +832,7 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 	end
 
 	if is_player_friendly_fire then
-		if damage_profile.max_friendly_damage then
+		if damage_profile and damage_profile.max_friendly_damage then
 			if calculated_damage > damage_profile.max_friendly_damage then
 				calculated_damage = damage_profile.max_friendly_damage
 			end
