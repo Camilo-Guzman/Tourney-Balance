@@ -273,26 +273,26 @@ mod:modify_talent("es_huntsman", 5, 3, {
 mod:add_text("gs_sniper_desc", "Makes all ranged attacks pin point accurate and removes aim punch.")
 
 local ignored_damage_types = {
-  temporary_health_degen = true,
-  buff_shared_medpack_temp_health = true,
-  buff_shared_medpack = true,
-  buff = true,
-  warpfire_ground = true,
-  life_tap = true,
-  health_degen = true,
-  vomit_ground = true,
-  wounded_dot = true,
-  heal = true,
-  life_drain = true
+	temporary_health_degen = true,
+	buff_shared_medpack_temp_health = true,
+	buff_shared_medpack = true,
+	buff = true,
+	warpfire_ground = true,
+	life_tap = true,
+	health_degen = true,
+	vomit_ground = true,
+	wounded_dot = true,
+	heal = true,
+	life_drain = true
 }
 
 mod:hook_origin(WeaponSpreadExtension, "extensions_ready", function (self, world, unit)
-  local owner_unit = self.owner_unit
-  self.owner_health_extension = ScriptUnit.extension(owner_unit, "health_system")
-  self.owner_status_extension = ScriptUnit.extension(owner_unit, "status_system")
-  self.owner_buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-  self.owner_locomotion_extension = ScriptUnit.extension(owner_unit, "locomotion_system")
-  self.owner_inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
+	local owner_unit = self.owner_unit
+	self.owner_health_extension = ScriptUnit.extension(owner_unit, "health_system")
+	self.owner_status_extension = ScriptUnit.extension(owner_unit, "status_system")
+	self.owner_buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+	self.owner_locomotion_extension = ScriptUnit.extension(owner_unit, "locomotion_system")
+	self.owner_inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
 end)
 
 mod:hook_origin(WeaponSpreadExtension, "update", function (self, unit, input, dt, context, t)
@@ -1244,6 +1244,101 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
 mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
 mod:add_text("kerillian_waywatcher_group_regen_desc_2", "Amaranthe also affects the other members of the party. Now gives 1 thp instead of 3 green hp.")
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe gives Kerillian 5%% ammo every tick. No longer restores health.")
+
+--Shade
+mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
+	buff_after_delay = true,
+	max_stacks = 1,
+	refresh_durations = true,
+	is_cooldown = true,
+	delayed_buff_name = "kerillian_shade_activated_ability_restealth",
+	duration = 0.2
+})
+local function is_local(unit)
+	local player = Managers.player:owner(unit)
+
+	return player and not player.remote
+end
+local function is_bot(unit)
+	local player = Managers.player:owner(unit)
+
+	return player and player.bot_player
+end
+mod:add_buff_function("shade_activated_ability_on_remove", function(unit, buff, params, world)
+	local status_extension = nil
+
+	if is_local(unit) then
+		status_extension = ScriptUnit.extension(unit, "status_system")
+
+		status_extension:remove_stealth_stacking()
+		status_extension:remove_noclip_stacking()
+	end
+
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+
+	if not talent_extension or not buff_extension then
+		return
+	end
+
+	if talent_extension:has_talent("kerillian_shade_activated_stealth_combo") then
+		buff_extension:add_buff("kerillian_shade_ult_invis_combo_blocker")
+		buff_extension:add_buff("kerillian_shade_ult_invis")
+	end
+
+	if talent_extension:has_talent("kerillian_shade_activated_ability_restealth") and buff.template.restealth then
+		buff_extension:add_buff("shade_second_stab_cooldown")
+	end
+
+	if talent_extension:has_talent("kerillian_shade_activated_ability_phasing") then
+		buff_extension:add_buff("kerillian_shade_phasing_buff")
+		buff_extension:add_buff("kerillian_shade_movespeed_buff")
+		buff_extension:add_buff("kerillian_shade_power_buff")
+	end
+
+	if is_local(unit) then
+		if not is_bot(unit) and status_extension:current_stealth_counter() == 0 then
+			local first_person_extension = ScriptUnit.extension(unit, "first_person_system")
+
+			first_person_extension:play_hud_sound_event("Play_career_ability_kerillian_shade_exit")
+			first_person_extension:play_hud_sound_event("Stop_career_ability_kerillian_shade_loop")
+
+			MOOD_BLACKBOARD.skill_shade = false
+		end
+
+		local career_extension = ScriptUnit.extension(unit, "career_system")
+
+		career_extension:set_state("default")
+
+		if Managers.state.network:game() then
+			local status_extension = ScriptUnit.extension(unit, "status_system")
+
+			status_extension:set_is_dodging(false)
+		end
+
+		local events = {
+			"Play_career_ability_kerillian_shade_exit",
+			"Stop_career_ability_kerillian_shade_loop_husk"
+		}
+		local network_manager = Managers.state.network
+		local network_transmit = network_manager.network_transmit
+		local is_server = Managers.player.is_server
+		local unit_id = network_manager:unit_game_object_id(unit)
+		local node_id = 0
+
+		for i = 1, #events, 1 do
+			local event = events[i]
+			local event_id = NetworkLookup.sound_events[event]
+
+			if is_server then
+				network_transmit:send_rpc_clients("rpc_play_husk_unit_sound_event", unit_id, node_id, event_id)
+			else
+				network_transmit:send_rpc_server("rpc_play_husk_unit_sound_event", unit_id, node_id, event_id)
+			end
+		end
+	end
+end)
+
 
 -- Bounty Hunter Talents
 -- Indisctiminate blast cdr upped to 60%

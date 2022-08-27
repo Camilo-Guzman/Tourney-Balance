@@ -338,7 +338,7 @@ mod:add_proc_function("bardin_engineer_remove_pump_stacks_on_fire", function(pla
     local wielded_slot = inventory_extension:get_wielded_slot_name()
     if wielded_slot == "slot_career_skill_weapon" then
 		ProcFunctions.bardin_engineer_remove_pump_stacks(player, buff, params)
-  end
+  	end
 end)
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks", {
     remove_buff_stack_data = {
@@ -507,7 +507,6 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 end)
 --Sister of the Thorn
 --ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
-
 
 --Shade
 --Revert Crit removal from ult
@@ -766,4 +765,9 @@ mod:hook_origin(ActionCareerBWScholar, "client_owner_start_action", function (se
 	local inventory_extension = self.inventory_extension
 
 	inventory_extension:check_and_drop_pickups("career_ability")
+end)
+
+--Explosion kill credit fix
+mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_context)
+    self.owner_unit = extension_init_data.owner_unit
 end)
