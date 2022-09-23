@@ -106,6 +106,7 @@ table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_sl
 
 -- Footknight
 -- Made Widecharge the standard Footknight ult
+ActivatedAbilitySettings.es_2[1].cooldown = 40
 mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 	self:_stop_priming()
 
@@ -507,6 +508,10 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 end)
 --Sister of the Thorn
 --ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
+mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
+	multiplier = 0.25
+})
+
 
 --Shade
 --Revert Crit removal from ult
@@ -768,6 +773,6 @@ mod:hook_origin(ActionCareerBWScholar, "client_owner_start_action", function (se
 end)
 
 --Explosion kill credit fix
-mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_context)
+mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_data)
     self.owner_unit = extension_init_data.owner_unit
 end)

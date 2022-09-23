@@ -591,6 +591,8 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ab
     duration = 10
 })
 
+mod:add_text("bardin_ironbreaker_activated_ability_taunt_range_and_duration_desc", "Increases the radius of Impenetrable's taunt by 50%%.")
+
 mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	self:_stop_priming()
 
@@ -1177,7 +1179,8 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
             end
         end
 
-        if Managers.state.network.is_server and not cooldown_talent then
+        -- if Managers.state.network.is_server and not cooldown_talent then
+        if Managers.state.network.is_server then
             local health_extension = ScriptUnit.extension(unit, "health_system")
             local status_extension = ScriptUnit.extension(unit, "status_system")
             local heal_amount = buff_template.heal_amount
@@ -1207,16 +1210,22 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
                             local status_extension = ScriptUnit.extension(player_and_bot_units[i], "status_system")
 
                             if health_extension:current_permanent_health_percent() <= regen_cap and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() and health_extension:is_alive() then
-                                --DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "career_passive")
-                                local unit_object_id = network_manager:unit_game_object_id(player_and_bot_units[i])
-                                if unit_object_id then
-                                    network_transmit:send_rpc_server("rpc_request_heal", unit_object_id, heal_amount, heal_type_id)
-                                end
+                                -- DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "career_passive")
+                                -- local unit_object_id = network_manager:unit_game_object_id(player_and_bot_units[i])
+                                -- if unit_object_id then
+                                    -- network_transmit:send_rpc_server("rpc_request_heal", unit_object_id, heal_amount, heal_type_id)
+                                -- end
+								-- give THP first so it doesn't grant GHP + THP resulting in double regen
+								DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "heal_from_proc")
+								DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "career_passive")
                             end
                         end
                     end
                 elseif health_extension:current_permanent_health_percent() <= regen_cap then
-                    DamageUtils.heal_network(unit, unit, heal_amount, "career_passive")
+                    -- DamageUtils.heal_network(unit, unit, heal_amount, "career_passive")
+					-- give THP first so it doesn't grant GHP + THP resulting in double regen
+					DamageUtils.heal_network(unit, unit, heal_amount, "heal_from_proc")
+					DamageUtils.heal_network(unit, unit, heal_amount, "career_passive")
                 end
             end
         end
@@ -1224,6 +1233,109 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
         buff.next_heal_tick = t + time_between_heals
     end
 end)
+
+
+--mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, buff, params)
+--    local t = params.t
+--    local buff_template = buff.template
+--    local next_heal_tick = buff.next_heal_tick or 0
+--    local regen_cap = 1
+--    local network_manager = Managers.state.network
+--    local network_transmit = network_manager.network_transmit
+--    local heal_type_id = NetworkLookup.heal_types.career_skill
+--    local time_between_heals = buff_template.time_between_heals
+--
+--    if next_heal_tick < t and Unit.alive(unit) then
+--        local talent_extension = ScriptUnit.extension(unit, "talent_system")
+--        local cooldown_talent = talent_extension:has_talent("kerillian_waywatcher_passive_cooldown_restore", "wood_elf", true)
+--
+--        if cooldown_talent then
+--            local weapon_slot = "slot_ranged"
+--            local inventory_extension = ScriptUnit.extension(unit, "inventory_system")
+--            local slot_data = inventory_extension:get_slot_data(weapon_slot)
+--
+--            if slot_data then
+--                local right_unit_1p = slot_data.right_unit_1p
+--                local left_unit_1p = slot_data.left_unit_1p
+--                local right_hand_ammo_extension = ScriptUnit.has_extension(right_unit_1p, "ammo_system")
+--                local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
+--                local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
+--
+--                if ammo_extension then
+--                    local ammo_bonus_fraction = 0.05
+--                    local ammo_amount = math.max(math.round(ammo_extension:max_ammo() * ammo_bonus_fraction), 1)
+--
+--                    ammo_extension:add_ammo_to_reserve(ammo_amount)
+--                end
+--            end
+--        end
+--
+--        if Managers.state.network.is_server and not cooldown_talent then
+--            local health_extension = ScriptUnit.extension(unit, "health_system")
+--            local status_extension = ScriptUnit.extension(unit, "status_system")
+--            local heal_amount = buff_template.heal_amount
+--
+--            if talent_extension:has_talent("kerillian_waywatcher_improved_regen", "wood_elf", true) then
+--                regen_cap = 1
+--                heal_amount = heal_amount * 1.5
+--            end
+--
+--            if health_extension:is_alive() and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() then
+--                if talent_extension:has_talent("kerillian_waywatcher_group_regen", "wood_elf", true) then
+--                    local side = Managers.state.side.side_by_unit[unit]
+--
+--                    if not side then
+--                        return
+--                    end
+--
+--                    heal_amount = heal_amount / 3
+--
+--                    time_between_heals = 6
+--
+--                    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+--
+--                    for i = 1, #player_and_bot_units, 1 do
+--                        if Unit.alive(player_and_bot_units[i]) then
+--                            local health_extension = ScriptUnit.extension(player_and_bot_units[i], "health_system")
+--                            local status_extension = ScriptUnit.extension(player_and_bot_units[i], "status_system")
+--
+--                            if health_extension:current_permanent_health_percent() <= regen_cap and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() and health_extension:is_alive() then
+--                                --DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "career_passive")
+--                                local unit_object_id = network_manager:unit_game_object_id(player_and_bot_units[i])
+--                                if unit_object_id then
+--                                    network_transmit:send_rpc_server("rpc_request_heal", unit_object_id, heal_amount, heal_type_id)
+--                                end
+--                            end
+--                        end
+--                    end
+--                elseif health_extension:current_permanent_health_percent() <= regen_cap then
+--                    DamageUtils.heal_network(unit, unit, heal_amount, "career_passive")
+--                end
+--            end
+--        end
+--
+--        buff.next_heal_tick = t + time_between_heals
+--    end
+--end)
+
+mod:modify_talent("we_waywatcher", 2, 1, {
+	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
+	name = "kerillian_waywatcher_movement_speed_on_special_kill",
+	num_ranks = 1,
+	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
+	description_values = {
+		{
+			value_type = "baked_percent",
+			value = 1.15
+		},
+		{
+			value = 10
+		}
+	},
+	buffs = {
+		"kerillian_waywatcher_movement_speed_on_special_kill"
+	}
+})
 
 mod:modify_talent("we_waywatcher", 2, 3, {
     description_values = {
@@ -1240,10 +1352,26 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
     duration = 10,
 	multiplier = 0.20
 })
+mod:modify_talent("we_waywatcher", 5, 1, {
+	description = "kerillian_waywatcher_extra_arrow_melee_kill_desc",
+	name = "kerillian_waywatcher_extra_arrow_melee_kill",
+	num_ranks = 1,
+	icon = "kerillian_waywatcher_extra_arrow_melee_kill",
+	description_values = {
+		{
+			value = 10
+		}
+	},
+	buffs = {
+		"kerillian_waywatcher_extra_arrow_melee_kill"
+	}
+})
 
-mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
+mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 1 health and 1 temporary health every 6 seconds.")
+mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
+--mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
 mod:add_text("kerillian_waywatcher_group_regen_desc_2", "Amaranthe also affects the other members of the party. Now gives 1 thp instead of 3 green hp.")
-mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe gives Kerillian 5%% ammo every tick. No longer restores health.")
+--mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe gives Kerillian 5%% ammo every tick. No longer restores health.")
 
 --Shade
 mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
