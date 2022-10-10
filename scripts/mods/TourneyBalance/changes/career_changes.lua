@@ -91,11 +91,6 @@ mod:hook_origin(ActionCareerDREngineer, "_fake_activate_ability", function(self,
 	end
 end)
 
---Sister of the Thorn
---mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
---    multiplier = 0.5
---})
-
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 

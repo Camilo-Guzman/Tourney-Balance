@@ -1896,7 +1896,7 @@ NewDamageProfileTemplates.tb_halberd_light_slash = {
 Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_stab.damage_profile = "tb_halberd_light_stab"
 NewDamageProfileTemplates.tb_halberd_light_stab = {
     charge_value = "light_attack",
-       cleave_distribution_smiter_default = {
+	cleave_distribution = {
         attack = 0.075,
         impact = 0.075
     },
@@ -2023,7 +2023,7 @@ NewDamageProfileTemplates.tb_halberd_heavy_slash = {
 Weapons.two_handed_halberds_template_1.actions.action_one.heavy_attack_stab.damage_profile = "tb_halberd_heavy_stab"
 NewDamageProfileTemplates.tb_halberd_heavy_stab = {
     charge_value = "heavy_attack",
-   	cleave_distribution_smiter_default = {
+   	cleave_distribution = {
 		attack = 0.075,
 		impact = 0.075
 	},
@@ -2105,7 +2105,7 @@ Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_down.dama
 Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_last.damage_profile = "tb_halberd_light_chop"
 NewDamageProfileTemplates.tb_halberd_light_chop = {
     charge_value = "light_attack",
-       cleave_distribution_smiter_default = {
+	cleave_distribution = {
         attack = 0.075,
         impact = 0.075
     },

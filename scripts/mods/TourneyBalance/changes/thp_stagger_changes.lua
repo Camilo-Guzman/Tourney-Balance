@@ -1323,13 +1323,15 @@ local INVALID_DAMAGE_TO_OVERHEAT_DAMAGE_SOURCES = {
 	overcharge = true,
 	life_tap = true,
 	ground_impact = true,
-	life_drain = true,
-    warpfire_face = true,
+	life_drain = true
+}
+local INVALID_DAMAGE_TO_OVERHEAT_DAMAGE_TYPES = {
+	warpfire_face = true,
 	vomit_face = true,
 	vomit_ground = true,
 	poison = true,
+	warpfire_ground = true,
 	plague_face = true,
-	warpfire_ground = true
 }
 local POISON_DAMAGE_TYPES = {
 	aoe_poison_dot = true,
@@ -1410,7 +1412,7 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 			local is_disabled = status_extension:is_disabled()
 
 			if not is_disabled then
-				local valid_damage_to_overheat = not INVALID_DAMAGE_TO_OVERHEAT_DAMAGE_SOURCES[damage_source]
+				local valid_damage_to_overheat = not INVALID_DAMAGE_TO_OVERHEAT_DAMAGE_SOURCES[damage_source] and not INVALID_DAMAGE_TO_OVERHEAT_DAMAGE_TYPES[damage_type]
 				local unit_side = Managers.state.side.side_by_unit[attacked_unit]
 				local player_and_bot_units = unit_side.PLAYER_AND_BOT_UNITS
 				local shot_by_friendly = false
