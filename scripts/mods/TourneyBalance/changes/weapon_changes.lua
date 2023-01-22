@@ -1584,8 +1584,8 @@ NewDamageProfileTemplates.tb_two_handed_sword_light = {
 
 --2h Hammer
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_right.damage_profile = "tb_2h_hammer_heavy"
-Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left = "tb_2h_hammer_heavy"
-Weapons.two_handed_hammers_template_1.actions.action_one.light_attack_push_left_up = "tb_2h_hammer_heavy"
+Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left.damage_profile = "tb_2h_hammer_heavy"
+Weapons.two_handed_hammers_template_1.actions.action_one.light_attack_push_left_up.damage_profile = "tb_2h_hammer_heavy"
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_right.anim_time_scale = 1.8
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left.anim_time_scale = 1.8
 
