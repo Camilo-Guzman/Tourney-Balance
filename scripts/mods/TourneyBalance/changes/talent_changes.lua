@@ -584,14 +584,14 @@ mod:modify_talent("dr_ranger", 5, 2, {
 
 --IB
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_ability_cooldown_on_damage_taken", {
-    bonus = 0.25
+    bonus = 0.4
 })
 
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ability_taunt_range_and_duration", {
-    duration = 10
-})
-
-mod:add_text("bardin_ironbreaker_activated_ability_taunt_range_and_duration_desc", "Increases the radius of Impenetrable's taunt by 50%%.")
+--mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ability_taunt_range_and_duration", {
+--    duration = 10
+--})
+--
+--mod:add_text("bardin_ironbreaker_activated_ability_taunt_range_and_duration_desc", "Increases the radius of Impenetrable's taunt by 50%%.")
 
 mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	self:_stop_priming()
@@ -753,40 +753,10 @@ mod:modify_talent("dr_slayer", 2, 1, {
 })
 mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15%% power if wielding 2 2handed weapons. Gain 10%% attackspeed if wielding 2 1handed weapons. Dead talent if not.")
 
-
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_crit_chance_buff", {
-	icon = "victor_zealot_attack_speed_on_health_percent",
-	stat_buff = "critical_strike_chance",
-	max_stacks = 1,
-	bonus = 0.2
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_crit_chance", {
-	activation_health = 0.7,
-	activate_below = true,
-	buff_to_add = "gs_bardin_slayer_crit_chance_buff",
-	update_func = "activate_buff_on_health_percent"
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_crit_chance_buff_2", {
-	icon = "victor_zealot_attack_speed_on_health_percent",
-	stat_buff = "critical_strike_chance",
-	max_stacks = 1,
-	bonus = 0.3
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_crit_chance_2", {
-	activation_health = 0.3,
-	activate_below = true,
-	buff_to_add = "gs_bardin_slayer_crit_chance_buff_2",
-	update_func = "activate_buff_on_health_percent"
-})
-
 mod:modify_talent("dr_slayer", 2, 3, {
-	description = "gs_bardin_slayer_crit_chance_desc",
-	buffs = {
-		"gs_bardin_slayer_crit_chance",
-		"gs_bardin_slayer_crit_chance_2"
-	}
+	description = "gs_bardin_slayer_crit_chance_desc"
 })
-mod:add_text("gs_bardin_slayer_crit_chance_desc", "Gain 10%% extra crit chance if under 70%% total health. Gain 50%% extra crit chance if under 30%% total health.")
+mod:add_text("gs_bardin_slayer_crit_chance_desc", "Increases critical hit chance by 10%%.")
 mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(player, buff, params)
 	if not Managers.state.network.is_server then
 		return
@@ -921,7 +891,9 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_spe
 		"speed_modifier"
 	}
 })
-
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_crit_chance", {
+	bonus = 0.1
+})
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_stacking_crit_buff", {
 	max_stacks = 3,
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
@@ -971,6 +943,24 @@ mod:modify_talent("dr_slayer", 4, 3, {
 })
 mod:add_text("gs_bardin_slayer_passive_cooldown_reduction_desc", "Each stack of Trophy Hunter increases cooldown regeneration by 67%%.")
 
+mod:add_talent_buff_template("dwarf_ranger", "bardin_slayer_dodge_speed", {
+	multiplier = 1.1,
+	remove_buff_func = "remove_movement_buff",
+	apply_buff_func = "apply_movement_buff",
+	path_to_movement_setting_to_modify = {
+		"dodging",
+		"speed_modifier"
+	}
+})
+mod:add_talent_buff_template("dwarf_ranger", "bardin_slayer_dodge_range", {
+	multiplier = 1.1,
+	remove_buff_func = "remove_movement_buff",
+	apply_buff_func = "apply_movement_buff",
+	path_to_movement_setting_to_modify = {
+		"dodging",
+		"distance_modifier"
+	}
+})
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_dr_scaling_buff", {
 	icon = "bardin_slayer_push_on_dodge",
 	stat_buff = "damage_taken",
@@ -1001,11 +991,11 @@ mod:modify_talent("dr_slayer", 5, 3, {
 	server = "both",
 	buffs = {
 		"bardin_slayer_push_on_dodge",
-		"gs_bardin_slayer_dr_scaling",
-		"gs_bardin_slayer_dr_scaling_2"
+		"bardin_slayer_dodge_range",
+		"bardin_slayer_dodge_speed"
 	}
 })
-mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. When below 50%% total health you gain 30%% damage reduction. When below 30%% you gain 60%% damage reduction.")
+mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%%.")
 
 --DamageProfileTemplates.slayer_leap_landing_impact.default_target.power_distribution.impact = 1.2
 
@@ -1187,7 +1177,7 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
 
             if talent_extension:has_talent("kerillian_waywatcher_improved_regen", "wood_elf", true) then
                 regen_cap = 1
-                heal_amount = heal_amount * 1.5
+                heal_amount = heal_amount * 2
             end
 
             if health_extension:is_alive() and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() then
@@ -1197,10 +1187,6 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
                     if not side then
                         return
                     end
-
-                    heal_amount = heal_amount / 3
-
-                    time_between_heals = 6
 
                     local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
 

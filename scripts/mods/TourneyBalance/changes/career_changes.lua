@@ -670,6 +670,14 @@ end)
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 
+--Zealot
+--Turn green hp into white hp on ult
+mod:hook_safe(CareerAbilityWHZealot, "_run_ability", function(self)
+    local player_unit = Managers.player:local_player().player_unit
+    local health_extension = ScriptUnit.extension(player_unit, "health_system")
+    local perm_health = health_extension:current_permanent_health()
+    health_extension:convert_to_temp(perm_health)
+end)
 
 -- Battle Wizard Changes
 ActivatedAbilitySettings.bw_2[1].cooldown = 60
