@@ -737,6 +737,28 @@ Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33
 
+--Elf 1h Sword
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[1].start_time = 0.5
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[2].start_time = 0.5
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[3].start_time = 0.5
+DamageProfileTemplates.light_slashing_linesman_elf.armor_modifier.attack = { 1, 0, 2, 1, 1 }
+DamageProfileTemplates.light_slashing_smiter_stab_swords.targets[1].power_distribution.attack = 0.2
+
+--2h sword elf
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_bopp.anim_time_scale = 0.95
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_right_upward.anim_time_scale = 1.25
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_left_upward.anim_time_scale = 1.25
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.anim_time_scale = 1.6
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_second.anim_time_scale = 1.6
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[1].external_multiplier = 1.5
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
+DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2
+DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].armor_modifier.attack = { 1, 0.9, 2.5, 1, 0.75 }
+DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.9, 3, 1, 1 }
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
+
 --Crowbill
 Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "light_pointy_smiter_tourney"
 Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "light_pointy_smiter_tourney"
@@ -912,6 +934,7 @@ NewDamageProfileTemplates.heavy_attack_crowbill = {
 			0.8,
 			2.5,
 			1,
+			1.2,
 			1.2
 		},
 		impact_armor_power_modifer = {
@@ -1593,7 +1616,7 @@ NewDamageProfileTemplates.tb_2h_hammer_heavy = {
 	stagger_duration_modifier = 1.8,
 	critical_strike = {
 		attack_armor_power_modifer = {
-			1,
+			1.3,
 			0.6,
 			2,
 			1,
@@ -1611,6 +1634,14 @@ NewDamageProfileTemplates.tb_2h_hammer_heavy = {
 	cleave_distribution = {
 		attack = 0.3,
 		impact = 0.8
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		attack_template = "blunt_tank",
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.125
+		}
 	},
 	targets = {
 		{
@@ -1669,10 +1700,8 @@ NewDamageProfileTemplates.tb_2h_hammer_heavy = {
 			1,
 			0.75
 		}
-	},
+	}
 }
-
-
 
 --Mace and Sword
 --lights 1,2
