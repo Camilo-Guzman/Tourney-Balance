@@ -313,6 +313,10 @@ end)
 -- Grail Knight Changes
 ActivatedAbilitySettings.es_4[1].cooldown = 60
 
+mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
+	damage_multiplier = 3
+})
+
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
 	event = "on_kill",
