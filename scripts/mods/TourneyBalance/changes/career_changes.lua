@@ -312,7 +312,7 @@ end)
 
 -- Grail Knight Changes
 ActivatedAbilitySettings.es_4[1].cooldown = 60
-
+mod:add_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 3 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
 mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
 	damage_multiplier = 3
 })

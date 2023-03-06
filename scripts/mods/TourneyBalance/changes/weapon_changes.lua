@@ -1615,8 +1615,6 @@ Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.slide_a
 Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.slide_armour_hit = true --nil
 Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
 Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
-DamageProfileTemplates.heavy_slashing_axe_linesman.cleave_distribution.attack = 0.6
-DamageProfileTemplates.heavy_slashing_axe_linesman.targets[3].power_distribution.attack = 0.25
 Weapons.two_handed_axes_template_1.actions.action_one.light_attack_up.anim_time_scale = 0.9 --0.81
 NewDamageProfileTemplates.heavy_2h_axe_tb = {
 	armor_modifier = {
