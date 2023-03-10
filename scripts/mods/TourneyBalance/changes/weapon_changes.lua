@@ -1631,9 +1631,9 @@ NewDamageProfileTemplates.light_1h_axe_tb = {
 		attack = {
 			1.25,
 			0.65,
-			2.5,
+			3,
 			1,
-			0.75,
+			1.25,
 			0.6
 		},
 		impact = {
