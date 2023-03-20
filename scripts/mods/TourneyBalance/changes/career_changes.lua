@@ -506,11 +506,10 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 	return unit
 end)
 --Sister of the Thorn
---ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
+ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
 	multiplier = 0.25
 })
-
 
 --Shade
 --Revert Crit removal from ult

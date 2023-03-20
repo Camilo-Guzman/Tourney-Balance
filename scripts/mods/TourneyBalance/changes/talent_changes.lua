@@ -1618,7 +1618,6 @@ mod:modify_talent("bw_scholar", 5, 2, {
 })
 mod:add_text("rebaltourn_traits_ranged_remove_overcharge_on_crit_desc", "Ranged critical hits refund the overcharge cost of the attack.")
 
-
 mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_dump_overcharge_buff", {
     max_stacks = 1,
     icon = "sienna_scholar_activated_ability_dump_overcharge",

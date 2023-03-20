@@ -1631,7 +1631,7 @@ NewDamageProfileTemplates.light_1h_axe_tb = {
 		attack = {
 			1.25,
 			0.65,
-			3,
+			2.5,
 			1,
 			1.25,
 			0.6
@@ -2545,11 +2545,7 @@ NewDamageProfileTemplates.tb_1h_hammer_light_1_2 = {
 	}
 }
 
---light 3, 4  (Also affects hammer and shield bop and light 3, hammer and tome lights, dual hammers bop 2, (flaming) flail light 3,4 and sienna mace light 1,2)
---DamageProfileTemplates changes also affect 1h axe lights
---DamageProfileTemplates.light_blunt_smiter.default_target.boost_curve_coefficient_headshot = 2 --1.5
---DamageProfileTemplates.light_blunt_smiter.armor_modifier.attack = { 1.25, 0.65, 3, 1, 1.25, 0.6 } --{ 1.25, 0.65, 2.5, 1, 0.75, 0.6 }
---DamageProfileTemplates.light_blunt_smiter.critical_strike.attack_armor_power_modifer = { 1.25, 0.75, 2.75, 1, 1 } --{ 1.25, 0.75, 2.75, 1, 1 }
+--light 3, 4
 Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
 Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
 Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_04.anim_time_scale = 1.5 --1.35
