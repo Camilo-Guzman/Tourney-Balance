@@ -136,13 +136,11 @@ function mod.add_talent(self, career_name, tier, index, new_talent_name, new_tal
 end
 
 --Fix clients getting too much ult recharge on explosions
-mod:add_proc_function("reduce_activated_ability_cooldown", function (player, buff, params)
-	local player_unit = player.player_unit
-
-	if Unit.alive(player_unit) then
+mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit, buff, params)
+	if Unit.alive(owner_unit) then
 		local attack_type = params[2]
 		local target_number = params[4]
-		local career_extension = ScriptUnit.extension(player_unit, "career_system")
+		local career_extension = ScriptUnit.extension(owner_unit, "career_system")
 
 		if not attack_type or attack_type == "heavy_attack" or attack_type == "light_attack" then
 			career_extension:reduce_activated_ability_cooldown(buff.bonus)
@@ -415,14 +413,12 @@ mod:hook_origin(WeaponSpreadExtension, "update", function (self, unit, input, dt
 	self.current_yaw = math.min(current_yaw, SpreadTemplates.maximum_yaw)
 end)
 
-mod:add_proc_function("gs_heal_on_ranged_kill", function (player, buff, params)
+mod:add_proc_function("gs_heal_on_ranged_kill", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 			return
 		end
 
-	local player_unit = player.player_unit
-
-	if ALIVE[player_unit] then
+	if ALIVE[owner_unit] then
 		local killing_blow_data = params[1]
 
 		if not killing_blow_data then
@@ -437,7 +433,7 @@ mod:add_proc_function("gs_heal_on_ranged_kill", function (player, buff, params)
 			if breed and breed.bloodlust_health and not breed.is_hero then
 				local heal_amount = (breed.bloodlust_health * 0.25) or 0
 
-				DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
+				DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
 			end
 		end
 	end
@@ -457,22 +453,21 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_passive", {
 	buff_func = "gs_bardin_ranger_scavenge_proc"
 })
 
-mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (player, buff, params)
+mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
 	end
 
-	local player_unit = player.player_unit
 	local offset_position_1 = Vector3(0, 0.25, 0)
 	local offset_position_2 = Vector3(0, -0.25, 0)
 
-	if Unit.alive(player_unit) then
+	if Unit.alive(owner_unit) then
 		local drop_chance = buff.template.drop_chance
-		local talent_extension = ScriptUnit.extension(player_unit, "talent_system")
+		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
 		local result = math.random(1, 100)
 
 		if result < drop_chance * 100 then
-			local player_pos = POSITION_LOOKUP[player_unit] + Vector3.up() * 0.1
+			local player_pos = POSITION_LOOKUP[owner_unit] + Vector3.up() * 0.1
 			local raycast_down = true
 			local pickup_system = Managers.state.entity:system("pickup_system")
 
@@ -757,50 +752,49 @@ mod:modify_talent("dr_slayer", 2, 3, {
 	description = "gs_bardin_slayer_crit_chance_desc"
 })
 mod:add_text("gs_bardin_slayer_crit_chance_desc", "Increases critical hit chance by 10%%.")
-mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(player, buff, params)
+mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
 	end
 
-	local player_unit = player.player_unit
 	local buff_system = Managers.state.entity:system("buff_system")
 
-	if Unit.alive(player_unit) then
+	if Unit.alive(owner_unit) then
 		local buff_name = "bardin_slayer_passive_stacking_damage_buff"
-		local talent_extension = ScriptUnit.extension(player_unit, "talent_system")
-		local buff_extension = ScriptUnit.extension(player_unit, "buff_system")
+		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
 
 		if talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
 			buff_name = "gs_bardin_slayer_passive_increased_max_stacks"
 		end
-		buff_system:add_buff(player_unit, buff_name, player_unit, false)
+		buff_system:add_buff(owner_unit, buff_name, owner_unit, false)
 
 		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
-			buff_system:add_buff(player_unit, "bardin_slayer_passive_movement_speed", player_unit, false)
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_dodge_range", player_unit, false)
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_dodge_speed", player_unit, false)
+			buff_system:add_buff(owner_unit, "bardin_slayer_passive_movement_speed", owner_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_range", owner_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_speed", owner_unit, false)
 		end
 
 		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_movement_speed_extra", player_unit, false)
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_dodge_range_extra", player_unit, false)
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_dodge_speed_extra", player_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_movement_speed_extra", owner_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_range_extra", owner_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_speed_extra", owner_unit, false)
 		end
 
 		if talent_extension:has_talent("gs_bardin_slayer_passive_stacking_crit_buff", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_stacking_crit_buff", player_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_stacking_crit_buff", owner_unit, false)
 		end
 
 		if talent_extension:has_talent("gs_bardin_slayer_passive_stacking_crit_buff", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_stacking_crit_buff_extra", player_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_stacking_crit_buff_extra", owner_unit, false)
 		end
 
 		if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_cooldown_reduction", player_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_cooldown_reduction", owner_unit, false)
 		end
 
 		if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(player_unit, "gs_bardin_slayer_passive_cooldown_reduction_extra", player_unit, false)
+			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_cooldown_reduction_extra", owner_unit, false)
 		end
 	end
 end)

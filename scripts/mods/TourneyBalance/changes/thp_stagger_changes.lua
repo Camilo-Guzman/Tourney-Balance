@@ -899,12 +899,11 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
 end
 
 -- THP & Stagger Buffs
-mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (player, buff, params)
+mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
 	end
 
-	local player_unit = player.player_unit
 	local heal_amount_crit = 1.5
 	local heal_amount_hs = 3
 	local has_procced = buff.has_procced
@@ -920,15 +919,15 @@ mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (playe
 		has_procced = false
 	end
 
-	if ALIVE[player_unit] and breed and (attack_type == "light_attack" or attack_type == "heavy_attack") and not has_procced then
+	if ALIVE[owner_unit] and breed and (attack_type == "light_attack" or attack_type == "heavy_attack") and not has_procced then
 		if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
 			buff.has_procced = true
 
-			DamageUtils.heal_network(player_unit, player_unit, heal_amount_hs, "heal_from_proc")
+			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_hs, "heal_from_proc")
 		end
 
 		if critical_hit then
-			DamageUtils.heal_network(player_unit, player_unit, heal_amount_crit, "heal_from_proc")
+			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_crit, "heal_from_proc")
 
 			buff.has_procced = true
 		end
@@ -941,14 +940,12 @@ mod:add_buff_template("rebaltourn_regrowth", {
 	event = "on_hit",
 	perk = "ninja_healing",
 })
-mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (player, buff, params)
+mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
 	end
 
-	local player_unit = player.player_unit
-
-	if ALIVE[player_unit] then
+	if ALIVE[owner_unit] then
 		local hit_unit = params[1]
 		local damage_profile = params[2]
 		local attack_type = damage_profile.charge_value
@@ -968,7 +965,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
 			heal_amount = 0.6
 		end
 		
-        local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
+        local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
         local equipment = inventory_extension:equipment()
 		local slot_data = equipment.slots.slot_melee
 	
@@ -984,7 +981,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (play
     	end
 
 		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
-			DamageUtils.heal_network(player_unit, player_unit, heal_amount, "heal_from_proc")
+			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
 		end
 	end
 end)
@@ -1026,13 +1023,12 @@ mod:add_buff_template("rebaltourn_power_level_unbalance", {
 	stat_buff = "power_level",
 	multiplier = 0.1 -- 0.075
 }) 
-mod:add_proc_function("rebaltourn_unbalance_debuff_on_stagger", function (player, buff, params)
-	local player_unit = player.player_unit
+mod:add_proc_function("rebaltourn_unbalance_debuff_on_stagger", function (owner_unit, buff, params)
 	local hit_unit = params[1]
 	local is_dummy = Unit.get_data(hit_unit, "is_dummy")
 	local buff_type = params[7]
 
-	if Unit.alive(player_unit) and (is_dummy or Unit.alive(hit_unit)) and buff_type == "MELEE_1H" or buff_type == "MELEE_2H" then
+	if Unit.alive(owner_unit) and (is_dummy or Unit.alive(hit_unit)) and buff_type == "MELEE_1H" or buff_type == "MELEE_2H" then
 		local buff_extension = ScriptUnit.extension(hit_unit, "buff_system")
 
 		if buff_extension then

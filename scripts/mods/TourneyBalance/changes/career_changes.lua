@@ -135,7 +135,7 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 			network_transmit:send_rpc_server("rpc_add_buff", owner_unit_id, buff_template_name_id, owner_unit_id, 0, false)
 		end
 	end
-	
+
 	if talent_extension:has_talent("markus_knight_wide_charge", "empire_soldier", true) then
 		buff_name = "markus_knight_heavy_buff"
 
@@ -331,13 +331,11 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_sta
         }
     }
 })
-mod:add_proc_function("bardin_engineer_remove_pump_stacks_on_fire", function(player, buff, params)
-    local player_unit = player.player_unit
-
-    local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
+mod:add_proc_function("bardin_engineer_remove_pump_stacks_on_fire", function(owner_unit, buff, params)
+    local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
     local wielded_slot = inventory_extension:get_wielded_slot_name()
     if wielded_slot == "slot_career_skill_weapon" then
-		ProcFunctions.bardin_engineer_remove_pump_stacks(player, buff, params)
+		ProcFunctions.bardin_engineer_remove_pump_stacks(owner_unit, buff, params)
   	end
 end)
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks", {
@@ -361,25 +359,25 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long"
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	
+
 	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon.actions.weapon_reload.default.chain_condition_func = function (action_user, input_extension)
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	
+
 	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon_special.actions.weapon_reload.default.condition_func = function (action_user, input_extension)
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	
+
 	return can_reload
 end
 Weapons.bardin_engineer_career_skill_weapon_special.actions.weapon_reload.default.chain_condition_func = function (action_user, input_extension)
 	local buff_extension = ScriptUnit.has_extension(action_user, "buff_system")
 	local can_reload = not buff_extension:has_buff_type("bardin_engineer_pump_max_exhaustion_buff")
-	
+
 	return can_reload
 end
 mod:hook_origin(ActionCareerDREngineerCharge, "client_owner_post_update", function (self, dt, t, world, can_damage)
@@ -420,9 +418,9 @@ mod:hook_origin(ActionCareerDREngineerCharge, "client_owner_post_update", functi
 	self.ability_charge_timer = charge_timer
 end)
 
-local function add_item(is_server, player_unit, pickup_type)
+local function add_item(is_server, owner_unit, pickup_type)
 	local player_manager = Managers.player
-	local player = player_manager:owner(player_unit)
+	local player = player_manager:owner(owner_unit)
 
 	if player then
 		local local_bot_or_human = not player.remote
@@ -430,8 +428,8 @@ local function add_item(is_server, player_unit, pickup_type)
 		if local_bot_or_human then
 			local network_manager = Managers.state.network
 			local network_transmit = network_manager.network_transmit
-			local inventory_extension = ScriptUnit.extension(player_unit, "inventory_system")
-			local career_extension = ScriptUnit.extension(player_unit, "career_system")
+			local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
+			local career_extension = ScriptUnit.extension(owner_unit, "career_system")
 			local pickup_settings = AllPickups[pickup_type]
 			local slot_name = pickup_settings.slot_name
 			local item_name = pickup_settings.item_name
@@ -453,8 +451,8 @@ local function add_item(is_server, player_unit, pickup_type)
 					local pickup_spawn_type = "dropped"
 					local pickup_name_id = NetworkLookup.pickup_names[pickup_item_to_spawn]
 					local pickup_spawn_type_id = NetworkLookup.pickup_spawn_types[pickup_spawn_type]
-					local position = POSITION_LOOKUP[player_unit]
-					local rotation = Unit.local_rotation(player_unit, 0)
+					local position = POSITION_LOOKUP[owner_unit]
+					local rotation = Unit.local_rotation(owner_unit, 0)
 
 					network_transmit:send_rpc_server("rpc_spawn_pickup", pickup_name_id, position, rotation, pickup_spawn_type_id)
 				end
@@ -471,7 +469,7 @@ local function add_item(is_server, player_unit, pickup_type)
 				inventory_extension:add_equipment(slot_name, item_data, unit_template, extra_extension_init_data)
 			end
 
-			local go_id = Managers.state.unit_storage:go_id(player_unit)
+			local go_id = Managers.state.unit_storage:go_id(owner_unit)
 			local slot_id = NetworkLookup.equipment_slots[slot_name]
 			local item_id = NetworkLookup.item_names[item_name]
 			local weapon_skin_id = NetworkLookup.weapon_skins["n/a"]
@@ -495,7 +493,7 @@ end
 
 mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, optional_rotation, is_initial_spawn, ammo_melee, ammo_ranged, healthkit, potion, grenade, ability_cooldown_percent_int, additional_items, initial_buff_names)
 	local unit = func(self, optional_position, optional_rotation, is_initial_spawn, ammo_melee, ammo_ranged, healthkit, potion, grenade, ability_cooldown_percent_int, additional_items, initial_buff_names)
-	
+
 	local is_server = self.is_server
 	local buff_extension = 	ScriptUnit.has_extension(unit, "buff_system")
 	local has_bombardier = buff_extension:has_buff_type("bardin_engineer_upgraded_grenades")
@@ -676,8 +674,8 @@ table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_pa
 --Zealot
 --Turn green hp into white hp on ult
 mod:hook_safe(CareerAbilityWHZealot, "_run_ability", function(self)
-    local player_unit = Managers.player:local_player().player_unit
-    local health_extension = ScriptUnit.extension(player_unit, "health_system")
+    local unit = self._owner_unit
+    local health_extension = ScriptUnit.extension(unit, "health_system")
     local perm_health = health_extension:current_permanent_health()
     health_extension:convert_to_temp(perm_health)
 end)
