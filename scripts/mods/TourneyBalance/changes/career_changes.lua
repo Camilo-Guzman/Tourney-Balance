@@ -94,9 +94,6 @@ end)
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 
--- Pyro
-table.insert(PassiveAbilitySettings.bw_1.buffs, "sienna_scholar_overcharge_no_slow")
-
 -- Ultimate Changes
 
 -- Footknight
@@ -152,7 +149,7 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 		end
 	end
 
-	status_extension:set_noclip(true)
+	status_extension:set_noclip(true, "skill_knight")
 
 	local hold_duration = 0.03
 	local windup_duration = 0.15
@@ -503,19 +500,161 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 	end
 	return unit
 end)
+
+--Handmaiden
+CareerSettings.we_maidenguard.attributes.max_hp = 150
+
+--Ult hitbox
+mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
+    func(self, ...)
+
+    local owner_unit = self._owner_unit
+    local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+    local bleed = talent_extension:has_talent("kerillian_maidenguard_activated_ability_damage")
+
+    if bleed then
+        local status_extension = self._status_extension
+        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
+        status_extension.do_lunge.damage.width = 1.5    --1.5    --width of hitbox
+        status_extension.do_lunge.damage.depth_padding = 0.4   --0.4    --length of hitbox
+        status_extension.do_lunge.damage.offset_forward = 0   --0    --position of hitbox
+    else
+        local status_extension = self._status_extension
+        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
+        status_extension.do_lunge.damage.width = 6.0    --1.5    --width of hitbox
+        status_extension.do_lunge.damage.depth_padding = 6.0   --0.4    --length of hitbox
+        status_extension.do_lunge.damage.offset_forward = 6.0   --0    --position of hitbox
+    end
+end)
+
 --Sister of the Thorn
 ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
 mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
-	multiplier = 0.25
+	multiplier = 0.10
 })
 
---Shade
---Revert Crit removal from ult
---mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_quick_cooldown", {
---	perk = "guaranteed_crit",
---})
+mod:hook_origin(PassiveAbilityThornsister, "_update_extra_abilities_info", function(self, talent_extension)
+    if not talent_extension then
+        return
+    end
+
+    local career_ext = self._career_extension
+
+    if not career_ext then
+        return
+    end
+
+    local max_uses = self._ability_init_data.max_stacks
+
+    if talent_extension:has_talent("kerillian_double_passive") then
+        max_uses = max_uses + 1
+    end
+
+    career_ext:update_extra_ability_uses_max(max_uses)
+
+    local cooldown = self._ability_init_data.cooldown
+
+    if talent_extension:has_talent("kerillian_thorn_sister_faster_passive") then
+        cooldown = cooldown * 0.75
+    end
+
+    career_ext:update_extra_ability_charge(cooldown)
+end)
+
+local WALL_TYPES = table.enum("default", "bleed")
+local UNIT_NAMES = {
+	default = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01",
+	bleed = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01_bleed"
+}
+
+SpawnUnitTemplates.thornsister_thorn_wall_unit = {
+	spawn_func = function (source_unit, position, rotation, state_int, group_spawn_index)
+		local UNIT_NAME = UNIT_NAMES[WALL_TYPES.default]
+		local UNIT_TEMPLATE_NAME = "thornsister_thorn_wall_unit"
+		local wall_index = state_int
+		local despawn_sound_event = "career_ability_kerillian_sister_wall_disappear"
+		local life_time = 6
+		local area_damage_params = {
+			aoe_dot_damage = 0,
+			radius = 0.3,
+			area_damage_template = "we_thornsister_thorn_wall",
+			invisible_unit = false,
+			nav_tag_volume_layer = "temporary_wall",
+			create_nav_tag_volume = true,
+			aoe_init_damage = 0,
+			damage_source = "career_ability",
+			aoe_dot_damage_interval = 0,
+			damage_players = false,
+			source_attacker_unit = source_unit,
+			life_time = life_time
+		}
+		local props_params = {
+			life_time = life_time,
+			owner_unit = source_unit,
+			despawn_sound_event = despawn_sound_event,
+			wall_index = wall_index
+		}
+		local health_params = {
+			health = 20
+		}
+		local buffs_to_add = nil
+		local source_talent_extension = ScriptUnit.has_extension(source_unit, "talent_system")
+
+		if source_talent_extension then
+			if source_talent_extension:has_talent("kerillian_thorn_sister_tanky_wall") then
+				local life_time_mult = 1
+				local life_time_bonus = 4.2
+				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
+				props_params.life_time = 6 /10 *(props_params.life_time * life_time_mult + life_time_bonus)
+			elseif source_talent_extension:has_talent("kerillian_thorn_sister_debuff_wall") then
+				local life_time_mult = 0.17
+				local life_time_bonus = 0
+				area_damage_params.create_nav_tag_volume = false
+				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
+				props_params.life_time = props_params.life_time * life_time_mult + life_time_bonus
+				UNIT_NAME = UNIT_NAMES[WALL_TYPES.bleed]
+			end
+		end
+
+		local extension_init_data = {
+			area_damage_system = area_damage_params,
+			props_system = props_params,
+			health_system = health_params,
+			death_system = {
+				death_reaction_template = "thorn_wall",
+				is_husk = false
+			},
+			hit_reaction_system = {
+				is_husk = false,
+				hit_reaction_template = "level_object"
+			}
+		}
+		local wall_unit = Managers.state.unit_spawner:spawn_network_unit(UNIT_NAME, UNIT_TEMPLATE_NAME, extension_init_data, position, rotation)
+		local random_rotation = Quaternion(Vector3.up(), math.random() * 2 * math.pi - math.pi)
+
+		Unit.set_local_rotation(wall_unit, 0, random_rotation)
+
+		local buff_extension = ScriptUnit.has_extension(wall_unit, "buff_system")
+
+		if buff_extension and buffs_to_add then
+			for i = 1, #buffs_to_add do
+				buff_extension:add_buff(buffs_to_add[i])
+			end
+		end
+
+		local thorn_wall_extension = ScriptUnit.has_extension(wall_unit, "props_system")
+
+		if thorn_wall_extension then
+			thorn_wall_extension.group_spawn_index = group_spawn_index
+		end
+	end
+}
+
+mod:add_text("kerillian_thorn_sister_tanky_wall_desc_2", "Increase the width of the Thorn Wall.")
+mod:add_text("kerillian_thorn_sister_faster_passive_desc", "Reduce the cooldown of Radiance by 25%%, taking damage sets the cooldown back 2 seconds.")
+
 --Waystalker
-ActivatedAbilitySettings.we_3[1].cooldown = 50
+ActivatedAbilitySettings.we_3[1].cooldown = 60
 local sniper_dropoff_ranges = {
 	dropoff_start = 30,
 	dropoff_end = 50
@@ -609,7 +748,6 @@ Weapons.kerillian_waywatcher_career_skill_weapon.actions.action_career_hold.prio
     skaven_ratling_gunner = 1,
     beastmen_standard_bearer = 1,
 }
-
 
 --Removed bloodshot and ult interaction
 mod:hook_origin(ActionCareerWEWaywatcher, "client_owner_post_update", function (self, dt, t, world, can_damage)
@@ -775,6 +913,23 @@ mod:hook_origin(ActionCareerBWScholar, "client_owner_start_action", function (se
 
 	inventory_extension:check_and_drop_pickups("career_ability")
 end)
+
+--Unchained
+PlayerCharacterStateOverchargeExploding.on_exit = function (self, unit, input, dt, context, t, next_state)
+    if not Managers.state.network:game() or not next_state then
+        return
+    end
+
+    CharacterStateHelper.play_animation_event(unit, "cooldown_end")
+    CharacterStateHelper.play_animation_event_first_person(self.first_person_extension, "cooldown_end")
+
+    local career_extension = ScriptUnit.extension(unit, "career_system")
+    local career_name = career_extension:career_name()
+
+    if self.falling and next_state ~= "falling" then
+        ScriptUnit.extension(unit, "whereabouts_system"):set_no_landing()
+    end
+end
 
 --Explosion kill credit fix
 mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_data)

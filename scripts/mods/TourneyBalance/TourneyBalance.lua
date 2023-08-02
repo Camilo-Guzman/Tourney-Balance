@@ -39,6 +39,15 @@ function mod:add_buff(buff_name, buff_data)
     NetworkLookup.buff_templates[buff_name] = index
 end
 
+mod:hook(InteractionDefinitions.pickup_object.client, "can_interact", function(func,interactor_unit, interactable_unit, data, config, world)
+    if Unit.has_data(interactable_unit, "unit_name") then
+        if Unit.get_data(interactable_unit, "unit_name") == "units/mutator/skulls_2023/pup_skull_of_fury" then
+            return false
+        end
+    end
+    return func(interactor_unit, interactable_unit, data, config, world)
+end)
+
 -- THP & Stagger Talent Functions & Changes
 mod:dofile("scripts/mods/TourneyBalance/changes/thp_stagger_changes")
 
@@ -50,6 +59,9 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
 
 -- Career Changes (Passives, Ultimates, etc.)
 mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
+
+--Enemies for Spicy
+mod:dofile("scripts/mods/TourneyBalance/changes/SpicyEnemies")
 
 -- on_remove_stack_down
 --[[

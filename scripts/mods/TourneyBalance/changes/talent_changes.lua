@@ -191,6 +191,17 @@ mod:modify_talent("es_knight", 2, 3, {
         }
     },
 })
+mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
+    local player_unit = unit
+
+    if Unit.alive(player_unit) then
+        local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
+
+        career_extension:reduce_activated_ability_cooldown_percent(0.7)
+    end
+end)
+mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70%% of cooldown upon allied incapacitation")
+
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
     buff_func = "buff_on_stagger_enemy"
 })
@@ -448,10 +459,26 @@ mod:modify_talent("es_huntsman", 4, 3, {
 })
 mod:add_text("gs_hs_4_3_desc", "Ranged kills restore thp equal to a quarter of bloodlust.")
 
+--Grail Knight
+mod:modify_talent("es_questingknight", 6, 2, {
+    buffs = {
+        "tb_cd_grail"
+    }
+})
+mod:add_talent_buff_template("empire_soldier", "tb_cd_grail", {
+	stat_buff = "activated_cooldown",
+	multiplier = -0.3,
+	max_stacks = 1
+})
+mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade increases movement speed by 35%% for 15 seconds. Reduces cooldown by 30%%.")
+
 --RV
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_passive", {
 	buff_func = "gs_bardin_ranger_scavenge_proc"
 })
+
+--Ales
+Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8
 
 mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
@@ -575,6 +602,11 @@ mod:modify_talent("dr_ranger", 5, 2, {
 			value = 7
 		}
 	},
+})
+
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_grenade_buff", {
+	duration = 10,
+    refresh_durations = true
 })
 
 --IB
@@ -1128,6 +1160,8 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_passive", {
     update_func = "gs_update_kerillian_waywatcher_regen"
 })
 
+mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds when below half health. This does not replace temp health.")
+
 mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, buff, params)
     local t = params.t
     local buff_template = buff.template
@@ -1347,11 +1381,74 @@ mod:modify_talent("we_waywatcher", 5, 1, {
 	}
 })
 
-mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 1 health and 1 temporary health every 6 seconds.")
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
 --mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
-mod:add_text("kerillian_waywatcher_group_regen_desc_2", "Amaranthe also affects the other members of the party. Now gives 1 thp instead of 3 green hp.")
 --mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe gives Kerillian 5%% ammo every tick. No longer restores health.")
+
+--Handmaiden
+local function is_server()
+    return Managers.player.is_server
+end
+
+--Focused Spirit
+mod:add_proc_function("lr_maidenguard_reset_unharmed_buff", function (owner_unit, buff, params)
+    local attacker_unit = params[1]
+    local damage_amount = params[2]
+    local damaged = true
+    local side = Managers.state.side.side_by_unit[owner_unit]
+    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+    local shot_by_friendly = false
+    local allies = (player_and_bot_units and #player_and_bot_units) or 0
+
+    if damage_amount and damage_amount == 0 then
+        damaged = false
+    end
+
+    for i = 1, allies, 1 do
+        local ally_unit =  player_and_bot_units[i]
+        if ally_unit == attacker_unit then
+            shot_by_friendly = true
+        end
+    end
+
+    if Unit.alive(owner_unit) and not shot_by_friendly and damaged then
+        local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+        local buff_name = "kerillian_maidenguard_power_level_on_unharmed_cooldown"
+        local network_manager = Managers.state.network
+        local network_transmit = network_manager.network_transmit
+        local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+        local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+        if is_server() then
+            buff_extension:add_buff(buff_name, {
+                attacker_unit = owner_unit
+            })
+        else
+            network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+        end
+
+        return true
+    end
+end)
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_power_level_on_unharmed", {
+    multiplier = 0.20,
+    buff_func = "lr_maidenguard_reset_unharmed_buff"
+})
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_power_level_on_unharmed_cooldown", {
+    duration = 4
+})
+mod:modify_talent("we_maidenguard", 2, 1, {
+    description = "elf_hm_hitless_desc",
+    description_values = {},
+})
+mod:add_text("elf_hm_hitless_desc", "After not taking damage for 4 seconds, increases Kerillian's power by 20.0%%. Reset upon taking damage, friendly fire will not reset the buff.")
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_crit_chance", {
+	bonus = 0.1
+})
+
+mod:add_text("kerillian_maidenguard_crit_chance_desc", "Increases critical strike chance by 10.0%%.")
 
 --Shade
 mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
@@ -1449,11 +1546,67 @@ end)
 
 
 -- Bounty Hunter Talents
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_railgun_delayed_add", {
+    max_stacks = 1,
+    multiplier = 0.8,
+})
+mod:add_text("victor_bountyhunter_activated_ability_railgun_desc_2", "Modifies Victor's sidearm to fire two powerful bullets in a straight line. Scoring a headshot with this attack will reduce the cooldown of Locked and Loaded by 80%%. This can only happen once")
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_increased_melee_damage_on_no_ammo_add", {
+    event = "on_hit"
+})
+
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_attack_speed_on_no_ammo_buff", {
+    multiplier = 0.15,
+    duration = 10
+})
+mod:add_text("victor_bountyhunter_power_burst_on_no_ammo_desc", "Ranged critical hits give 15%% ranged power and 15%% attack speed for 10 seconds.")
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_power_on_no_ammo_buff", {
+    multiplier = 0.15,
+    stat_buff = "power_level_ranged",
+    duration = 10
+})
+MeleeBuffTypes = {
+	MELEE_1H = true,
+	MELEE_2H = true
+}
+mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, params)
+    if Unit.alive(owner_unit) then
+        local buff_type = params[5]
+        local is_critical = params[6]
+
+        if is_critical and not MeleeBuffTypes[buff_type] then
+
+            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+            local buff_template = buff.template
+            local buffs = buff_template.buffs_to_add
+
+            for i = 1, #buffs do
+                local buff_name = buffs[i]
+                local network_manager = Managers.state.network
+                local network_transmit = network_manager.network_transmit
+                local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+                if is_server() then
+                    buff_extension:add_buff(buff_name, {
+                        attacker_unit = owner_unit
+                    })
+                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+                else
+                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+                end
+            end
+        end
+    end
+end)
+
+
 -- Indisctiminate blast cdr upped to 60%
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
     multiplier = -0.6, -- -0.25
     stat_buff = "activated_cooldown",
 })
+mod:add_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", " Modifies Victor's sidearm to fire two blasts of shield-penetrating pellets in a devastating cone. Reduces cooldown of Locked and Loaded by 60%%.")
 mod:modify_talent("wh_bountyhunter", 6, 3, {
     buffs = {
         "victor_bountyhunter_activated_ability_blast_shotgun_cdr",
@@ -1480,6 +1633,19 @@ PassiveAbilitySettings.wh_2.perks = {
 }
 mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
 mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
+
+--Sister of the thorn
+mod:modify_talent("we_thornsister", 6, 3, {
+    buffs = {
+        "tb_cd_thorn"
+    }
+})
+mod:add_talent_buff_template("wood_elf", "tb_cd_thorn", {
+	stat_buff = "activated_cooldown",
+	multiplier = -0.3,
+	max_stacks = 1
+})
+mod:add_text("kerillian_thorn_sister_debuff_wall_desc_2", "Thornwake instead causes roots to burst from the ground, staggering enemies and applying Blackvenom to them. Reduces cooldown by 30%%.")
 
 -- Battle Wizard Talents
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
