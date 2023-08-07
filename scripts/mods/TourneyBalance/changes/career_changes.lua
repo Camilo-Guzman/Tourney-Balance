@@ -503,6 +503,9 @@ end)
 
 --Handmaiden
 CareerSettings.we_maidenguard.attributes.max_hp = 150
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
+	range = 20
+})
 
 --Ult hitbox
 mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)

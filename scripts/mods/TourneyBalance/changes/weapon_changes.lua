@@ -369,7 +369,7 @@ Weapons.wh_deus_01_template_1.actions.action_one.default.barrels = balanced_barr
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.attack = 0.05
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.impact = 0.05
 --Beam
---DamageProfileTemplates.beam_shot.default_target.power_distribution_near.attack = 0.85
+DamageProfileTemplates.beam_shot.default_target.power_distribution_near.attack = 0.85
 Weapons.staff_blast_beam_template_1.actions.action_two.default.aim_zoom_delay = 0.01
 Weapons.staff_blast_beam_template_1.actions.action_one.default.default_zoom = "zoom_in"
 Weapons.staff_blast_beam_template_1.actions.action_one.default.zoom_thresholds = { "zoom_in_trueflight", "zoom_in" }
@@ -434,7 +434,7 @@ NewDamageProfileTemplates.beam_blast = {
 		boost_curve_coefficient = 0.5,
 		attack_template = "flame_blast",
 		power_distribution_near = {
-			attack = 0.12,
+			attack = 0.1,
 			impact = 0.275
 		},
 		power_distribution_far = {
@@ -620,7 +620,6 @@ mod:hook_origin(ActionBeam, "client_owner_post_update", function(self, dt, t, wo
 end)
 
 --Coruscation
-Weapons.bw_deus_01_template_1.actions.action_one.default.allowed_chain_actions[1].start_time = 0.6
 Weapons.bw_deus_01_template_1.actions.action_one.default.allowed_chain_actions[1].start_time = 0.5
 Weapons.bw_deus_01_template_1.actions.action_one.default.total_time = 0.65
 Weapons.bw_deus_01_template_1.actions.action_one.default.shot_count = 15
@@ -1352,7 +1351,7 @@ NewDamageProfileTemplates.light_blunt_tank_wiz = {
 	stagger_duration_modifier = 1.25,
 	critical_strike = {
 		attack_armor_power_modifer = {
-			1.1,
+			1.3,
 			0.25,
 			1.5,
 			1,
@@ -2101,7 +2100,6 @@ DamageProfileTemplates.priest_hammer_heavy_blunt_tank_upper.targets[2].power_dis
 DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[2] = 2.025
 DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[6] = 1.2
 DamageProfileTemplates.priest_hammer_blunt_smiter.critical_strike.attack_armor_power_modifer[2] = 1.8
-DamageProfileTemplates.priest_hammer_heavy_blunt_tank_upper.cleave_distribution.attack = 0.3
 NewDamageProfileTemplates.tb_2h_hammer_light_3_priest = {
 	stagger_duration_modifier = 1.5,
 	critical_strike = {

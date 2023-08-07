@@ -462,7 +462,8 @@ mod:add_text("gs_hs_4_3_desc", "Ranged kills restore thp equal to a quarter of b
 --Grail Knight
 mod:modify_talent("es_questingknight", 6, 2, {
     buffs = {
-        "tb_cd_grail"
+        "tb_cd_grail",
+		"markus_questing_knight_ability_buff_on_kill"
     }
 })
 mod:add_talent_buff_template("empire_soldier", "tb_cd_grail", {
