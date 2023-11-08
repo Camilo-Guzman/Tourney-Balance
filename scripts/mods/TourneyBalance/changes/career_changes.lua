@@ -41,6 +41,98 @@ mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_al
 	max_stacks = 3,
 	remove_buff_func = "remove_party_buff_stacks"
 })
+mod:add_buff_function("activate_party_buff_stacks_on_ally_proximity", function (owner_unit, buff, params)
+	if not Managers.state.network.is_server then
+		return
+	end
+
+	local buff_system = Managers.state.entity:system("buff_system")
+	local template = buff.template
+	local range = 20
+	local range_squared = range * range
+	local chunk_size = template.chunk_size
+	local buff_to_add = template.buff_to_add
+	local max_stacks = template.max_stacks
+	local side = Managers.state.side.side_by_unit[owner_unit]
+
+	if not side then
+		return
+	end
+
+	local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+	local own_position = POSITION_LOOKUP[owner_unit]
+	local num_nearby_allies = 0
+	local allies = #player_and_bot_units
+
+	for i = 1, allies do
+		local ally_unit = player_and_bot_units[i]
+
+		if ally_unit ~= owner_unit then
+			local ally_position = POSITION_LOOKUP[ally_unit]
+			local distance_squared = Vector3.distance_squared(own_position, ally_position)
+
+			if distance_squared < range_squared then
+				num_nearby_allies = num_nearby_allies + 1
+			end
+
+			if math.floor(num_nearby_allies / chunk_size) == max_stacks then
+				break
+			end
+		end
+	end
+
+	if not buff.stack_ids then
+		buff.stack_ids = {}
+	end
+
+	for i = 1, allies do
+		local unit = player_and_bot_units[i]
+
+		if ALIVE[unit] then
+			if not buff.stack_ids[unit] then
+				buff.stack_ids[unit] = {}
+			end
+
+			local unit_position = POSITION_LOOKUP[unit]
+			local distance_squared = Vector3.distance_squared(own_position, unit_position)
+			local buff_extension = ScriptUnit.extension(unit, "buff_system")
+
+			if range_squared < distance_squared then
+				local stack_ids = buff.stack_ids[unit]
+
+				for i = 1, #stack_ids do
+					local stack_ids = buff.stack_ids[unit]
+					local buff_id = table.remove(stack_ids)
+
+					buff_system:remove_server_controlled_buff(unit, buff_id)
+				end
+			else
+				local num_chunks = math.floor(num_nearby_allies / chunk_size)
+				local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+				if num_buff_stacks < num_chunks then
+					local difference = num_chunks - num_buff_stacks
+					local stack_ids = buff.stack_ids[unit]
+
+					for i = 1, difference do
+						local buff_id = buff_system:add_buff(unit, buff_to_add, unit, true)
+						stack_ids[#stack_ids + 1] = buff_id
+					end
+				elseif num_chunks < num_buff_stacks then
+					local difference = num_buff_stacks - num_chunks
+					local stack_ids = buff.stack_ids[unit]
+
+					for i = 1, difference do
+						local buff_id = table.remove(stack_ids)
+
+						buff_system:remove_server_controlled_buff(unit, buff_id)
+					end
+				end
+			end
+		end
+	end
+end)
+
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
 	multiplier = -0.033
 })
@@ -313,6 +405,27 @@ mod:add_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strike
 mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
 	damage_multiplier = 3
 })
+local side_quest_challenge_gs = {
+	reward = "markus_questing_knight_passive_strength_potion",
+	type = "kill_enemies",
+	amount = {
+		1,
+		100,
+		125,
+		150,
+		175,
+		200,
+		250,
+		250
+	}
+}
+
+mod:hook_origin(PassiveAbilityQuestingKnight, "_get_side_quest_challenge", function(self)
+	local side_quest_challenge = side_quest_challenge_gs
+
+	return side_quest_challenge
+end)
+
 
 -- Engineer
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_remove_pump_stacks_fire", {
@@ -502,7 +615,29 @@ mod:hook(BulldozerPlayer, "spawn", function (func, self, optional_position, opti
 end)
 
 --Handmaiden
-CareerSettings.we_maidenguard.attributes.max_hp = 150
+--CareerSettings.we_maidenguard.attributes.max_hp = 150
+table.insert(PassiveAbilitySettings.we_2.buffs, "gs_dash_ult_toggle_function")
+mod:add_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_damage_reduction ", {
+	stat_buff = "damage_taken",
+	multiplier = -0.3
+})
+PassiveAbilitySettings.we_2.perks = {
+	{
+        display_name = "career_passive_name_we_2b",
+        description = "career_passive_desc_we_2b_2"
+    },
+    {
+        display_name = "career_passive_name_we_2c",
+        description = "career_passive_desc_we_2c_2"
+    },
+	{
+		display_name = "rebaltourn_career_passive_name_we_2d",
+		description = "rebaltourn_career_passive_desc_we_2d_2"
+	}
+}
+mod:add_text("rebaltourn_career_passive_name_we_2d", "Bendy")
+mod:add_text("rebaltourn_career_passive_desc_we_2d_2", "Reduces damage taken by 30%.")
+
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
 	range = 20
 })
@@ -657,7 +792,7 @@ mod:add_text("kerillian_thorn_sister_tanky_wall_desc_2", "Increase the width of 
 mod:add_text("kerillian_thorn_sister_faster_passive_desc", "Reduce the cooldown of Radiance by 25%%, taking damage sets the cooldown back 2 seconds.")
 
 --Waystalker
-ActivatedAbilitySettings.we_3[1].cooldown = 60
+ActivatedAbilitySettings.we_3[1].cooldown = 65
 local sniper_dropoff_ranges = {
 	dropoff_start = 30,
 	dropoff_end = 50
@@ -832,7 +967,6 @@ mod:add_buff_template("sienna_adept_ability_trail", {
     end_flow_event = "smoke",
     start_flow_event = "burn",
     on_max_stacks_overflow_func = "reapply_buff",
-    remove_buff_func = "remove_dot_damage",
     apply_buff_func = "start_dot_damage",
     update_start_delay = 0.25,
     death_flow_event = "burn_death",
@@ -841,7 +975,7 @@ mod:add_buff_template("sienna_adept_ability_trail", {
     damage_profile = "burning_dot",
     update_func = "apply_dot_damage",
     max_stacks = 1,
-    perk = buff_perks.burning
+    perks = { buff_perks.burning }
 })
 --Firebomb fix
 mod:add_buff_template("burning_dot_fire_grenade", {
@@ -851,13 +985,12 @@ mod:add_buff_template("burning_dot_fire_grenade", {
 	start_flow_event = "burn",
 	death_flow_event = "burn_death",
 	 update_start_delay = 0.75,
-	remove_buff_func = "remove_dot_damage",
 	apply_buff_func = "start_dot_damage",
 	time_between_dot_damages = 1,
 	damage_type = "burninating",
 	damage_profile = "burning_dot_firegrenade",
 	update_func = "apply_dot_damage",
-	perk = buff_perks.burning
+	perks = { buff_perks.burning }
 })
 
 DamageProfileTemplates.burning_dot_firegrenade.default_target.armor_modifier.attack[6] = 0.25

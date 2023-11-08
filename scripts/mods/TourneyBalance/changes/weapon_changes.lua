@@ -1,5 +1,5 @@
 local mod = get_mod("TourneyBalance")
-
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 --Staff can lift chemists
 --Weapons.staff_life.actions.action_two.default.prioritized_breeds.chaos_plague_sorcerer = 1
 --Breeds.chaos_plague_sorcerer.controllable = true
@@ -123,6 +123,13 @@ DamageProfileTemplates.dr_deus_01_glance.armor_modifier.attack[2] = 0.6
 DamageProfileTemplates.dr_deus_01_glance.armor_modifier.attack[6] = 0.6
 DamageProfileTemplates.dr_deus_01_glance.armor_modifier.attack[1] = 0.6
 Weapons.dr_deus_01_template_1.ammo_data.reload_time = 4
+
+--Strength boost reduction
+DamageProfileTemplates.dr_deus_01_explosion.default_target.boost_curve_coefficient = 0.5
+DamageProfileTemplates.dr_deus_01_glance.default_target.boost_curve_coefficient = 0.5
+DamageProfileTemplates.dr_deus_01_explosion.default_target.boost_curve_type = "tank_curve"
+DamageProfileTemplates.dr_deus_01_glance.default_target.boost_curve_type = "tank_curve"
+DamageProfileTemplates.dr_deus_01.default_target.boost_curve_coefficient = 0.5
 
 --Conservative doesnt proc if Trollhammer equiped
 mod:add_proc_function("replenish_ammo_on_headshot_ranged", function (owner_unit, buff, params)
@@ -268,7 +275,7 @@ NewDamageProfileTemplates.tb_shot_sniper_pistol_burst = {
 	armor_modifier_near = {
 		attack = {
 			1,
-			1,
+			1.2,
 			1,
 			1,
 			0.75,
@@ -386,8 +393,9 @@ local carbine_dropoff_ranges = {
 }
 NewDamageProfileTemplates.beam_blast = {
 	charge_value = "projectile",
+	dot_balefire_variant = true,
 	no_stagger_damage_reduction_ranged = true,
-	dot_template_name = "burning_1W_dot",
+	dot_template_name = "burning_dot_1tick",
 	critical_strike = {
 		attack_armor_power_modifer = {
 			1,
@@ -630,11 +638,9 @@ ExplosionTemplates.magma.aoe.duration = 3
 ExplosionTemplates.magma.aoe.damage_interval = 1
 PlayerUnitStatusSettings.overcharge_values.magma_charged_2 = 10
 PlayerUnitStatusSettings.overcharge_values.magma_charged = 14
-local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 mod:add_buff_template("burning_magma_dot", {
         duration = 3,
         name = "burning_magma_dot",
-        remove_buff_func = "remove_dot_damage",
         end_flow_event = "smoke",
         start_flow_event = "burn",
 		update_start_delay = 0.75,
@@ -648,7 +654,7 @@ mod:add_buff_template("burning_magma_dot", {
         update_func = "apply_dot_damage",
         reapply_buff_func = "reapply_dot_damage",
         max_stacks = 15,
-        perk = buff_perks.burning
+        perks = { buff_perks.burning }
 })
 --Flamethrowers
 Weapons.drakegun_template_1.actions.action_one.shoot_charged.damage_interval = 0.30
@@ -817,6 +823,20 @@ Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33
 
+--Glaive
+
+-- Buffs to push attack chain attack speed and linesman on bopp, removes linesman from heavy attack, makes both heavy attacks have the Heavy 2 profile--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.hit_mass_count = LINESMAN_HIT_MASS_COUNT	--no modifier on live--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left_upward.anim_time_scale = 0.95*1.15		-- 1.0--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left.anim_time_scale = 0.95*1.4			-- 1.25--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.anim_time_scale = 0.95*1.2			-- 1.15--
+Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.damage_profile = "heavy_slashing_smiter_glaive"
+Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.hit_mass_count = NONE
+
+--buffs cleave and stagger cleave from 8.21 and 7.46 respectively to 10.74 each --
+DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.attack = 0.36
+DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.impact = 0.36
+
 --Elf 1h Sword
 Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.damage_profile = "tb_1h_sword_light_1_2"
 Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_left.damage_profile = "tb_1h_sword_light_1_2"
@@ -843,7 +863,7 @@ Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
 DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2
 DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].armor_modifier.attack = { 1, 0.9, 2.5, 1, 0.75 }
-DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.9, 3, 1, 1 }
+DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.7, 3, 1, 1 }
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
@@ -1502,6 +1522,232 @@ DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution
 --DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.attack = 0.06
 DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.impact = 0.25
 --DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.attack = 0.25
+
+--Flail
+
+--Light 1, 2, Bopp Attack Speed--
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.anim_time_scale = 1 * 1.25	-- 1.0
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_right.anim_time_scale = 1 * 1.35	-- 1.0
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_bopp.anim_time_scale = 1 * 1.3	-- 1.1
+
+--Light 1, 2, 3, 4 Movement Speed--
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.buff_data.external_multiplier = 0.85	-- 0.75
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_right.buff_data.external_multiplier = 0.85	--0.75
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_down.buff_data.external_multiplier = 0.85	--0.75
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.buff_data.external_multiplier = 1.0	--0.75
+
+--New Damage Profiles Applied--
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_down.damage_profile = "light_1h_flail_tb"
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_last.damage_profile = "light_1h_flail_tb"
+Weapons.one_handed_flail_template_1.actions.action_one.heavy_attack.damage_profile = "heavy_1h_flail_tb"
+Weapons.one_handed_flail_template_1.actions.action_one.heavy_attack_left.damage_profile = "heavy_1h_flail_tb"
+
+--Light 1, 2, Bopp Stagger Cleave
+DamageProfileTemplates.light_blunt_tank_spiked.cleave_distribution.impact = 0.5			--0.25
+--New Damage Profiles Flail Lights 3,4
+NewDamageProfileTemplates.light_1h_flail_tb = {
+	armor_modifier = {
+		attack = {
+			1.25,
+			0.9,
+			2.5,
+			1,
+			1,
+			0.9
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			0.75,
+			0.25
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.25,
+			0.9,
+			2.75,
+			1,
+			0.9
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		attack_template = "slashing_smiter",
+		boost_curve_coefficient_headshot = 1.5,
+		power_distribution = {
+			attack = 0.25,
+			impact = 0.175
+		}
+	},
+	ignore_stagger_reduction = true,
+	targets =  {
+		[2] = {
+			boost_curve_type = "smiter_curve",
+			attack_template = "slashing_smiter",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.075
+			}
+		}
+	},
+}
+
+--Flail Heavy 1,2-- --Increased Target 2 Damage from 0.15 to 0.25-- --Increased Target 3 Damage from 0.075 to 0.12--
+NewDamageProfileTemplates.heavy_1h_flail_tb = {
+	armor_modifier = {
+		attack = {
+			1.3,
+			0.8,
+			1.3,
+			1.3,
+			1.3,
+			1
+		},
+		impact = {
+			1,
+			1,
+			0.5,
+			1,
+			0.75,
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.3,
+			1.0,
+			1.3,
+			1.3,
+			1.3
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.6,
+		impact = 0.65
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		attack_template = "blunt_tank",
+		boost_curve_coefficient_headshot = 1.5,
+		power_distribution = {
+			attack = 0.3,
+			impact = 0.3
+		}
+	},
+	ignore_stagger_reduction = true,
+	targets =  {
+		[2] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.3
+			}
+		},
+		[3] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.12,
+				impact = 0.3
+			}
+		},
+		[4] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.3
+			}
+		}
+	},
+}
 
 --2h Sword
 --bop
@@ -3093,7 +3339,7 @@ NewDamageProfileTemplates.tb_halberd_light_chop = {
     },
     critical_strike = {
         attack_armor_power_modifer = {
-            1,
+            1.25,
             .76,
             2.5,
             1,
@@ -3787,6 +4033,51 @@ Weapons.two_handed_cog_hammers_template_1.actions.action_one.heavy_attack_right.
 	}
 }
 
-
+--Shield crit fix
+DamageProfileTemplates.shield_slam_target = {
+	stagger_duration_modifier = 1.75,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			2
+		}
+	},
+	charge_value = "heavy_attack",
+	shield_break = true,
+	default_target = "default_target_slam_target_tank_M",
+	armor_modifier = "armor_modifier_slam_target_tank_M"
+}
+DamageProfileTemplates.shield_slam = {
+	stagger_duration_modifier = 1.75,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			1.5
+		}
+	},
+	charge_value = "heavy_attack",
+	armor_modifier = "armor_modifier_slam_tank_M",
+	default_target = "default_target_slam_tank_M"
+}
 
 

@@ -152,12 +152,6 @@ mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit,
 	end
 end)
 
---Mecenary Talents
-mod:modify_talent_buff_template("empire_soldier", "markus_mercenary_ability_cooldown_on_damage_taken", {
-    bonus = 0.25
-})
-
-
 -- Footknight Talents
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_ability_cooldown_on_damage_taken", {
    bonus = 0.35
@@ -180,6 +174,20 @@ mod:modify_talent("es_knight", 2, 2, {
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
     duration = 5
 })
+mod:modify_talent("es_knight", 2, 1, {
+    description = "markus_knight_free_pushes_on_block_desc",
+	name = "markus_knight_free_pushes_on_block",
+	num_ranks = 1,
+	icon = "markus_knight_free_pushes_on_block",
+	description_values = {
+		{
+			value = 1
+		}
+	},
+	buffs = {
+		"markus_knight_free_pushes_on_block"
+	}
+})
 mod:modify_talent("es_knight", 2, 3, {
     description_values = {
         {
@@ -201,6 +209,27 @@ mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
     end
 end)
 mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70%% of cooldown upon allied incapacitation")
+
+mod:modify_talent("es_knight", 5, 2, {
+    description = "markus_knight_power_level_impact_desc",
+	name = "markus_knight_power_level_impact",
+	buffer = "server",
+	num_ranks = 1,
+	icon = "markus_knight_power_level_impact",
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.2
+		}
+	},
+	buffs = {
+		"markus_knight_power_level_impact"
+	}
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_impact", {
+    multiplier = 0.2
+})
+mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%%.")
 
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
     buff_func = "buff_on_stagger_enemy"
@@ -501,7 +530,7 @@ mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, bu
 
 			if talent_extension:has_talent("bardin_ranger_passive_spawn_potions_or_bombs", "dwarf_ranger", true) then
 				local counter = buff.counter
-				local spawn_requirement = 9
+				local spawn_requirement = 11
 				if counter == 5 then
 					local randomness = math.random(1, 4)
 					buff.counter = buff.counter + randomness
@@ -1249,108 +1278,24 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
     end
 end)
 
-
---mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, buff, params)
---    local t = params.t
---    local buff_template = buff.template
---    local next_heal_tick = buff.next_heal_tick or 0
---    local regen_cap = 1
---    local network_manager = Managers.state.network
---    local network_transmit = network_manager.network_transmit
---    local heal_type_id = NetworkLookup.heal_types.career_skill
---    local time_between_heals = buff_template.time_between_heals
---
---    if next_heal_tick < t and Unit.alive(unit) then
---        local talent_extension = ScriptUnit.extension(unit, "talent_system")
---        local cooldown_talent = talent_extension:has_talent("kerillian_waywatcher_passive_cooldown_restore", "wood_elf", true)
---
---        if cooldown_talent then
---            local weapon_slot = "slot_ranged"
---            local inventory_extension = ScriptUnit.extension(unit, "inventory_system")
---            local slot_data = inventory_extension:get_slot_data(weapon_slot)
---
---            if slot_data then
---                local right_unit_1p = slot_data.right_unit_1p
---                local left_unit_1p = slot_data.left_unit_1p
---                local right_hand_ammo_extension = ScriptUnit.has_extension(right_unit_1p, "ammo_system")
---                local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
---                local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
---
---                if ammo_extension then
---                    local ammo_bonus_fraction = 0.05
---                    local ammo_amount = math.max(math.round(ammo_extension:max_ammo() * ammo_bonus_fraction), 1)
---
---                    ammo_extension:add_ammo_to_reserve(ammo_amount)
---                end
---            end
---        end
---
---        if Managers.state.network.is_server and not cooldown_talent then
---            local health_extension = ScriptUnit.extension(unit, "health_system")
---            local status_extension = ScriptUnit.extension(unit, "status_system")
---            local heal_amount = buff_template.heal_amount
---
---            if talent_extension:has_talent("kerillian_waywatcher_improved_regen", "wood_elf", true) then
---                regen_cap = 1
---                heal_amount = heal_amount * 1.5
---            end
---
---            if health_extension:is_alive() and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() then
---                if talent_extension:has_talent("kerillian_waywatcher_group_regen", "wood_elf", true) then
---                    local side = Managers.state.side.side_by_unit[unit]
---
---                    if not side then
---                        return
---                    end
---
---                    heal_amount = heal_amount / 3
---
---                    time_between_heals = 6
---
---                    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
---
---                    for i = 1, #player_and_bot_units, 1 do
---                        if Unit.alive(player_and_bot_units[i]) then
---                            local health_extension = ScriptUnit.extension(player_and_bot_units[i], "health_system")
---                            local status_extension = ScriptUnit.extension(player_and_bot_units[i], "status_system")
---
---                            if health_extension:current_permanent_health_percent() <= regen_cap and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() and health_extension:is_alive() then
---                                --DamageUtils.heal_network(player_and_bot_units[i], unit, heal_amount, "career_passive")
---                                local unit_object_id = network_manager:unit_game_object_id(player_and_bot_units[i])
---                                if unit_object_id then
---                                    network_transmit:send_rpc_server("rpc_request_heal", unit_object_id, heal_amount, heal_type_id)
---                                end
---                            end
---                        end
---                    end
---                elseif health_extension:current_permanent_health_percent() <= regen_cap then
---                    DamageUtils.heal_network(unit, unit, heal_amount, "career_passive")
---                end
---            end
---        end
---
---        buff.next_heal_tick = t + time_between_heals
---    end
---end)
-
-mod:modify_talent("we_waywatcher", 2, 1, {
-	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
-	name = "kerillian_waywatcher_movement_speed_on_special_kill",
-	num_ranks = 1,
-	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
-	description_values = {
-		{
-			value_type = "baked_percent",
-			value = 1.15
-		},
-		{
-			value = 10
-		}
-	},
-	buffs = {
-		"kerillian_waywatcher_movement_speed_on_special_kill"
-	}
-})
+--mod:modify_talent("we_waywatcher", 2, 1, {
+--	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
+--	name = "kerillian_waywatcher_movement_speed_on_special_kill",
+--	num_ranks = 1,
+--	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
+--	description_values = {
+--		{
+--			value_type = "baked_percent",
+--			value = 1.15
+--		},
+--		{
+--			value = 10
+--		}
+--	},
+--	buffs = {
+--		"kerillian_waywatcher_movement_speed_on_special_kill"
+--	}
+--})
 
 mod:modify_talent("we_waywatcher", 2, 3, {
     description_values = {
@@ -1367,20 +1312,20 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
     duration = 10,
 	multiplier = 0.20
 })
-mod:modify_talent("we_waywatcher", 5, 1, {
-	description = "kerillian_waywatcher_extra_arrow_melee_kill_desc",
-	name = "kerillian_waywatcher_extra_arrow_melee_kill",
-	num_ranks = 1,
-	icon = "kerillian_waywatcher_extra_arrow_melee_kill",
-	description_values = {
-		{
-			value = 10
-		}
-	},
-	buffs = {
-		"kerillian_waywatcher_extra_arrow_melee_kill"
-	}
-})
+--mod:modify_talent("we_waywatcher", 5, 1, {
+--	description = "kerillian_waywatcher_extra_arrow_melee_kill_desc",
+--	name = "kerillian_waywatcher_extra_arrow_melee_kill",
+--	num_ranks = 1,
+--	icon = "kerillian_waywatcher_extra_arrow_melee_kill",
+--	description_values = {
+--		{
+--			value = 10
+--		}
+--	},
+--	buffs = {
+--		"kerillian_waywatcher_extra_arrow_melee_kill"
+--	}
+--})
 
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
 --mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
@@ -1450,6 +1395,15 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_crit_chance",
 })
 
 mod:add_text("kerillian_maidenguard_crit_chance_desc", "Increases critical strike chance by 10.0%%.")
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_push", {
+    amount_to_add = 3,
+    max_sub_buff_stacks = 3,
+})
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_block", {
+    amount_to_add = 3,
+    max_sub_buff_stacks = 3,
+})
 
 --Shade
 mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
@@ -1808,4 +1762,86 @@ PassiveAbilitySettings.bw_1.perks = {
 mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
 mod:add_text("rebaltourn_career_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
 
+--Necromancer
+mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)
+	local is_crit = params [param_order.is_critical_strike]
+	if not is_crit then
+		return
+	end
 
+	local is_first_hit = params [param_order.first_hit]
+	if not is_first_hit then
+		return
+	end
+
+	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+	local exploded_already = false
+	if buff_extension then
+		exploded_already = buff_extension:has_buff_type("no_proc_necro")
+	end
+	if exploded_already then
+		return
+	end
+
+	local hit_unit = params [param_order.attacked_unit]
+	local is_burning, applied_this_frame = Managers.state.status_effect:has_status(hit_unit, StatusEffectNames.burning_balefire)
+	if not is_burning or applied_this_frame then
+		return
+	end
+
+	local damage_dealt = params [param_order.damage_amount]
+	if damage_dealt <= 0 then
+		return
+	end
+
+	local template = buff.template
+	local side = Managers.state.side.side_by_unit [owner_unit]
+	local hit_pos = POSITION_LOOKUP [hit_unit]
+	if not hit_pos then
+
+		return
+	end
+
+	local unit_storage = Managers.state.unit_storage
+	local hit_go_id = unit_storage:go_id(hit_unit)
+	local node_id = 0
+	if Unit.has_node(hit_unit, "j_spine") then
+		node_id = Unit.node(hit_unit, "j_spine")
+	end
+
+	local network_manager = Managers.state.network
+	network_manager.network_transmit:send_rpc_server("rpc_play_particle_effect", NetworkLookup.effects ["fx/necromancer_cursed_explosion_blood"], hit_go_id, node_id, Vector3.zero(), Quaternion.identity(), false)
+	network_manager.network_transmit:send_rpc_server("rpc_play_particle_effect", NetworkLookup.effects ["fx/necromancer_cursed_explosion_blue"], hit_go_id, node_id, Vector3(0.5, 0, 0), Quaternion.identity(), false)
+
+	local audio_system = Managers.state.entity:system("audio_system")
+	audio_system:play_audio_unit_event("Play_career_necro_ability_cursed_blood", hit_unit, "j_spine")
+
+	local broadphase_categories = side.enemy_broadphase_categories
+	local nearby_units = FrameTable.alloc_table()
+	local num_nearby = AiUtils.broadphase_query(hit_pos, template.radius, nearby_units, broadphase_categories)
+
+	if num_nearby == 0 then
+		return
+	end
+
+	local t = Managers.time:time("game")
+	local propagated_damage = damage_dealt * template.propagation_multiplier
+	local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+	local power_level = career_extension:get_career_power_level()
+	for i = 1, num_nearby do
+		local target_unit = nearby_units [i]
+		if target_unit ~= hit_unit then
+			local damage_direction = Vector3.normalize(POSITION_LOOKUP [target_unit] - hit_pos)
+			DamageUtils.add_damage_network(target_unit, owner_unit, propagated_damage, "torso", "buff", nil, damage_direction, "buff", nil, owner_unit, nil, nil, false, nil, nil, nil, nil, true)
+			DamageUtils.stagger_ai(t, DamageProfileTemplates.necromancer_crit_burst_stagger, i + 1, power_level, target_unit, owner_unit, "torso", damage_direction, nil, nil, false, "buff", owner_unit)
+		end
+	end
+
+	local buff_system = Managers.state.entity:system("buff_system")
+	local buff_to_add = "no_proc_necro"
+	buff_system:add_buff(owner_unit, buff_to_add, owner_unit, false)
+end)
+
+mod:add_talent_buff_template("bright_wizard", "no_proc_necro", {
+	duration = 0.3
+})
