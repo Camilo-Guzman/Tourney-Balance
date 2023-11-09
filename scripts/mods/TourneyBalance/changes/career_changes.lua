@@ -616,8 +616,8 @@ end)
 
 --Handmaiden
 --CareerSettings.we_maidenguard.attributes.max_hp = 150
-table.insert(PassiveAbilitySettings.we_2.buffs, "gs_dash_ult_toggle_function")
-mod:add_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_damage_reduction ", {
+table.insert(PassiveAbilitySettings.we_2.buffs, "kerillian_maidenguard_passive_damage_reduction")
+mod:add_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_damage_reduction", {
 	stat_buff = "damage_taken",
 	multiplier = -0.3
 })

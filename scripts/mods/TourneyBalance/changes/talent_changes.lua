@@ -617,6 +617,8 @@ mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, bu
 		end
 	end
 end)
+mod:add_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 10%% chance to drop a potion or bomb instead of a Survivalist cache.")
+
 
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_reduced_damage_taken_headshot_buff", {
 	multiplier = -0.2
@@ -1404,7 +1406,10 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_bloc
     amount_to_add = 3,
     max_sub_buff_stacks = 3,
 })
-
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_block_dummy_buff", {
+    max_stacks = 3
+})
+mod:add_text("kerillian_maidenguard_speed_on_block_desc", "Blocking an attack or pushing an enemy grants the next three strikes 30%% attack speed and 10%% power.")
 --Shade
 mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
 	buff_after_delay = true,

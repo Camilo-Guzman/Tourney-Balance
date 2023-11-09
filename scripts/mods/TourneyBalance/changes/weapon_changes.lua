@@ -326,7 +326,7 @@ NewDamageProfileTemplates.tb_shot_sniper_pistol_burst = {
 			attack = 0.5,
 			impact = 0.5
 		},
-		range_dropoff_settings = shotgun_dropoff_ranges
+		range_modifier_settings = shotgun_dropoff_ranges
 	}
 }
 --Hagbane
@@ -449,7 +449,7 @@ NewDamageProfileTemplates.beam_blast = {
 			attack = 0.05,
 			impact = 0.15
 		},
-		range_dropoff_settings = carbine_dropoff_ranges
+		range_modifier_settings = carbine_dropoff_ranges
 	}
 }
 
@@ -863,7 +863,7 @@ Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
 DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2
 DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].armor_modifier.attack = { 1, 0.9, 2.5, 1, 0.75 }
-DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.7, 3, 1, 1 }
+DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.9, 3, 1, 1 }
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
@@ -1524,7 +1524,6 @@ DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution
 --DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.attack = 0.25
 
 --Flail
-
 --Light 1, 2, Bopp Attack Speed--
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.anim_time_scale = 1 * 1.25	-- 1.0
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_right.anim_time_scale = 1 * 1.35	-- 1.0
@@ -1534,7 +1533,7 @@ Weapons.one_handed_flail_template_1.actions.action_one.light_attack_bopp.anim_ti
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.buff_data.external_multiplier = 0.85	-- 0.75
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_right.buff_data.external_multiplier = 0.85	--0.75
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_down.buff_data.external_multiplier = 0.85	--0.75
-Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.buff_data.external_multiplier = 1.0	--0.75
+Weapons.one_handed_flail_template_1.actions.action_one.light_attack_last.buff_data.external_multiplier = 1.0	--0.75
 
 --New Damage Profiles Applied--
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_down.damage_profile = "light_1h_flail_tb"
@@ -1666,33 +1665,41 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 	default_target = {
 		boost_curve_type = "tank_curve",
 		attack_template = "blunt_tank",
-		boost_curve_coefficient_headshot = 1.5,
+		armor_modifier = {
+			attack = {
+				1,
+				0.25,
+				1,
+				1,
+				0.75
+			},
+			impact = {
+				0.75,
+				0.25,
+				1,
+				1,
+				0.75
+			}
+		},
 		power_distribution = {
-			attack = 0.3,
+			attack = 0.075,
 			impact = 0.3
 		}
 	},
 	ignore_stagger_reduction = true,
 	targets =  {
+		[1] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			boost_curve_coefficient_headshot = 1.5,
+			power_distribution = {
+				attack = 0.3,
+				impact = 0.3
+			}
+		},
 		[2] = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
 			power_distribution = {
 				attack = 0.25,
 				impact = 0.3
@@ -1701,52 +1708,12 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 		[3] = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
 			power_distribution = {
 				attack = 0.12,
 				impact = 0.3
 			}
-		},
-		[4] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "blunt_tank",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.3
-			}
 		}
-	},
+	}
 }
 
 --2h Sword
