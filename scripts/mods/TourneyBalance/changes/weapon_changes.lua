@@ -1626,19 +1626,18 @@ NewDamageProfileTemplates.light_1h_flail_tb = {
 NewDamageProfileTemplates.heavy_1h_flail_tb = {
 	armor_modifier = {
 		attack = {
-			1.3,
-			0.8,
-			1.3,
-			1.3,
-			1.3,
-			1
+			1,
+			0.25,
+			1,
+			1,
+			0.75
 		},
 		impact = {
-			1,
-			1,
-			0.5,
-			1,
 			0.75,
+			0.25,
+			1,
+			1,
+			0.75
 		}
 	},
 	critical_strike = {
@@ -1665,22 +1664,6 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 	default_target = {
 		boost_curve_type = "tank_curve",
 		attack_template = "blunt_tank",
-		armor_modifier = {
-			attack = {
-				1,
-				0.25,
-				1,
-				1,
-				0.75
-			},
-			impact = {
-				0.75,
-				0.25,
-				1,
-				1,
-				0.75
-			}
-		},
 		power_distribution = {
 			attack = 0.075,
 			impact = 0.3
@@ -1692,6 +1675,23 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
 			boost_curve_coefficient_headshot = 1.5,
+			armor_modifier = {
+				attack = {
+					1.3,
+					0.8,
+					1.3,
+					1.3,
+					1.3,
+					1
+				},
+				impact = {
+					1,
+					1,
+					0.5,
+					1,
+					0.75,
+				}
+			},
 			power_distribution = {
 				attack = 0.3,
 				impact = 0.3
