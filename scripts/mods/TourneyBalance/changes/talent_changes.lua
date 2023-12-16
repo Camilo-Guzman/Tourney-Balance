@@ -208,7 +208,7 @@ mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
         career_extension:reduce_activated_ability_cooldown_percent(0.7)
     end
 end)
-mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70%% of cooldown upon allied incapacitation")
+mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70% of cooldown upon allied incapacitation")
 
 mod:modify_talent("es_knight", 5, 2, {
     description = "markus_knight_power_level_impact_desc",
@@ -229,7 +229,7 @@ mod:modify_talent("es_knight", 5, 2, {
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_impact", {
     multiplier = 0.2
 })
-mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%%.")
+mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%.")
 
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
     buff_func = "buff_on_stagger_enemy"
@@ -256,7 +256,7 @@ mod:modify_talent("es_knight", 6, 2, {
     description = "rebaltourn_markus_knight_heavy_buff_desc",
     description_values = {},
 })
-mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0%% for 6 seconds.")
+mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0% for 6 seconds.")
 
 --Huntsman
 ActivatedAbilitySettings.es_1[1].cooldown = 60
@@ -617,7 +617,7 @@ mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, bu
 		end
 	end
 end)
-mod:add_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 10%% chance to drop a potion or bomb instead of a Survivalist cache.")
+mod:add_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 10% chance to drop a potion or bomb instead of a Survivalist cache.")
 
 
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_reduced_damage_taken_headshot_buff", {
@@ -646,12 +646,6 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_ability_cool
     bonus = 0.4
 })
 
---mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ability_taunt_range_and_duration", {
---    duration = 10
---})
---
---mod:add_text("bardin_ironbreaker_activated_ability_taunt_range_and_duration_desc", "Increases the radius of Impenetrable's taunt by 50%%.")
-
 mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	self:_stop_priming()
 
@@ -678,7 +672,7 @@ mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 
 		buffs = {
 			"bardin_ironbreaker_activated_ability_taunt_range_and_duration",
-			"bardin_ironbreaker_activated_ability_block_cost",
+			"bardin_ironbreaker_activated_ability_taunt_range_and_duration_block_cost",
 			"bardin_ironbreaker_activated_ability_taunt_range_and_duration_attack_intensity_decay_increase"
 		}
 	end
@@ -810,7 +804,7 @@ mod:modify_talent("dr_slayer", 2, 1, {
 		"bardin_slayer_power_on_double_two_handed_weapons"
 	}
 })
-mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15%% power if wielding 2 2handed weapons. Gain 10%% attackspeed if wielding 2 1handed weapons. Dead talent if not.")
+mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15% power if wielding 2 2handed weapons. Gain 10% attackspeed if wielding 2 1handed weapons. Dead talent if not.")
 
 mod:modify_talent("dr_slayer", 2, 3, {
 	description = "gs_bardin_slayer_crit_chance_desc"
@@ -977,7 +971,7 @@ mod:add_talent("dr_slayer", 4, 2, "gs_bardin_slayer_passive_stacking_crit_buff",
 	description_values = {},
 	buffs = {}
 })
-mod:add_text("bardin_slayer_passive_stacking_crit_buff_desc", "Each stack of Trophy Hunter increases power by 5%%.")
+mod:add_text("bardin_slayer_passive_stacking_crit_buff_desc", "Each stack of Trophy Hunter increases power by 5%.")
 mod:add_text("bardin_slayer_passive_stacking_crit_buff_name", "Blood Drunk")
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_reduction", {
 	icon = "bardin_slayer_passive_cooldown_reduction_on_max_stacks",
@@ -999,7 +993,7 @@ mod:modify_talent("dr_slayer", 4, 3, {
 	description = "gs_bardin_slayer_passive_cooldown_reduction_desc",
 	description_values = {}
 })
-mod:add_text("gs_bardin_slayer_passive_cooldown_reduction_desc", "Each stack of Trophy Hunter increases cooldown regeneration by 67%%.")
+mod:add_text("gs_bardin_slayer_passive_cooldown_reduction_desc", "Each stack of Trophy Hunter increases cooldown regeneration by 67%.")
 
 mod:add_talent_buff_template("dwarf_ranger", "bardin_slayer_dodge_speed", {
 	multiplier = 1.1,
@@ -1053,139 +1047,7 @@ mod:modify_talent("dr_slayer", 5, 3, {
 		"bardin_slayer_dodge_speed"
 	}
 })
-mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%%.")
-
---DamageProfileTemplates.slayer_leap_landing_impact.default_target.power_distribution.impact = 1.2
-
-
---Engineer Talents
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_melee_power_free_shot_stat", {
-	multiplier = 0.20 -- 0.10
-})
-mod:modify_talent("dr_engineer", 2, 3, {
-    description_values = {
-		{
-			value_type = "percent",
-			value = 0.2 --BuffTemplates.bardin_engineer_melee_power_free_shot_stat.multiplier
-		},
-		{
-			value = 5 --BuffTemplates.bardin_engineer_melee_power_free_shot_counter.max_stacks
-		},
-		{
-			value_type = "percent",
-			value = 0.15 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.multiplier
-		},
-		{
-			value = 10 --BuffTemplates.bardin_engineer_melee_power_range_power_buff.duration
-		}
-	},
-})
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_stacking_damage_reduction_buff", {
-	max_stacks = 4, -- 3
-	multiplier = -0.10 -- -0.05
-})
-mod:modify_talent("dr_engineer", 5, 1, {
-    description_values = {
-        {
-			value = 5 --BuffTemplates.bardin_engineer_stacking_damage_reduction.update_frequency
-		},
-		{
-			value = 4 --BuffTemplates.bardin_engineer_stacking_damage_reduction_buff.max_stacks
-		},
-		{
-			value_type = "percent",
-			value = -0.10 --BuffTemplates.bardin_engineer_stacking_damage_reduction_buff.multiplier
-		}
-	},
-})
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff_long_attack_speed", {
-	multiplier = 0.05
-})
-mod:modify_talent("dr_engineer", 4, 3, {
-		description_values = {
-		{
-			value_type = "percent",
-			value = 0.05 --BuffTemplates.bardin_engineer_pump_buff_long_attack_speed.multiplier
-		}
-	},
-})
-mod:modify_talent("dr_engineer", 5, 2, {
-	description = "rebaltourn_bardin_engineer_upgraded_grenades_desc",
-	description_values = {},
-})
-mod:add_text("rebaltourn_bardin_engineer_upgraded_grenades_desc", "Bardin's Bombs gain the effect of both regular Bombs and Incendiary Bombs. You also start the mission with 2 bombs.")
-
-mod:modify_talent("dr_engineer", 4, 1, {
-		description = "rebaltourn_bardin_engineer_pump_buff_desc",
-		description_values = {
-		{
-			value_type = "percent",
-			value = 0.15 --BuffTemplates.bardin_engineer_pump_buff.multiplier
-		}
-	},
-})
-mod:add_text("rebaltourn_bardin_engineer_pump_buff_desc", "Upon reaching 5 stacks of Pressure Bardin gains 15%% power.")
-BuffTemplates.bardin_engineer_power_on_max_pump_buff.buffs[1].duration = nil
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_pump_buff", {
-    max_stack_data = {
-        buffs_to_add = {
-            "bardin_engineer_pump_exhaustion_buff"
-        },
-        --[[talent_buffs_to_add = {
-            bardin_engineer_power_on_max_pump = {
-                buff_to_add = "bardin_engineer_power_on_max_pump_buff",
-                rpc_sync = true
-            }
-        }]]
-    },
-    update_func = "bardin_engineer_power_on_max_pump"
-})
-mod:add_buff_function("bardin_engineer_power_on_max_pump", function (unit, buff, params)
-    if Unit.alive(unit) then
-        local buff_to_add_name = "bardin_engineer_power_on_max_pump_buff"
-        local buff_name = "bardin_engineer_pump_buff"
-        local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-        if talent_extension:has_talent("bardin_engineer_pump_buff_long") then
-            buff_name = "bardin_engineer_pump_buff_long"
-        end
-        if talent_extension:has_talent("bardin_engineer_power_on_max_pump") then
-            local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-            local current_stacks = buff_extension:num_buff_type(buff_name)
-            local max_stacks = 5 --tonumber(BuffTemplates[buff_name].buffs[1].max_stacks)
-            local has_buff = buff_extension:has_buff_type(buff_to_add_name)
-
-            if current_stacks == max_stacks and not has_buff then
-                buff_extension:add_buff(buff_to_add_name)
-            elseif current_stacks < max_stacks and has_buff then
-                local remove_buff_template = buff_extension:get_buff_type(buff_to_add_name)
-                if remove_buff_template then
-                    local remove_buff_id = remove_buff_template.id
-                    buff_extension:remove_buff(remove_buff_id)
-                end
-            end
-        end
-    end
-end)
---Increased Super-Armor damage with Gromril-Plated Shot
-DamageProfileTemplates.engineer_ability_shot_armor_pierce.armor_modifier_near.attack = {
-	1,
-	1,
-	1,
-	1,
-	0.5,
-	0.4
-}
-DamageProfileTemplates.engineer_ability_shot_armor_pierce.armor_modifier_far.attack = {
-	1,
-	1,
-	1,
-	1,
-	0.5,
-	0.4
-}
---Gromril Shots spread + longer range
-Weapons.bardin_engineer_career_skill_weapon_special.default_spread_template = "repeating_handgun"
-Weapons.bardin_engineer_career_skill_weapon_special.actions.action_one.armor_pierce_fire.range = 100
+mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%.")
 
 --Waystalker
 mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_passive", {
@@ -1330,8 +1192,6 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
 --})
 
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
---mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds.")
---mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe gives Kerillian 5%% ammo every tick. No longer restores health.")
 
 --Handmaiden
 local function is_server()
@@ -1390,13 +1250,13 @@ mod:modify_talent("we_maidenguard", 2, 1, {
     description = "elf_hm_hitless_desc",
     description_values = {},
 })
-mod:add_text("elf_hm_hitless_desc", "After not taking damage for 4 seconds, increases Kerillian's power by 20.0%%. Reset upon taking damage, friendly fire will not reset the buff.")
+mod:add_text("elf_hm_hitless_desc", "After not taking damage for 4 seconds, increases Kerillian's power by 20.0%. Reset upon taking damage, friendly fire will not reset the buff.")
 
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_crit_chance", {
 	bonus = 0.1
 })
 
-mod:add_text("kerillian_maidenguard_crit_chance_desc", "Increases critical strike chance by 10.0%%.")
+mod:add_text("kerillian_maidenguard_crit_chance_desc", "Increases critical strike chance by 10%%.")
 
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_push", {
     amount_to_add = 3,
@@ -1576,7 +1436,7 @@ mod:modify_talent("wh_bountyhunter", 4, 1, {
     description = "rebaltourn_victor_bountyhunter_blessed_combat_desc",
     description_values = {},
 })
-mod:add_text("rebaltourn_victor_bountyhunter_blessed_combat_desc", "Melee strikes makes up to the next 6 ranged shots deal 15%% more damage. Ranged hits makes up to the next 6 melee strikes deal 15%% more damage.")
+mod:add_text("rebaltourn_victor_bountyhunter_blessed_combat_desc", "Melee strikes makes up to the next 6 ranged shots deal 15% more damage. Ranged hits makes up to the next 6 melee strikes deal 15% more damage.")
 PassiveAbilitySettings.wh_2.perks = {
 	{
 		display_name = "career_passive_name_wh_2b",
@@ -1643,12 +1503,83 @@ mod:modify_talent("bw_adept", 6, 2, {
         "sienna_adept_activated_ability_explosion_buff"
     },
 })
-mod:add_text("rebaltourn_sienna_adept_activated_ability_explosion_desc", "Fire Walk explosion radius and burn damage increased. No longer leaves a burning trail. Cooldown of Fire Walk reduced by 20%%.")
+mod:add_text("rebaltourn_sienna_adept_activated_ability_explosion_desc", "Fire Walk explosion radius and burn damage increased. No longer leaves a burning trail. Cooldown of Fire Walk reduced by 20%.")
 
 mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_explosion_buff", {
     stat_buff = "activated_cooldown",
 	multiplier = -0.2
 })
+
+local InfiniteBurnDotLookup = InfiniteBurnDotLookup or {}
+local buff_perk_names = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+mod:hook_origin(BuffUtils, "generate_infinite_burn_variants", function(buff_templates)
+	for template_name, template in pairs(buff_templates) do
+		if not string.find(template_name, "_infinite") then
+			local new_name = template_name .. "_infinite"
+			local new_buff_template = table.clone(template)
+
+			for _, sub_buff in ipairs(new_buff_template.buffs) do
+				local perks = sub_buff.perks
+				if perks and table.find(perks, buff_perk_names.burning) then
+					sub_buff.name = "infinite_burning_dot"
+					sub_buff.duration = nil
+					sub_buff.on_max_stacks_overflow_func = "reapply_infinite_burn"
+					sub_buff.max_stacks = 1
+
+					if sub_buff.time_between_dot_damages then
+						sub_buff.time_between_dot_damages = sub_buff.time_between_dot_damages / 2
+					end
+
+					InfiniteBurnDotLookup [template_name] = new_name
+					buff_templates [new_name] = new_buff_template
+					break
+				end
+			end
+		end
+	end
+end)
+
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+mod:add_buff_template("burning_dot_1tick_infinite", {
+    duration = nil,
+	name = "infinite_burning_dot",
+	apply_buff_func = "start_dot_damage",
+	on_max_stacks_overflow_func = "reapply_infinite_burn",
+	update_start_delay = 1.5,
+	time_between_dot_damages = 0.75,
+	max_stacks = 1,
+	damage_type = "burninating",
+	damage_profile = "burning_dot",
+	update_func = "apply_dot_damage",
+    perks = { buff_perks.burning }
+})
+mod:add_buff_template("burning_dot_3tick_infinite", {
+    duration = nil,
+	name = "infinite_burning_dot",
+	apply_buff_func = "start_dot_damage",
+	on_max_stacks_overflow_func = "reapply_infinite_burn",
+	update_start_delay = 1,
+	time_between_dot_damages = 0.5,
+	max_stacks = 1,
+	damage_type = "burninating",
+	damage_profile = "burning_dot",
+	update_func = "apply_dot_damage",
+	perks = { buff_perks.burning }
+})
+
+mod:add_buff_template("beam_burning_dot_infinite", {
+    duration = nil,
+	name = "infinite_burning_dot",
+	apply_buff_func = "start_dot_damage",
+	update_start_delay = 1,
+	time_between_dot_damages = 0.5,
+	max_stacks = 1,
+	damage_type = "burninating",
+	damage_profile = "beam_burning_dot",
+	update_func = "apply_dot_damage",
+	perks = { buff_perks.burning }
+})
+
 --mod:modify_talent("bw_adept", 6, 3, {
 --    buffs = {
 --		"sienna_adept_increased_ult_cooldown"
@@ -1659,113 +1590,7 @@ mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_ex
 --	apply_buff_func = "add_modify_ability_max_cooldown",
 --	multiplier = 0.5
 --})
---mod:add_text("sienna_adept_ability_trail_double_desc", "Fire Walk can be activated a second time within 10 seconds. Increases the cooldown of Fire Walk by 50.0%%.")
-
--- Pyromancer Talents
-mod:add_buff_function("gs_activate_buff_stacks_based_on_certain_health_percentage", function(unit, buff, params)
-	if not Managers.state.network.is_server then
-		return
-	end
-
-	local health_extension = ScriptUnit.extension(unit, "health_system")
-	local buff_extension = ScriptUnit.extension(unit, "buff_system")
-	local buff_system = Managers.state.entity:system("buff_system")
-	local template = buff.template
-	local max_health = health_extension:get_max_health()
-	local current_health = health_extension:current_health()
-	local health_percentage = current_health / max_health
-	local stacks_to_add = 0
-	if health_percentage >= 0.5 and health_percentage < 0.65 then
-		stacks_to_add = 1
-	elseif health_percentage >= 0.65 and health_percentage < 0.8 then
-		stacks_to_add = 2
-	elseif health_percentage >= 0.8 then
-		stacks_to_add = 3
-	end
-	local buff_to_add = template.buff_to_add
-	local num_chunks = stacks_to_add
-	local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
-
-	if not buff.stack_ids then
-		buff.stack_ids = {}
-	end
-
-	if num_buff_stacks < num_chunks then
-		local difference = num_chunks - num_buff_stacks
-
-		for i = 1, difference, 1 do
-			local buff_id = buff_system:add_buff(unit, buff_to_add, unit, true)
-			local stack_ids = buff.stack_ids
-			stack_ids[#stack_ids + 1] = buff_id
-		end
-	elseif num_chunks < num_buff_stacks then
-		local difference = num_buff_stacks - num_chunks
-
-		for i = 1, difference, 1 do
-			local stack_ids = buff.stack_ids
-			local buff_id = table.remove(stack_ids, 1)
-
-			buff_system:remove_server_controlled_buff(unit, buff_id)
-		end
-	end
-end)
-mod:add_talent_buff_template("bright_wizard", "gs_sienna_scholar_crit_chance_above_health_threshold", {
-	buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_buff",
-	update_func = "gs_activate_buff_stacks_based_on_certain_health_percentage",
-	update_frequency = 0.2
-})
-mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
-	max_stacks = 4,
-	icon = "sienna_scholar_crit_chance_above_health_threshold",
-	stat_buff = "critical_strike_chance",
-	bonus = 0.05
-})
-mod:modify_talent("bw_scholar", 2, 3, {
-    buffs = {
-        "gs_sienna_scholar_crit_chance_above_health_threshold"
-    },
-    description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
-    description_values = {},
-})
-mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0%% while above 50.0%% health, increased by 10.0%% while above 65.0%% health and increased by 15.0%% while above 80.0%% health.")
-
-mod:modify_talent("bw_scholar", 5, 2, {
-	buffs = {
-		"traits_ranged_remove_overcharge_on_crit"
-	},
-	description = "rebaltourn_traits_ranged_remove_overcharge_on_crit_desc",
-	description_values = {},
-})
-mod:add_text("rebaltourn_traits_ranged_remove_overcharge_on_crit_desc", "Ranged critical hits refund the overcharge cost of the attack.")
-
-mod:add_talent_buff_template("bright_wizard", "sienna_scholar_activated_ability_dump_overcharge_buff", {
-    max_stacks = 1,
-    icon = "sienna_scholar_activated_ability_dump_overcharge",
-    stat_buff = "critical_strike_chance",
-    bonus = 0.15,
-    duration = 10,
-    refresh_durations = true,
-})
-mod:modify_talent("bw_scholar", 6, 1, {
-	description = "rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc",
-	description_values = {},
-})
-mod:add_text("rebaltourn_sienna_scholar_activated_ability_dump_overcharge_buff_desc", "The Burning Head also removes all overcharge and grants 15%% increased crit chance for 10 seconds.")
-mod:add_text("sienna_scholar_activated_ability_heal_desc", "The Burning Head grants 20 temporary health when used.")
-
-PassiveAbilitySettings.bw_1.perks = {
-	{
-		display_name = "career_passive_name_bw_1b",
-		description = "career_passive_desc_bw_1b_2"
-	},
-	{
-		display_name = "rebaltourn_career_passive_name_bw_1c",
-		description = "rebaltourn_career_passive_desc_bw_1c_2"
-	}
-}
-
-mod:add_text("rebaltourn_career_passive_name_bw_1c", "Complete Control")
-mod:add_text("rebaltourn_career_passive_desc_bw_1c_2", "No longer slowed from being overcharged.")
+--mod:add_text("sienna_adept_ability_trail_double_desc", "Fire Walk can be activated a second time within 10 seconds. Increases the cooldown of Fire Walk by 50.0%.")
 
 --Necromancer
 mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)

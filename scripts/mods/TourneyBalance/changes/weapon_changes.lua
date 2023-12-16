@@ -1719,6 +1719,7 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 --2h Sword
 --bop
 Weapons.two_handed_swords_template_1.actions.action_one.light_attack_bopp.anim_time_scale = 1.35
+Weapons.two_handed_swords_template_1.actions.action_one.light_attack_bopp.damage_profile = "medium_slashing_smiter_2h"
 --Heavies
 --DamageProfileTemplates.heavy_slashing_linesman.targets[2].power_distribution.attack = 0.4
 --DamageProfileTemplates.heavy_slashing_linesman.targets[2].armor_modifier = { attack = { 1, 0.4, 2, 1, 1 }, impact = { 1, 0.5, 0.5, 1, 1} }
@@ -2829,6 +2830,8 @@ DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[1].boost_curve_ty
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[1].boost_curve_coefficient_headshot = 1.5
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[1].power_distribution.attack = 0.35 --0.3
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[2].power_distribution.attack = 0.175 --0.1
+DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[3].power_distribution.attack = 0.1
+DamageProfileTemplates.medium_slashing_tank_1h_finesse.targets[4].power_distribution.attack = 0.075
 Weapons.one_handed_swords_template_1.actions.action_one.heavy_attack_left.range_mod = 1.4 --1.25
 Weapons.one_handed_swords_template_1.actions.action_one.heavy_attack_right.range_mod = 1.4 --1.25
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.cleave_distribution = "cleave_distribution_tank_L"
