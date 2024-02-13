@@ -714,8 +714,9 @@ mod:add_proc_function("kerillian_waywatcher_consume_extra_shot_buff", function (
 end)
 
 --Shade
+table.insert(PassiveAbilitySettings.we_1.buffs, "kerillian_shade_passive_stealth_parry_buff_remover")
 mod:modify_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry", {
-    event = "on_timed_block",
+    event = "on_timed_block_long",
     buff_to_add = "kerillian_shade_passive_stealth_parry_buff",
 	buff_func = "shade_passive_parry_proc"
 })
@@ -731,6 +732,23 @@ mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry_
     event = "on_critical_hit",
     buff_func = "remove_shade_passive_crit_buff"
 })
+
+mod:add_proc_function("remove_shade_passive_crit_buff", function (owner_unit, buff, params)
+    if Unit.alive(owner_unit) then
+        local attack_type = params[2]
+
+        if not attack_type or (attack_type ~= "light_attack" and attack_type ~= "heavy_attack") then
+            return
+        end
+
+        local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+        local crit_buff = buff_extension:get_non_stacking_buff("kerillian_shade_passive_stealth_parry_buff")
+
+        if crit_buff then
+            buff_extension:remove_buff(crit_buff.id)
+        end
+    end
+end)
 
 mod:add_talent_buff_template("wood_elf", "kerrilian_stealth_parry_cooldown", {
     duration = 15,
@@ -812,8 +830,31 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_shade_charged_backstabs_b
 	max_stacks = 1
 })
 
+mod:add_proc_function("kerillian_shade_buff_on_charged_backstab", function(owner_unit, buff, params)
+	local hit_unit = params[1]
+
+	if ALIVE[owner_unit] and ALIVE[hit_unit] then
+		local player_unit_pos = POSITION_LOOKUP[owner_unit]
+		local hit_unit_pos = POSITION_LOOKUP[hit_unit]
+		local owner_to_hit_dir = Vector3.normalize(hit_unit_pos - player_unit_pos)
+		local hit_unit_direction = Quaternion.forward(Unit.local_rotation(hit_unit, 0))
+		local hit_angle = Vector3.dot(hit_unit_direction, owner_to_hit_dir)
+		local behind_target = hit_angle >= 0.55 and hit_angle <= 1
+		local attack_type = params[2]
+		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+		local buff_to_add = buff.template.buff_to_add
+
+		if behind_target and attack_type == "heavy_attack" then
+			if not buff_extension:has_buff_type("kerillian_shade_passive_improved_crit_blocker") then
+				buff_extension:add_buff(buff_to_add)
+				buff_extension:add_buff("kerillian_shade_passive_improved_crit_blocker")
+			end
+		end
+	end
+end)
+
 mod:add_text("kerillian_shade_charged_backstabs_desc", "Charged Backstabs increase Cleave Power by 50%% for 10 seconds.")
-mod:add_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a Backstab grants 25%% more damage to first enemy hit with each melee attack")
+mod:add_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a Backstab grants 25%% more damage to first enemy hit with each melee attack.")
 mod:add_text("career_passive_desc_we_1d", "Parrying an attack grants Kerillian a guaranteed melee critical strike. Every 15 seconds, Kerillian can quickly dodge after a parry to gain invisibility for a short duration.")
 
 -- Bounty Hunter
@@ -913,7 +954,7 @@ mod:hook_origin(ActionMeleeStart, "client_owner_post_update", function (self, dt
 		status_extension:set_charge_blocking(true)
 
 		status_extension.timed_block = t + 0.5
-		status_extension.timed_block_long = t + 1
+		status_extension.timed_block_long = t + 0.75
 	end
 
 	if self.zoom_condition_function and self.zoom_condition_function(action.lookup_data) then
@@ -957,7 +998,7 @@ mod:hook_origin(ActionBlock, "client_owner_start_action", function (self, new_ac
 	status_extension:set_blocking(true)
 
 	status_extension.timed_block = t + 0.5
-	status_extension.timed_block_long = t + 1
+	status_extension.timed_block_long = t + 0.75
 end)
 
 mod:hook_origin(GenericStatusExtension, "init", function (self, extension_init_context, unit, extension_init_data)

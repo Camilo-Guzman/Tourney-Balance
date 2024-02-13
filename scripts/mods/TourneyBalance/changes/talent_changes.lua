@@ -1754,3 +1754,4 @@ DamageProfileTemplates.trapped_soul.default_target.power_distribution_far.impact
 mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
 	multiplier = 0
 })
+mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
