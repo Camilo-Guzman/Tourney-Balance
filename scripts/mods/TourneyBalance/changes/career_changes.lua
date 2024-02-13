@@ -142,6 +142,8 @@ mod:add_text("markus_knight_damage_taken_ally_proximity_desc_2", "Increases dama
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 
 -- Ultimate Changes
+--Huntsman
+ActivatedAbilitySettings.es_1[1].cooldown = 75
 
 -- Footknight
 -- Made Widecharge the standard Footknight ult
@@ -711,6 +713,109 @@ mod:add_proc_function("kerillian_waywatcher_consume_extra_shot_buff", function (
     return should_consume_shot
 end)
 
+--Shade
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry", {
+    event = "on_timed_block",
+    buff_to_add = "kerillian_shade_passive_stealth_parry_buff",
+	buff_func = "shade_passive_parry_proc"
+})
+
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry_buff", {
+    stat_buff = "critical_strike_chance_melee",
+    bonus = 1,
+    icon = "kerillian_shade_perk_blur",
+    max_stacks = 1
+})
+
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry_buff_remover", {
+    event = "on_critical_hit",
+    buff_func = "remove_shade_passive_crit_buff"
+})
+
+mod:add_talent_buff_template("wood_elf", "kerrilian_stealth_parry_cooldown", {
+    duration = 15,
+	max_stacks = 1,
+	icon = "kerillian_shade_perk_blur",
+	debuff = true,
+	is_cooldown = true
+})
+
+local function is_server()
+    return Managers.player.is_server
+end
+mod:add_proc_function("shade_passive_parry_proc", function(owner_unit, buff, params)
+	if ALIVE[owner_unit] then
+		local buff_template = buff.template
+		local buff_name = buff_template.buff_to_add
+		local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+		local network_manager = Managers.state.network
+		local network_transmit = network_manager.network_transmit
+		local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+		local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+		if is_server() then
+			buff_extension:add_buff(buff_name, {
+				attacker_unit = owner_unit,
+			})
+			network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+		else
+			network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+		end
+
+		local on_cooldown = false
+		if buff_extension then
+			on_cooldown = buff_extension:has_buff_type("kerrilian_stealth_parry_cooldown")
+		end
+
+		if not on_cooldown then
+			local buffs_to_add = {
+				"kerrilian_stealth_parry_cooldown",
+				"kerillian_shade_dash_stealth",
+			}
+
+			local player = Managers.player:owner(owner_unit)
+			local player_unit = player.player_unit
+			local local_player = player.local_player
+			if local_player or is_server and bot_player then
+
+				for i = 1, #buffs_to_add do
+					local buff_names = buffs_to_add[i]
+
+					if is_server() then
+						buff_extension:add_buff(buff_names, {
+							attacker_unit = player_unit,
+						})
+						network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+					else
+						network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+					end
+				end
+			end
+		end
+	end
+end)
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_dash_stealth_active", {
+	duration = 2.25,
+})
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_backstabs_cooldown_regeneration_buff", {
+	duration = 10,
+	multiplier = 0.25,
+	stat_buff = "first_melee_hit_damage",
+})
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_charged_backstabs_buff", {
+	duration = 10,
+	multiplier = 0.5,
+	stat_buff = "power_level_melee_cleave",
+	max_stacks = 1
+})
+
+mod:add_text("kerillian_shade_charged_backstabs_desc", "Charged Backstabs increase Cleave Power by 50%% for 10 seconds.")
+mod:add_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a Backstab grants 25%% more damage to first enemy hit with each melee attack")
+mod:add_text("career_passive_desc_we_1d", "Parrying an attack grants Kerillian a guaranteed melee critical strike. Every 15 seconds, Kerillian can quickly dodge after a parry to gain invisibility for a short duration.")
+
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 
@@ -783,3 +888,278 @@ end
 mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_data)
     self.owner_unit = extension_init_data.owner_unit
 end)
+
+mod:hook_origin(ActionMeleeStart, "client_owner_post_update", function (self, dt, t, world)
+	local action = self.current_action
+	local owner_unit = self.owner_unit
+	local action_start_time = self.action_start_t
+	local blocking_charge = action.blocking_charge
+	local status_extension = self.status_extension
+
+	if not status_extension.blocking and blocking_charge and t > action_start_time + self._block_delay then
+		local go_id = Managers.state.unit_storage:go_id(owner_unit)
+
+		if not LEVEL_EDITOR_TEST then
+			if self.is_server then
+				Managers.state.network.network_transmit:send_rpc_clients("rpc_set_blocking", go_id, true)
+				Managers.state.network.network_transmit:send_rpc_clients("rpc_set_charge_blocking", go_id, true)
+			else
+				Managers.state.network.network_transmit:send_rpc_server("rpc_set_blocking", go_id, true)
+				Managers.state.network.network_transmit:send_rpc_server("rpc_set_charge_blocking", go_id, true)
+			end
+		end
+
+		status_extension:set_blocking(true)
+		status_extension:set_charge_blocking(true)
+
+		status_extension.timed_block = t + 0.5
+		status_extension.timed_block_long = t + 1
+	end
+
+	if self.zoom_condition_function and self.zoom_condition_function(action.lookup_data) then
+		local input_extension = self.input_extension
+		local buff_extension = self.buff_extension
+
+		if not status_extension:is_zooming() and self.aim_zoom_time <= t then
+			status_extension:set_zooming(true, action.default_zoom)
+		end
+
+		if buff_extension:has_buff_perk("increased_zoom") and status_extension:is_zooming() and input_extension:get("action_three") then
+			status_extension:switch_variable_zoom(action.buffed_zoom_thresholds)
+		end
+	end
+end)
+
+mod:hook_origin(ActionBlock, "client_owner_start_action", function (self, new_action, t)
+	ActionBlock.super.client_owner_start_action(self, new_action, t)
+
+	self.current_action = new_action
+	self.action_time_started = t
+	local input_extension = ScriptUnit.extension(self.owner_unit, "input_system")
+
+	input_extension:reset_input_buffer()
+
+	local owner_unit = self.owner_unit
+	local go_id = Managers.state.unit_storage:go_id(owner_unit)
+
+	if not LEVEL_EDITOR_TEST then
+		if self.is_server then
+			Managers.state.network.network_transmit:send_rpc_clients("rpc_set_blocking", go_id, true)
+		else
+			Managers.state.network.network_transmit:send_rpc_server("rpc_set_blocking", go_id, true)
+		end
+	end
+
+	Unit.flow_event(self.first_person_unit, "sfx_block_started")
+
+	local status_extension = self._status_extension
+
+	status_extension:set_blocking(true)
+
+	status_extension.timed_block = t + 0.5
+	status_extension.timed_block_long = t + 1
+end)
+
+mod:hook_origin(GenericStatusExtension, "init", function (self, extension_init_context, unit, extension_init_data)
+	self.world = extension_init_context.world
+	self.profile_id = extension_init_data.profile_id
+
+	fassert(self.profile_id)
+
+	self.unit = unit
+	self.pacing_intensity = 0
+	self.pacing_intensity_decay_delay = 0
+	self.move_speed_multiplier = 1
+	self.move_speed_multiplier_timer = 1
+	self.invisible = {}
+	self.crouching = false
+	self.blocking = false
+	self.override_blocking = nil
+	self.charge_blocking = false
+	self.catapulted = false
+	self.catapulted_direction = nil
+	self.pounced_down = false
+	self.on_ladder = false
+	self.is_ledge_hanging = false
+	self.left_ladder_timer = 0
+	self.aim_unit = nil
+	self.revived = false
+	self.dead = false
+	self.pulled_up = false
+	self.overpowered = false
+	self.overpowered_template = nil
+	self.overpowered_attacking_unit = nil
+	self._has_blocked = false
+	self.my_dodge_cd = 0
+	self.my_dodge_jump_override_t = 0
+	self.dodge_cooldown = 0
+	self.dodge_cooldown_delay = 0
+	self.is_aiming = false
+	self.dodge_count = 2
+	self.combo_target_count = 0
+	self.fatigue = 0
+	self.last_fatigue_gain_time = 0
+	self.show_fatigue_gui = false
+	self.max_fatigue_points = 100
+	self.next_hanging_damage_time = 0
+	self.block_broken = false
+	self.block_broken_at_t = -math.huge
+	self.stagger_immune = false
+	self.pushed = false
+	self.pushed_at_t = -math.huge
+	self.push_cooldown = false
+	self.push_cooldown_timer = false
+	self.timed_block = nil
+	self.timed_block_long = nil
+	self.shield_block = nil
+	self.charged = false
+	self.charged_at_t = -math.huge
+	self.interrupt_cooldown = false
+	self.interrupt_cooldown_timer = nil
+	self.inside_transport_unit = nil
+	self.using_transport = false
+	self.dodge_position = Vector3Box(0, 0, 0)
+	self.overcharge_exploding = false
+	self.fall_height = nil
+	self.under_ratling_gunner_attack = nil
+	self.last_catapulted_time = 0
+	self.grabbed_by_tentacle = false
+	self.grabbed_by_tentacle_status = nil
+	self.grabbed_by_chaos_spawn = false
+	self.grabbed_by_chaos_spawn_status = nil
+	self.in_vortex = false
+	self.in_vortex_unit = nil
+	self.near_vortex = false
+	self.near_vortex_unit = nil
+	self.in_liquid = false
+	self.in_liquid_unit = nil
+	self.in_hanging_cage_unit = nil
+	self.in_hanging_cage_state = nil
+	self.in_hanging_cage_animations = nil
+	self.wounds = extension_init_data.wounds
+
+	if self.wounds == -1 then
+		self.wounds = math.huge
+	end
+
+	self._base_max_wounds = self.wounds
+	self._num_times_grabbed_by_pack_master = 0
+	self._num_times_hit_by_globadier_poison = 0
+	self._num_times_knocked_down = 0
+	self.is_server = Managers.player.is_server
+	self.update_funcs = {}
+
+	self:set_spawn_grace_time(5)
+
+	self.ready_for_assisted_respawn = false
+	self.assisted_respawning = false
+	self.player = extension_init_data.player
+	self.is_bot = self.player.bot_player
+	self.in_end_zone = false
+	self.is_husk = self.player.remote
+
+	if self.is_server then
+		self.conflict_director = Managers.state.conflict
+	end
+
+	self._intoxication_level = 0
+	self.noclip = {}
+	self._incapacitated_outline_ids = {}
+	self._assisted_respawn_outline_id = -1
+	self._invisible_outline_id = -1
+end)
+
+
+mod:hook_origin(GenericStatusExtension, "blocked_attack", function (self, fatigue_type, attacking_unit, fatigue_point_costs_multiplier, improved_block, attack_direction)
+	local unit = self.unit
+	local inventory_extension = self.inventory_extension
+	local equipment = inventory_extension:equipment()
+	local blocking_unit = nil
+
+	self:set_has_blocked(true)
+
+	local player = self.player
+
+	if player then
+		local buff_extension = self.buff_extension
+		local all_blocks_parry_buff = "power_up_deus_block_procs_parry_exotic"
+		local all_blocks_parry = buff_extension:has_buff_type(all_blocks_parry_buff)
+		local is_timed_block = false
+		local t = Managers.time:time("game")
+
+		if self.timed_block and (t < self.timed_block or all_blocks_parry) then
+			buff_extension:trigger_procs("on_timed_block", attacking_unit)
+			is_timed_block = true
+		end
+
+		if self.timed_block_long and (t < self.timed_block_long or all_blocks_parry) then
+			buff_extension:trigger_procs("on_timed_block_long", attacking_unit)
+		end
+
+		if not player.remote then
+			local first_person_extension = ScriptUnit.extension(unit, "first_person_system")
+			local first_person_unit = first_person_extension:get_first_person_unit()
+
+			if Managers.state.controller_features and player.local_player then
+				Managers.state.controller_features:add_effect("rumble", {
+					rumble_effect = "block"
+				})
+			end
+
+			blocking_unit = equipment.right_hand_wielded_unit or equipment.left_hand_wielded_unit
+			local weapon_template_name = equipment.wielded.template or equipment.wielded.temporary_template
+			local weapon_template = Weapons[weapon_template_name]
+
+			if is_timed_block then
+				first_person_extension:play_hud_sound_event("Play_player_parry_success", nil, false)
+			end
+
+			self:add_fatigue_points(fatigue_type, attacking_unit, blocking_unit, fatigue_point_costs_multiplier, is_timed_block)
+
+			local parry_reaction = "parry_hit_reaction"
+
+			if improved_block then
+				local amount = PlayerUnitStatusSettings.fatigue_point_costs[fatigue_type]
+
+				if amount <= 2 and (attack_direction == "left" or attack_direction == "right") then
+					parry_reaction = "parry_deflect_" .. attack_direction
+				end
+
+				local block_arc_event = (weapon_template and weapon_template.sound_event_block_within_arc) or "Play_player_block_ark_success"
+
+				first_person_extension:play_hud_sound_event(block_arc_event, nil, false)
+			else
+				local wwise_world = Managers.world:wwise_world(self.world)
+				local enemy_pos = POSITION_LOOKUP[attacking_unit]
+
+				if enemy_pos then
+					local player_pos = first_person_extension:current_position()
+					local dir_to_enemy = Vector3.normalize(enemy_pos - player_pos)
+
+					WwiseWorld.trigger_event(wwise_world, "Play_player_combat_out_of_arc_block", player_pos + dir_to_enemy)
+				end
+			end
+
+			Unit.animation_event(first_person_unit, parry_reaction)
+			QuestSettings.handle_bastard_block(unit, attacking_unit, true)
+		else
+			blocking_unit = equipment.right_hand_wielded_unit_3p or equipment.left_hand_wielded_unit_3p
+
+			QuestSettings.handle_bastard_block(unit, attacking_unit, true)
+			self:add_fatigue_points(fatigue_type, attacking_unit, blocking_unit, fatigue_point_costs_multiplier, is_timed_block)
+			Unit.animation_event(unit, "parry_hit_reaction")
+		end
+
+		Managers.state.entity:system("play_go_tutorial_system"):register_block()
+	end
+
+	if blocking_unit then
+		local unit_pos = POSITION_LOOKUP[blocking_unit]
+		local unit_rot = Unit.world_rotation(blocking_unit, 0)
+		local particle_position = unit_pos + Quaternion.up(unit_rot) * Math.random() * 0.5 + Quaternion.right(unit_rot) * 0.1
+
+		World.create_particles(self.world, "fx/wpnfx_sword_spark_parry", particle_position)
+	end
+end)
+
+table.insert(ProcEvents, "on_timed_block_long")

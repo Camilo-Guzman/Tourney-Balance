@@ -530,14 +530,14 @@ mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, bu
 
 			if talent_extension:has_talent("bardin_ranger_passive_spawn_potions_or_bombs", "dwarf_ranger", true) then
 				local counter = buff.counter
-				local spawn_requirement = 11
+				local spawn_requirement = 18
 				if counter == 5 then
 					local randomness = math.random(1, 4)
 					buff.counter = buff.counter + randomness
 				end
 
 				if not counter or counter >= spawn_requirement then
-					local potion_result = math.random(1, 5)
+					local potion_result = math.random(1, 3)
 
 					if potion_result >= 1 and potion_result <= 3 then
 						local game_mode_key = Managers.state.game_mode:game_mode_key()
@@ -617,7 +617,7 @@ mod:add_proc_function("gs_bardin_ranger_scavenge_proc", function (owner_unit, bu
 		end
 	end
 end)
-mod:add_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 10% chance to drop a potion or bomb instead of a Survivalist cache.")
+mod:add_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 6%% chance to drop a potion instead of a Survivalist cache.")
 
 
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_reduced_damage_taken_headshot_buff", {
@@ -1049,6 +1049,50 @@ mod:modify_talent("dr_slayer", 5, 3, {
 })
 mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%.")
 
+--Engineer
+mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count", {
+	buff_to_add = "bardin_engineer_ranged_crit_counter_buff",
+	max_stacks = 1,
+	stat_buff = "critical_strike_chance_ranged",
+	buff_func = "add_buff_on_first_target_hit",
+	event = "on_hit",
+	client_side = true,
+	valid_attack_types = {
+		instant_projectile = true,
+		heavy_instant_projectile = true,
+		projectile = true
+	}
+})
+mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_counter_buff", {
+	reset_on_max_stacks = true,
+	on_max_stacks_func = "add_remove_buffs",
+	max_stacks = 5,
+	is_cooldown = true,
+	icon = "bardin_engineer_ranged_crit_count",
+	max_stack_data = {
+		buffs_to_add = {
+			"bardin_engineer_ranged_crit_count_buff"
+		}
+	}
+})
+mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count_buff", {
+	event = "on_critical_shot",
+	max_stacks = 1,
+	stat_buff = "critical_strike_chance_ranged",
+	buff_func = "dummy_function",
+	remove_on_proc = true,
+	icon = "bardin_engineer_ranged_crit_count",
+	priority_buff = true
+})
+mod:modify_talent("dr_engineer", 2,1, {
+	icon = "bardin_engineer_ranged_crit_count",
+	buffs = {
+		"bardin_engineer_ranged_crit_count"
+	}
+})
+
+mod:add_text("bardin_engineer_improved_explosives_desc", "Every 4th Ranged Attack is a guaranteed Critical Hit.")
+
 --Waystalker
 mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_passive", {
     update_func = "gs_update_kerillian_waywatcher_regen"
@@ -1371,55 +1415,84 @@ mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_a
     multiplier = 0.8,
 })
 mod:add_text("victor_bountyhunter_activated_ability_railgun_desc_2", "Modifies Victor's sidearm to fire two powerful bullets in a straight line. Scoring a headshot with this attack will reduce the cooldown of Locked and Loaded by 80%%. This can only happen once")
-mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_increased_melee_damage_on_no_ammo_add", {
-    event = "on_hit"
+--mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_increased_melee_damage_on_no_ammo_add", {
+--    event = "on_hit"
+--})
+--
+--mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_attack_speed_on_no_ammo_buff", {
+--    multiplier = 0.15,
+--    duration = 10
+--})
+--mod:add_text("victor_bountyhunter_power_burst_on_no_ammo_desc", "Ranged critical hits give 15%% ranged power and 15%% attack speed for 10 seconds.")
+--mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_power_on_no_ammo_buff", {
+--    multiplier = 0.15,
+--    stat_buff = "power_level_ranged",
+--    duration = 10
+--})
+--MeleeBuffTypes = {
+--	MELEE_1H = true,
+--	MELEE_2H = true
+--}
+--mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, params)
+--    if Unit.alive(owner_unit) then
+--        local buff_type = params[5]
+--        local is_critical = params[6]
+--
+--        if is_critical and not MeleeBuffTypes[buff_type] then
+--
+--            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+--            local buff_template = buff.template
+--            local buffs = buff_template.buffs_to_add
+--
+--            for i = 1, #buffs do
+--                local buff_name = buffs[i]
+--                local network_manager = Managers.state.network
+--                local network_transmit = network_manager.network_transmit
+--                local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+--                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+--
+--                if is_server() then
+--                    buff_extension:add_buff(buff_name, {
+--                        attacker_unit = owner_unit
+--                    })
+--                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+--                else
+--                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+--                end
+--            end
+--        end
+--    end
+--end)
+
+
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activate_passive_on_melee_kill", {
+	activation_buff = "victor_bountyhunter_blessed_melee_damage_buff",
+	buff_to_add = "victor_bountyhunter_blessed_melee_attack_speed_buff",
+	update_func = "activate_buff_on_other_buff",
 })
 
-mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_attack_speed_on_no_ammo_buff", {
-    multiplier = 0.15,
-    duration = 10
+mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_blessed_melee_attack_speed_buff", {
+	stat_buff = "attack_speed",
+	multiplier = 0.15,
+	max_stacks = 1,
 })
-mod:add_text("victor_bountyhunter_power_burst_on_no_ammo_desc", "Ranged critical hits give 15%% ranged power and 15%% attack speed for 10 seconds.")
-mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_power_on_no_ammo_buff", {
-    multiplier = 0.15,
-    stat_buff = "power_level_ranged",
-    duration = 10
+
+mod:add_text("victor_bountyhunter_weapon_swap_buff_desc", "Melee strikes make up to the next 6 ranged shots deal 15%% more damage. Ranged hits make up to the next 6 melee strikes deal 15%% more damage and grants 15%% attack speed for the next 6 strikes.")
+
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_stacking_damage_reduction_on_elite_or_special_kill_buff", {
+	max_stacks = 20
 })
-MeleeBuffTypes = {
-	MELEE_1H = true,
-	MELEE_2H = true
-}
-mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, params)
-    if Unit.alive(owner_unit) then
-        local buff_type = params[5]
-        local is_critical = params[6]
-
-        if is_critical and not MeleeBuffTypes[buff_type] then
-
-            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-            local buff_template = buff.template
-            local buffs = buff_template.buffs_to_add
-
-            for i = 1, #buffs do
-                local buff_name = buffs[i]
-                local network_manager = Managers.state.network
-                local network_transmit = network_manager.network_transmit
-                local unit_object_id = network_manager:unit_game_object_id(owner_unit)
-                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
-
-                if is_server() then
-                    buff_extension:add_buff(buff_name, {
-                        attacker_unit = owner_unit
-                    })
-                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
-                else
-                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
-                end
-            end
-        end
-    end
-end)
-
+mod:modify_talent("wh_bountyhunter", 5, 3, {
+    description_values = {
+		{
+			value_type = "percent",
+			value = -0.01
+		},
+		{
+			value = 20
+		}
+	},
+})
 
 -- Indisctiminate blast cdr upped to 60%
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
@@ -1432,11 +1505,6 @@ mod:modify_talent("wh_bountyhunter", 6, 3, {
         "victor_bountyhunter_activated_ability_blast_shotgun_cdr",
     },
 })
-mod:modify_talent("wh_bountyhunter", 4, 1, {
-    description = "rebaltourn_victor_bountyhunter_blessed_combat_desc",
-    description_values = {},
-})
-mod:add_text("rebaltourn_victor_bountyhunter_blessed_combat_desc", "Melee strikes makes up to the next 6 ranged shots deal 15% more damage. Ranged hits makes up to the next 6 melee strikes deal 15% more damage.")
 PassiveAbilitySettings.wh_2.perks = {
 	{
 		display_name = "career_passive_name_wh_2b",
@@ -1454,6 +1522,51 @@ PassiveAbilitySettings.wh_2.perks = {
 mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
 mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
 
+--Warrior Priest
+mod:modify_talent_buff_template("witch_hunter", "victor_priest_5_2_buff", {
+	stat_buff = nil,
+	multiplier = 1.1,
+	apply_buff_func = "apply_movement_buff",
+	max_stacks = 1,
+	remove_buff_func = "remove_movement_buff",
+	path_to_movement_setting_to_modify = {
+		"move_speed",
+	},
+})
+
+mod:add_text("victor_priest_5_2_desc", "Bless the party with 10%% increased movement speed. Fly you fools.")
+
+local spell_params = {}
+local spell_params_improved = {
+	external_optional_duration = CareerConstants.wh_priest.talent_6_1_improved_ability_duration,
+}
+local spell_buffs = {
+	"victor_priest_activated_ability_invincibility",
+	"victor_priest_activated_ability_nuke",
+}
+
+mod:hook_origin(ActionCareerWHPriestUtility, "_add_buffs_to_target", function (target_unit, warrior_priest_unit)
+	local spell_buffs = spell_buffs
+	local params = spell_params
+	local talent_extension = ScriptUnit.extension(warrior_priest_unit, "talent_system")
+
+	if talent_extension:has_talent("victor_priest_6_1") then
+		params = spell_params_improved
+	end
+
+	params.attacker_unit = warrior_priest_unit
+
+	if ALIVE[target_unit] then
+		local buff_system = Managers.state.entity:system("buff_system")
+
+		for i = 1, #spell_buffs do
+			local buff_name = spell_buffs[i]
+
+			buff_system:add_buff_synced(target_unit, buff_name, BuffSyncType.All, params)
+		end
+	end
+end)
+
 --Sister of the thorn
 mod:modify_talent("we_thornsister", 6, 3, {
     buffs = {
@@ -1468,6 +1581,45 @@ mod:add_talent_buff_template("wood_elf", "tb_cd_thorn", {
 mod:add_text("kerillian_thorn_sister_debuff_wall_desc_2", "Thornwake instead causes roots to burst from the ground, staggering enemies and applying Blackvenom to them. Reduces cooldown by 30%%.")
 
 -- Battle Wizard Talents
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_increased_burn_damage", {
+    multiplier = 1.5, -- 1,
+})
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_reduced_non_burn_damage", {
+    multiplier = -0.3, -- -0.15,
+})
+mod:add_text("sienna_adept_increased_burn_damage_reduced_non_burn_damage_desc", "Burning damage over time is increased by 150.0%%. All non-burn damage is reduced by 30.0%%.")
+
+InfiniteBurnDotLookup = InfiniteBurnDotLookup or {}
+local buff_perk_names = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+local buff_templates = BuffTemplates
+
+for template_name, template in pairs(buff_templates) do
+	if not string.find(template_name, "_infinite") then
+		local new_name = template_name .. "_infinite"
+		local new_buff_template = table.clone(template)
+
+		for _, sub_buff in ipairs(new_buff_template.buffs) do
+			local perks = sub_buff.perks
+
+			if perks and table.find(perks, buff_perk_names.burning) then
+				sub_buff.name = "infinite_burning_dot"
+				sub_buff.duration = nil
+				sub_buff.on_max_stacks_overflow_func = "reapply_infinite_burn"
+				sub_buff.max_stacks = 1
+
+				if sub_buff.time_between_dot_damages then
+					sub_buff.time_between_dot_damages = sub_buff.time_between_dot_damages / (4/3)
+				end
+
+				InfiniteBurnDotLookup[template_name] = new_name
+				buff_templates[new_name] = new_buff_template
+
+				break
+			end
+		end
+	end
+end
+
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_damage_reduction_on_ignited_enemy_buff", {
     multiplier = -0.05, -- -0.1,
 	max_stacks = 4
@@ -1509,88 +1661,6 @@ mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_ex
     stat_buff = "activated_cooldown",
 	multiplier = -0.2
 })
-
-local InfiniteBurnDotLookup = InfiniteBurnDotLookup or {}
-local buff_perk_names = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
-mod:hook_origin(BuffUtils, "generate_infinite_burn_variants", function(buff_templates)
-	for template_name, template in pairs(buff_templates) do
-		if not string.find(template_name, "_infinite") then
-			local new_name = template_name .. "_infinite"
-			local new_buff_template = table.clone(template)
-
-			for _, sub_buff in ipairs(new_buff_template.buffs) do
-				local perks = sub_buff.perks
-				if perks and table.find(perks, buff_perk_names.burning) then
-					sub_buff.name = "infinite_burning_dot"
-					sub_buff.duration = nil
-					sub_buff.on_max_stacks_overflow_func = "reapply_infinite_burn"
-					sub_buff.max_stacks = 1
-
-					if sub_buff.time_between_dot_damages then
-						sub_buff.time_between_dot_damages = sub_buff.time_between_dot_damages / 2
-					end
-
-					InfiniteBurnDotLookup [template_name] = new_name
-					buff_templates [new_name] = new_buff_template
-					break
-				end
-			end
-		end
-	end
-end)
-
-local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
-mod:add_buff_template("burning_dot_1tick_infinite", {
-    duration = nil,
-	name = "infinite_burning_dot",
-	apply_buff_func = "start_dot_damage",
-	on_max_stacks_overflow_func = "reapply_infinite_burn",
-	update_start_delay = 1.5,
-	time_between_dot_damages = 0.75,
-	max_stacks = 1,
-	damage_type = "burninating",
-	damage_profile = "burning_dot",
-	update_func = "apply_dot_damage",
-    perks = { buff_perks.burning }
-})
-mod:add_buff_template("burning_dot_3tick_infinite", {
-    duration = nil,
-	name = "infinite_burning_dot",
-	apply_buff_func = "start_dot_damage",
-	on_max_stacks_overflow_func = "reapply_infinite_burn",
-	update_start_delay = 1,
-	time_between_dot_damages = 0.5,
-	max_stacks = 1,
-	damage_type = "burninating",
-	damage_profile = "burning_dot",
-	update_func = "apply_dot_damage",
-	perks = { buff_perks.burning }
-})
-
-mod:add_buff_template("beam_burning_dot_infinite", {
-    duration = nil,
-	name = "infinite_burning_dot",
-	apply_buff_func = "start_dot_damage",
-	update_start_delay = 1,
-	time_between_dot_damages = 0.5,
-	max_stacks = 1,
-	damage_type = "burninating",
-	damage_profile = "beam_burning_dot",
-	update_func = "apply_dot_damage",
-	perks = { buff_perks.burning }
-})
-
---mod:modify_talent("bw_adept", 6, 3, {
---    buffs = {
---		"sienna_adept_increased_ult_cooldown"
---	}
---})
---mod:add_talent_buff_template("bright_wizard", "sienna_adept_increased_ult_cooldown", {
---	remove_buff_func = "remove_modify_ability_max_cooldown",
---	apply_buff_func = "add_modify_ability_max_cooldown",
---	multiplier = 0.5
---})
---mod:add_text("sienna_adept_ability_trail_double_desc", "Fire Walk can be activated a second time within 10 seconds. Increases the cooldown of Fire Walk by 50.0%.")
 
 --Necromancer
 mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)
@@ -1674,4 +1744,13 @@ end)
 
 mod:add_talent_buff_template("bright_wizard", "no_proc_necro", {
 	duration = 0.3
+})
+
+DamageProfileTemplates.sienna_necromancer_blood_explosion.default_target.power_distribution.impact = 0
+DamageProfileTemplates.sienna_necromancer_ability_stagger.default_target.power_distribution.impact = 0
+DamageProfileTemplates.trapped_soul.default_target.power_distribution_near.impact = 0
+DamageProfileTemplates.trapped_soul.default_target.power_distribution_far.impact = 0
+
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
+	multiplier = 0
 })

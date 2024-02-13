@@ -716,51 +716,6 @@ mod:add_buff_template("rebaltourn_regrowth", {
 	event = "on_hit",
 	perks = { buff_perks.ninja_healing },
 })
---mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owner_unit, buff, params)
---	if not Managers.state.network.is_server then
---		return
---	end
---
---	if ALIVE[owner_unit] then
---		local hit_unit = params[1]
---		local damage_profile = params[2]
---		local attack_type = damage_profile.charge_value
---		local stagger_value = params[6]
---		local stagger_type = params[4]
---		local buff_type = params[7]
---		local target_index = params[8]
---		local breed = AiUtils.unit_breed(hit_unit)
---		local multiplier = buff.multiplier
---		local is_push = damage_profile.is_push
---		local stagger_calulation = stagger_type or stagger_value
---		local heal_amount = stagger_calulation * multiplier --stagger_value * multiplier
---		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
---		local is_corpse = death_extension.death_is_done == false
---
---		if is_push then
---			heal_amount = 0.6
---		end
---
---      local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
---      local equipment = inventory_extension:equipment()
---		local slot_data = equipment.slots.slot_melee
---
---		if slot_data then
---			local item_data = slot_data.item_data
---			local item_name = item_data.name
---			if item_name == "wh_2h_billhook" and heal_amount == 9 then
---				heal_amount = 2
---			end
---		 	if item_name == "bw_flame_sword" and attack_type == "heavy_attack" and heal_amount == 1 then
---				heal_amount = 2
---		 	end
---    	end
---
---		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
---			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
---		end
---	end
---end)
 mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
@@ -794,6 +749,9 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 			local item_name = item_data.name
 			if item_name == "wh_2h_billhook" and heal_amount == 9 then
 				heal_amount = 2
+			end
+			if item_name == "bw_ghost_scythe" and attack_type == "action_push" and not is_push and heal_amount > 0 then
+				heal_amount = 0.25	-- Change this number to adjust thp gain per target
 			end
     	end
 
@@ -899,7 +857,6 @@ local talent_first_row = {
 		"wh_zealot",
 		"wh_priest",
 		"bw_unchained",
-		"bw_necromancer"
 	},
 	{
 		"es_huntsman",
@@ -908,6 +865,7 @@ local talent_first_row = {
 		"wh_captain",
 		"bw_scholar",
 		"bw_adept",
+		"bw_necromancer"
 	},
 	{
 		"dr_slayer",
@@ -1032,6 +990,7 @@ local talent_third_row = {
 		"bw_adept",
 		"bw_unchained",
 		"wh_priest",
+		"bw_necromancer"
 	},
 }
 for i=1, #talent_third_row[1] do
