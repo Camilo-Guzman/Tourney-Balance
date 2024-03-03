@@ -724,22 +724,19 @@ Breeds.skaven_storm_vermin_warlord.boost_curve_multiplier_override = 2
 Breeds.skaven_stormfiend.boost_curve_multiplier_override = 2
 Breeds.skaven_stormfiend_boss.boost_curve_multiplier_override = 2
 
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_phasing", {
+--mod:modify_talent_buff_template("wood_elf", "Kerillian_shade_activated_ability_phasing", {
+--	duration = 2.5
+--})
+mod:modify_talent_buff_template("wood_elf", "Kerillian_shade_activated_ability_quick_cooldown", {
 	duration = 2.5
 })
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_short_blocker", {
+mod:modify_talent_buff_template("wood_elf", "Kerillian_shade_activated_ability_short_blocker", {
 	duration = 2.5
 })
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability", {
-	duration = 2.5
-})
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability_restealth", {
-	duration = 2.5
-})
-mod:modify_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry", {
-	event = "on_timed_block_long",
-})
-mod:add_text("career_active_desc_we_1_2", "Kerillian becomes undetectable, can pass through enemies, and deals greatly increased melee damage. Lasts for 2.5 seconds or until she deals damage.")
+TalentBuffTemplates.wood_elf
+--mod:modify_talent_buff_template("wood_elf", "kerillian_shade_activated_ability", {
+--	duration = 2.5
+--})
 
 -- Bounty Hunter
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
@@ -1018,7 +1015,6 @@ mod:hook_origin(GenericStatusExtension, "blocked_attack", function (self, fatigu
 
 		if self.timed_block_long and (t < self.timed_block_long or all_blocks_parry) then
 			buff_extension:trigger_procs("on_timed_block_long", attacking_unit)
-			is_timed_block = true
 		end
 
 		if not player.remote then

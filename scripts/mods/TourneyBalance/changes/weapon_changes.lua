@@ -1215,7 +1215,8 @@ NewDamageProfileTemplates.staff_scythe_L2_PA = {
 
 DamageProfileTemplates.scythe_discharge = {
 	no_stagger_damage_reduction = true,
-	charge_value = "action_push",-- "heavy_attack"
+	charge_value = "heavy_attack",
+	is_discharge = true,
 	armor_modifier = {
 		attack = {
 			1,

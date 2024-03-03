@@ -1314,100 +1314,6 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_bloc
     max_stacks = 3
 })
 mod:add_text("kerillian_maidenguard_speed_on_block_desc", "Blocking an attack or pushing an enemy grants the next three strikes 30%% attack speed and 10%% power.")
---Shade
-mod:add_talent_buff_template("wood_elf", "shade_second_stab_cooldown", {
-	buff_after_delay = true,
-	max_stacks = 1,
-	refresh_durations = true,
-	is_cooldown = true,
-	delayed_buff_name = "kerillian_shade_activated_ability_restealth",
-	duration = 0.2
-})
-local function is_local(unit)
-	local player = Managers.player:owner(unit)
-
-	return player and not player.remote
-end
-local function is_bot(unit)
-	local player = Managers.player:owner(unit)
-
-	return player and player.bot_player
-end
-mod:add_buff_function("shade_activated_ability_on_remove", function(unit, buff, params, world)
-	local status_extension = nil
-
-	if is_local(unit) then
-		status_extension = ScriptUnit.extension(unit, "status_system")
-
-		status_extension:remove_stealth_stacking()
-		status_extension:remove_noclip_stacking()
-	end
-
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-
-	if not talent_extension or not buff_extension then
-		return
-	end
-
-	if talent_extension:has_talent("kerillian_shade_activated_stealth_combo") then
-		buff_extension:add_buff("kerillian_shade_ult_invis_combo_blocker")
-		buff_extension:add_buff("kerillian_shade_ult_invis")
-	end
-
-	if talent_extension:has_talent("kerillian_shade_activated_ability_restealth") and buff.template.restealth then
-		buff_extension:add_buff("shade_second_stab_cooldown")
-	end
-
-	if talent_extension:has_talent("kerillian_shade_activated_ability_phasing") then
-		buff_extension:add_buff("kerillian_shade_phasing_buff")
-		buff_extension:add_buff("kerillian_shade_movespeed_buff")
-		buff_extension:add_buff("kerillian_shade_power_buff")
-	end
-
-	if is_local(unit) then
-		if not is_bot(unit) and status_extension:current_stealth_counter() == 0 then
-			local first_person_extension = ScriptUnit.extension(unit, "first_person_system")
-
-			first_person_extension:play_hud_sound_event("Play_career_ability_kerillian_shade_exit")
-			first_person_extension:play_hud_sound_event("Stop_career_ability_kerillian_shade_loop")
-
-			MOOD_BLACKBOARD.skill_shade = false
-		end
-
-		local career_extension = ScriptUnit.extension(unit, "career_system")
-
-		career_extension:set_state("default")
-
-		if Managers.state.network:game() then
-			local status_extension = ScriptUnit.extension(unit, "status_system")
-
-			status_extension:set_is_dodging(false)
-		end
-
-		local events = {
-			"Play_career_ability_kerillian_shade_exit",
-			"Stop_career_ability_kerillian_shade_loop_husk"
-		}
-		local network_manager = Managers.state.network
-		local network_transmit = network_manager.network_transmit
-		local is_server = Managers.player.is_server
-		local unit_id = network_manager:unit_game_object_id(unit)
-		local node_id = 0
-
-		for i = 1, #events, 1 do
-			local event = events[i]
-			local event_id = NetworkLookup.sound_events[event]
-
-			if is_server then
-				network_transmit:send_rpc_clients("rpc_play_husk_unit_sound_event", unit_id, node_id, event_id)
-			else
-				network_transmit:send_rpc_server("rpc_play_husk_unit_sound_event", unit_id, node_id, event_id)
-			end
-		end
-	end
-end)
-
 
 -- Bounty Hunter Talents
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_railgun_delayed_add", {
@@ -1523,8 +1429,11 @@ mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
 mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
 
 --Warrior Priest
-mod:modify_talent_buff_template("witch_hunter", "victor_priest_5_2_buff", {
-	stat_buff = nil,
+mod:modify_talent_buff_template("witch_hunter", "victor_priest_5_2", {
+	buff_to_add = "victor_priest_5_2_speed_buff",
+})
+
+mod:add_talent_buff_template("witch_hunter", "victor_priest_5_2_speed_buff", {
 	multiplier = 1.1,
 	apply_buff_func = "apply_movement_buff",
 	max_stacks = 1,
@@ -1606,10 +1515,6 @@ for template_name, template in pairs(buff_templates) do
 				sub_buff.duration = nil
 				sub_buff.on_max_stacks_overflow_func = "reapply_infinite_burn"
 				sub_buff.max_stacks = 1
-
-				if sub_buff.time_between_dot_damages then
-					sub_buff.time_between_dot_damages = sub_buff.time_between_dot_damages / (4/3)
-				end
 
 				InfiniteBurnDotLookup[template_name] = new_name
 				buff_templates[new_name] = new_buff_template
@@ -1746,10 +1651,15 @@ mod:add_talent_buff_template("bright_wizard", "no_proc_necro", {
 	duration = 0.3
 })
 
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_4_1_cursed_blood", {
+	propagation_multiplier = 0.10
+})
 DamageProfileTemplates.sienna_necromancer_blood_explosion.default_target.power_distribution.impact = 0
 DamageProfileTemplates.sienna_necromancer_ability_stagger.default_target.power_distribution.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_near.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_far.impact = 0
+DamageProfileTemplates.necromancer_crit_burst_stagger.default_target.power_distribution.impact = 0
+
 
 mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
 	multiplier = 0

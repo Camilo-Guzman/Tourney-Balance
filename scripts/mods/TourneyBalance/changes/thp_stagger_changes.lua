@@ -731,10 +731,12 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 		local breed = AiUtils.unit_breed(hit_unit)
 		local multiplier = buff.multiplier
 		local is_push = damage_profile.is_push
+		local is_discharge = damage_profile.is_discharge
 		local stagger_calulation = stagger_type or stagger_value
 		local heal_amount = stagger_calulation * multiplier
 		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
 		local is_corpse = death_extension.death_is_done == false
+		mod:echo(is_discharge)
 
 		if is_push then
 			heal_amount = 0.6
@@ -750,7 +752,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 			if item_name == "wh_2h_billhook" and heal_amount == 9 then
 				heal_amount = 2
 			end
-			if item_name == "bw_ghost_scythe" and attack_type == "action_push" and not is_push and heal_amount > 0 then
+			if item_name == "bw_ghost_scythe" and is_discharge and not is_push and heal_amount > 0 then
 				heal_amount = 0.25	-- Change this number to adjust thp gain per target
 			end
     	end
