@@ -736,7 +736,6 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 		local heal_amount = stagger_calulation * multiplier
 		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
 		local is_corpse = death_extension.death_is_done == false
-		mod:echo(is_discharge)
 
 		if is_push then
 			heal_amount = 0.6
