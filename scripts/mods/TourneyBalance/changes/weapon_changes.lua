@@ -110,6 +110,9 @@ Weapons.longbow_empire_template.actions.action_two.default.heavy_aim_flow_event 
 Weapons.longbow_empire_template.actions.action_two.default.default_zoom = "zoom_in_trueflight"
 Weapons.longbow_empire_template.actions.action_two.default.buffed_zoom_thresholds = { "zoom_in_trueflight", "zoom_in" }
 DamageProfileTemplates.arrow_sniper_kruber.armor_modifier_near.attack = { 1, 1.25, 1.5, 1, 0.75, 0.25 }
+DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient = 0.6 -- 1.25
+DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient_headshot = 0.8 -- 1
+DamageProfileTemplates.arrow_sniper_kruber.critical_strike.attack_armor_power_modifer = { 1, 1, 1, 1, 0.75, 0.5 }
 
 -- Trollhammer
 DamageProfileTemplates.dr_deus_01_explosion.armor_modifier.attack = {
@@ -310,6 +313,10 @@ local balanced_barrels =  { {	yaw = -1, pitch = 0, shot_count = 2 }, { yaw = -0.
 Weapons.wh_deus_01_template_1.actions.action_one.default.barrels = balanced_barrels
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.attack = 0.05
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.impact = 0.05
+--Bolt
+DamageProfileTemplates.fire_spear_3.armor_modifier_near.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
+DamageProfileTemplates.fire_spear_3.armor_modifier_far.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
+
 --Beam
 DamageProfileTemplates.beam_shot.default_target.power_distribution_near.attack = 0.85
 Weapons.staff_blast_beam_template_1.actions.action_two.default.aim_zoom_delay = 0.01

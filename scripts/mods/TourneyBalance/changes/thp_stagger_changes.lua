@@ -863,18 +863,18 @@ local talent_first_row = {
 		"es_huntsman",
 		"dr_ranger",
 		"dr_engineer",
+		"we_maidenguard",
 		"wh_captain",
+		"wh_bountyhunter",
 		"bw_scholar",
 		"bw_adept",
-		"bw_necromancer"
 	},
 	{
 		"dr_slayer",
 		"we_shade",
-		"we_maidenguard",
 		"we_waywatcher",
-		"wh_bountyhunter",
 		"we_thornsister",
+		"bw_necromancer"
 	},
 }
 

@@ -152,6 +152,11 @@ mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit,
 	end
 end)
 
+--Merc Talents
+mod:modify_talent_buff_template("empire_soldier", "markus_mercenary_passive_improved", {
+    targets = 3
+})
+
 -- Footknight Talents
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_ability_cooldown_on_damage_taken", {
    bonus = 0.35
@@ -1444,10 +1449,14 @@ mod:add_talent_buff_template("witch_hunter", "victor_priest_5_2_speed_buff", {
 })
 
 mod:add_text("victor_priest_5_2_desc", "Bless the party with 10%% increased movement speed. Fly you fools.")
+mod:add_text("victor_priest_5_2", "Prayer of Flight")
 
 local spell_params = {}
 local spell_params_improved = {
 	external_optional_duration = CareerConstants.wh_priest.talent_6_1_improved_ability_duration,
+}
+local spell_params_double= {
+	external_optional_duration = 3
 }
 local spell_buffs = {
 	"victor_priest_activated_ability_invincibility",
@@ -1461,6 +1470,9 @@ mod:hook_origin(ActionCareerWHPriestUtility, "_add_buffs_to_target", function (t
 
 	if talent_extension:has_talent("victor_priest_6_1") then
 		params = spell_params_improved
+	end
+	if talent_extension:has_talent("victor_priest_6_2") then
+		params = spell_params_double
 	end
 
 	params.attacker_unit = warrior_priest_unit
