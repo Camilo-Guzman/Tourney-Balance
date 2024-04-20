@@ -73,6 +73,8 @@ local damage_source_procs = {
 }
 local unit_get_data = Unit.get_data
 mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, target_unit, hit_zone_name, hit_position, attack_direction, hit_ragdoll_actor, damage_source, power_level, damage_profile, target_index, boost_curve_multiplier, is_critical_strike, can_damage, can_stagger, blocking, shield_breaking_hit, backstab_multiplier, first_hit, total_hits, source_attacker_unit)
+	source_attacker_unit = source_attacker_unit or attacker_unit
+
 	local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
 
 	if buff_extension and damage_source_procs[damage_source] then
@@ -95,44 +97,41 @@ mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, tar
 			if status_extension then
 				local current_fall_distance = status_extension:fall_distance()
 
-				if MinFallDistanceForBonus <= current_fall_distance then
+				if current_fall_distance >= MinFallDistanceForBonus then
 					attack_power_level = attack_power_level * FallingPowerLevelBonusMultiplier
 				end
 			end
 		end
 
-		local custom_dot_name = nil
+		local added_dot = false
+
 		if buff_extension then
-
-			local witch_hunter_bleed = buff_extension:has_buff_perk("victor_witchhunter_bleed_on_critical_hit") and (
-			damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack") and
-			not buff_extension:has_buff_perk("victor_witchhunter_bleed_on_critical_hit_disable")
-
-
-			local kerillian_bleed = buff_extension:has_buff_perk("kerillian_critical_bleed_dot") and
-			damage_profile.charge_value == "projectile" and
-			not buff_extension:has_buff_perk("kerillian_critical_bleed_dot_disable")
-
-			local generic_melee_bleed = buff_extension:has_buff_perk("generic_melee_bleed") and (
-			damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
+			local witch_hunter_bleed = buff_extension:has_buff_perk("victor_witchhunter_bleed_on_critical_hit") and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack") and not buff_extension:has_buff_perk("victor_witchhunter_bleed_on_critical_hit_disable")
+			local kerillian_bleed = buff_extension:has_buff_perk("kerillian_critical_bleed_dot") and damage_profile.charge_value == "projectile" and not buff_extension:has_buff_perk("kerillian_critical_bleed_dot_disable")
+			local generic_melee_bleed = buff_extension:has_buff_perk("generic_melee_bleed") and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
+			local custom_dot_name
 
 			if witch_hunter_bleed or kerillian_bleed or generic_melee_bleed then
 				custom_dot_name = "weapon_bleed_dot_whc"
-			end
-			if buff_extension:has_buff_perk("sienna_unchained_burn_push") and damage_profile and damage_profile.is_push then
+			elseif buff_extension:has_buff_perk("sienna_unchained_burn_push") and damage_profile and damage_profile.is_push then
 				custom_dot_name = "burning_dot_unchained_push"
 			end
-		end
-		local source_attacker_unit = source_attacker_unit or attacker_unit
 
-		local added_dot = nil
-		if not damage_profile.require_damage_for_dot or attack_power_level ~= 0 then
-			local custom_dot = nil
 			if custom_dot_name then
-				custom_dot = FrameTable.alloc_table()
+				local custom_dot = FrameTable.alloc_table()
+
 				custom_dot.dot_template_name = custom_dot_name
+
+				local added_custom_dot = DamageUtils.apply_dot(damage_profile, target_index, power_level, target_unit, attacker_unit, hit_zone_name, damage_source, boost_curve_multiplier, is_critical_strike, nil, source_attacker_unit, custom_dot)
+
+				added_dot = added_dot or added_custom_dot
 			end
-			added_dot = DamageUtils.apply_dot(damage_profile, target_index, power_level, target_unit, attacker_unit, hit_zone_name, damage_source, boost_curve_multiplier, is_critical_strike, nil, source_attacker_unit, custom_dot)
+		end
+
+		if (not damage_profile.require_damage_for_dot or attack_power_level ~= 0) and not added_dot then
+			local added_profile_dot = DamageUtils.apply_dot(damage_profile, target_index, power_level, target_unit, attacker_unit, hit_zone_name, damage_source, boost_curve_multiplier, is_critical_strike, nil, source_attacker_unit, nil)
+
+			added_dot = added_dot or added_profile_dot
 		end
 
 		if not HEALTH_ALIVE [target_unit] then -- If it dies make it say it just died
@@ -143,7 +142,11 @@ mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, tar
 		local shield_extension = ScriptUnit.has_extension(target_unit, "ai_shield_system")
 
 		if shield_extension then
-			shield_extension:break_shield()
+			local item_actually_dropped = shield_extension:break_shield()
+
+			if item_actually_dropped and buff_extension then
+				buff_extension:trigger_procs("on_broke_shield", target_unit)
+			end
 		end
 
 		blocking = false
@@ -156,33 +159,7 @@ mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, tar
 			stagger_power_level = 0
 		end
 
-		DamageUtils.stagger_ai(t, damage_profile, target_index, stagger_power_level, target_unit, attacker_unit, hit_zone_name, attack_direction, boost_curve_multiplier, is_critical_strike, blocking, damage_source)
-	end
-
-	if unit_get_data(target_unit, "is_dummy") and not damage_profile.no_stagger and can_stagger then
-		local buff_system = Managers.state.entity:system("buff_system")
-		local target_settings = (damage_profile.targets and damage_profile.targets[1]) or damage_profile.default_target
-		local attack_template_name = target_settings.attack_template
-		local attack_template = AttackTemplates[attack_template_name]
-		local stagger_value = (attack_template and attack_template.stagger_value) or 1
-
-		for i = 1, stagger_value, 1 do
-			buff_system:add_buff(target_unit, "dummy_stagger", attacker_unit, false)
-		end
-
-		local attacker_buff_extension = attacker_unit and ScriptUnit.has_extension(attacker_unit, "buff_system")
-
-		if attacker_buff_extension then
-			local item_data = rawget(ItemMasterList, damage_source)
-			local weapon_template_name = item_data and item_data.template
-
-			if weapon_template_name then
-				local weapon_template = Weapons[weapon_template_name]
-				local buff_type = weapon_template.buff_type
-
-				attacker_buff_extension:trigger_procs("on_stagger", target_unit, damage_profile, attacker_unit, 1, 1, stagger_value, buff_type, target_index)
-			end
-		end
+		DamageUtils.stagger_ai(t, damage_profile, target_index, stagger_power_level, target_unit, attacker_unit, hit_zone_name, attack_direction, boost_curve_multiplier, is_critical_strike, blocking, damage_source, source_attacker_unit, optional_predicted_damage)
 	end
 end)
 
