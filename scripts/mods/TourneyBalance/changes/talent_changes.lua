@@ -1,6 +1,16 @@
 local mod = get_mod("TourneyBalance")
 
--- Buff and Talent Functions
+--[[
+
+██████╗░██╗░░░██╗███████╗███████╗  ███████╗██╗░░░██╗███╗░░██╗░█████╗░████████╗██╗░█████╗░███╗░░██╗░██████╗
+██╔══██╗██║░░░██║██╔════╝██╔════╝  ██╔════╝██║░░░██║████╗░██║██╔══██╗╚══██╔══╝██║██╔══██╗████╗░██║██╔════╝
+██████╦╝██║░░░██║█████╗░░█████╗░░  █████╗░░██║░░░██║██╔██╗██║██║░░╚═╝░░░██║░░░██║██║░░██║██╔██╗██║╚█████╗░
+██╔══██╗██║░░░██║██╔══╝░░██╔══╝░░  ██╔══╝░░██║░░░██║██║╚████║██║░░██╗░░░██║░░░██║██║░░██║██║╚████║░╚═══██╗
+██████╦╝╚██████╔╝██║░░░░░██║░░░░░  ██║░░░░░╚██████╔╝██║░╚███║╚█████╔╝░░░██║░░░██║╚█████╔╝██║░╚███║██████╔╝
+╚═════╝░░╚═════╝░╚═╝░░░░░╚═╝░░░░░  ╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝░╚════╝░░░░╚═╝░░░╚═╝░╚════╝░╚═╝░░╚══╝╚═════╝░
+
+]]
+
 local function merge(dst, src)
     for k, v in pairs(src) do
         dst[k] = v
@@ -135,135 +145,31 @@ function mod.add_talent(self, career_name, tier, index, new_talent_name, new_tal
     }
 end
 
---Fix clients getting too much ult recharge on explosions
-mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit, buff, params)
-	if Unit.alive(owner_unit) then
-		local attack_type = params[2]
-		local target_number = params[4]
-		local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+--[[
 
-		if not attack_type or attack_type == "heavy_attack" or attack_type == "light_attack" then
-			career_extension:reduce_activated_ability_cooldown(buff.bonus)
-		elseif attack_type == "aoe" then
-            return
-		elseif target_number and target_number == 1 then
-			career_extension:reduce_activated_ability_cooldown(buff.bonus)
-		end
-	end
-end)
+██╗░░██╗██████╗░██╗░░░██╗██████╗░███████╗██████╗░
+██║░██╔╝██╔══██╗██║░░░██║██╔══██╗██╔════╝██╔══██╗
+█████═╝░██████╔╝██║░░░██║██████╦╝█████╗░░██████╔╝
+██╔═██╗░██╔══██╗██║░░░██║██╔══██╗██╔══╝░░██╔══██╗
+██║░╚██╗██║░░██║╚██████╔╝██████╦╝███████╗██║░░██║
+╚═╝░░╚═╝╚═╝░░╚═╝░╚═════╝░╚═════╝░╚══════╝╚═╝░░╚═╝
 
---Merc Talents
+]]
+
+--[[
+
+	Mercenary Talents
+
+]]
 mod:modify_talent_buff_template("empire_soldier", "markus_mercenary_passive_improved", {
     targets = 3
 })
 
--- Footknight Talents
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_ability_cooldown_on_damage_taken", {
-   bonus = 0.35
-})
+--[[
 
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
-    duration = 15
-})
-mod:modify_talent("es_knight", 2, 2, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
-        },
-        {
-            value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
-        }
-    },
-})
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
-    duration = 5
-})
-mod:modify_talent("es_knight", 2, 1, {
-    description = "markus_knight_free_pushes_on_block_desc",
-	name = "markus_knight_free_pushes_on_block",
-	num_ranks = 1,
-	icon = "markus_knight_free_pushes_on_block",
-	description_values = {
-		{
-			value = 1
-		}
-	},
-	buffs = {
-		"markus_knight_free_pushes_on_block"
-	}
-})
-mod:modify_talent("es_knight", 2, 3, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.15 --BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
-        },
-        {
-            value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
-        }
-    },
-})
-mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
-    local player_unit = unit
+	Huntsman Talents
 
-    if Unit.alive(player_unit) then
-        local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
-
-        career_extension:reduce_activated_ability_cooldown_percent(0.7)
-    end
-end)
-mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70% of cooldown upon allied incapacitation")
-
-mod:modify_talent("es_knight", 5, 2, {
-    description = "markus_knight_power_level_impact_desc",
-	name = "markus_knight_power_level_impact",
-	buffer = "server",
-	num_ranks = 1,
-	icon = "markus_knight_power_level_impact",
-	description_values = {
-		{
-			value_type = "percent",
-			value = 0.2
-		}
-	},
-	buffs = {
-		"markus_knight_power_level_impact"
-	}
-})
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_impact", {
-    multiplier = 0.2
-})
-mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%.")
-
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
-    buff_func = "buff_on_stagger_enemy"
-})
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
-    duration = 1.5,
-    multiplier = 2,
-	icon = "markus_knight_improved_passive_defence_aura"
-})
-mod:add_text("markus_knight_cooldown_on_stagger_elite_desc", "Subjecting an elite enemy to a stagger state grants the player an accelerated cooldown of their career skill by a magnitude of 200%% for 1500 milliseconds.")
-
-mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
-    max_stacks = 1,
-    stat_buff = "power_level_melee",
-    icon = "markus_knight_ability_hit_target_damage_taken",
-    multiplier = 0.5,
-    duration = 6,
-    refresh_durations = true,
-})
-mod:modify_talent("es_knight", 6, 2, {
-    buffs = {
-        "markus_knight_heavy_buff",
-    },
-    description = "rebaltourn_markus_knight_heavy_buff_desc",
-    description_values = {},
-})
-mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0% for 6 seconds.")
-
---Huntsman
+]]
 ActivatedAbilitySettings.es_1[1].cooldown = 60
 mod:modify_talent_buff_template("empire_soldier", "markus_huntsman_passive_crit_aura", {
     range = 20
@@ -493,7 +399,120 @@ mod:modify_talent("es_huntsman", 4, 3, {
 })
 mod:add_text("gs_hs_4_3_desc", "Ranged kills restore thp equal to a quarter of bloodlust.")
 
---Grail Knight
+--[[
+
+	Footknight Talents
+
+]]
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_ability_cooldown_on_damage_taken", {
+   bonus = 0.35
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
+    duration = 15
+})
+mod:modify_talent("es_knight", 2, 2, {
+    description_values = {
+        {
+            value_type = "percent",
+            value = 0.15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
+        },
+        {
+            value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
+        }
+    },
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
+    duration = 5
+})
+mod:modify_talent("es_knight", 2, 1, {
+    description = "markus_knight_free_pushes_on_block_desc",
+	name = "markus_knight_free_pushes_on_block",
+	num_ranks = 1,
+	icon = "markus_knight_free_pushes_on_block",
+	description_values = {
+		{
+			value = 1
+		}
+	},
+	buffs = {
+		"markus_knight_free_pushes_on_block"
+	}
+})
+mod:modify_talent("es_knight", 2, 3, {
+    description_values = {
+        {
+            value_type = "percent",
+            value = 0.15 --BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
+        },
+        {
+            value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
+        }
+    },
+})
+mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
+    local player_unit = unit
+
+    if Unit.alive(player_unit) then
+        local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
+
+        career_extension:reduce_activated_ability_cooldown_percent(0.7)
+    end
+end)
+mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70% of cooldown upon allied incapacitation")
+
+mod:modify_talent("es_knight", 5, 2, {
+    description = "markus_knight_power_level_impact_desc",
+	name = "markus_knight_power_level_impact",
+	buffer = "server",
+	num_ranks = 1,
+	icon = "markus_knight_power_level_impact",
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.2
+		}
+	},
+	buffs = {
+		"markus_knight_power_level_impact"
+	}
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_impact", {
+    multiplier = 0.2
+})
+mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%.")
+
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
+    buff_func = "buff_on_stagger_enemy"
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
+    duration = 1.5,
+    multiplier = 2,
+	icon = "markus_knight_improved_passive_defence_aura"
+})
+mod:add_text("markus_knight_cooldown_on_stagger_elite_desc", "Subjecting an elite enemy to a stagger state grants the player an accelerated cooldown of their career skill by a magnitude of 200%% for 1500 milliseconds.")
+
+mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
+    max_stacks = 1,
+    stat_buff = "power_level_melee",
+    icon = "markus_knight_ability_hit_target_damage_taken",
+    multiplier = 0.5,
+    duration = 6,
+    refresh_durations = true,
+})
+mod:modify_talent("es_knight", 6, 2, {
+    buffs = {
+        "markus_knight_heavy_buff",
+    },
+    description = "rebaltourn_markus_knight_heavy_buff_desc",
+    description_values = {},
+})
+mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0% for 6 seconds.")
+
+--[[
+
+	Grail Knight
+
+]]
 mod:modify_talent("es_questingknight", 6, 2, {
     buffs = {
         "tb_cd_grail",
@@ -507,7 +526,23 @@ mod:add_talent_buff_template("empire_soldier", "tb_cd_grail", {
 })
 mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade increases movement speed by 35%% for 15 seconds. Reduces cooldown by 30%%.")
 
---RV
+
+--[[
+
+██████╗░░█████╗░██████╗░██████╗░██╗███╗░░██╗
+██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║████╗░██║
+██████╦╝███████║██████╔╝██║░░██║██║██╔██╗██║
+██╔══██╗██╔══██║██╔══██╗██║░░██║██║██║╚████║
+██████╦╝██║░░██║██║░░██║██████╔╝██║██║░╚███║
+╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚═╝╚═╝░░╚══╝
+
+]]
+
+--[[
+
+	Ranger Veteran Talents
+
+]]
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_passive", {
 	buff_func = "gs_bardin_ranger_scavenge_proc"
 })
@@ -646,7 +681,11 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_gren
     refresh_durations = true
 })
 
---IB
+--[[
+
+	Iron Breaker Talents
+
+]]
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_ability_cooldown_on_damage_taken", {
     bonus = 0.4
 })
@@ -765,7 +804,11 @@ mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	career_extension:start_activated_ability_cooldown()
 end)
 
---Slayer Talents
+--[[
+
+	Slayer Talents
+
+]]
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_increased_defence", {
 	stat_buff = "damage_taken",
 	multiplier = -0.15
@@ -809,7 +852,7 @@ mod:modify_talent("dr_slayer", 2, 1, {
 		"bardin_slayer_power_on_double_two_handed_weapons"
 	}
 })
-mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15% power if wielding 2 2handed weapons. Gain 10% attackspeed if wielding 2 1handed weapons. Dead talent if not.")
+mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15% power if wielding 2 two-handed weapons. Gain 10% attack speed if wielding 2 one-handed weapons.")
 
 mod:modify_talent("dr_slayer", 2, 3, {
 	description = "gs_bardin_slayer_crit_chance_desc"
@@ -1054,7 +1097,11 @@ mod:modify_talent("dr_slayer", 5, 3, {
 })
 mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%.")
 
---Engineer
+--[[
+
+	Outcast Engineer Talents
+
+]]
 mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count", {
 	buff_to_add = "bardin_engineer_ranged_crit_counter_buff",
 	max_stacks = 1,
@@ -1071,7 +1118,7 @@ mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count"
 mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_counter_buff", {
 	reset_on_max_stacks = true,
 	on_max_stacks_func = "add_remove_buffs",
-	max_stacks = 5,
+    max_stacks = 4,     -- 5
 	is_cooldown = true,
 	icon = "bardin_engineer_ranged_crit_count",
 	max_stack_data = {
@@ -1081,13 +1128,16 @@ mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_counte
 	}
 })
 mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count_buff", {
-	event = "on_critical_shot",
-	max_stacks = 1,
-	stat_buff = "critical_strike_chance_ranged",
-	buff_func = "dummy_function",
-	remove_on_proc = true,
-	icon = "bardin_engineer_ranged_crit_count",
-	priority_buff = true
+    event = "on_critical_shot",
+    max_stacks = 1,
+    stat_buff = "critical_strike_chance_ranged",
+    buff_func = "dummy_function",
+    remove_on_proc = true,
+    icon = "bardin_engineer_ranged_crit_count",
+    priority_buff = true,
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count_buff", {
+    bonus = 1
 })
 mod:modify_talent("dr_engineer", 2,1, {
 	icon = "bardin_engineer_ranged_crit_count",
@@ -1097,13 +1147,30 @@ mod:modify_talent("dr_engineer", 2,1, {
 })
 
 mod:add_text("bardin_engineer_improved_explosives_desc", "Every 4th Ranged Attack is a guaranteed Critical Hit.")
+mod:add_text("bardin_engineer_melee_power_ranged_power_desc", "Melee Power is increased by 10%%. Every 5 Melee Strikes makes Bardin's next Ranged Attack grant 15%% Ranged Power for 10 seconds.")
 
---Waystalker
+--[[
+
+██╗░░██╗███████╗██████╗░██╗██╗░░░░░██╗░░░░░██╗░█████╗░███╗░░██╗
+██║░██╔╝██╔════╝██╔══██╗██║██║░░░░░██║░░░░░██║██╔══██╗████╗░██║
+█████═╝░█████╗░░██████╔╝██║██║░░░░░██║░░░░░██║███████║██╔██╗██║
+██╔═██╗░██╔══╝░░██╔══██╗██║██║░░░░░██║░░░░░██║██╔══██║██║╚████║
+██║░╚██╗███████╗██║░░██║██║███████╗███████╗██║██║░░██║██║░╚███║
+╚═╝░░╚═╝╚══════╝╚═╝░░╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝░░╚═╝╚═╝░░╚══╝
+
+]]
+
+--[[
+
+	Waystalker Talents
+
+]]
 mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_passive", {
     update_func = "gs_update_kerillian_waywatcher_regen"
 })
 
-mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds when below half health. This does not replace temp health.")
+mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds. This does not replace temp health.")
+mod:add_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 100%%.")
 
 mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, buff, params)
     local t = params.t
@@ -1190,25 +1257,24 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
         buff.next_heal_tick = t + time_between_heals
     end
 end)
-
---mod:modify_talent("we_waywatcher", 2, 1, {
---	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
---	name = "kerillian_waywatcher_movement_speed_on_special_kill",
---	num_ranks = 1,
---	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
---	description_values = {
---		{
---			value_type = "baked_percent",
---			value = 1.15
---		},
---		{
---			value = 10
---		}
---	},
---	buffs = {
---		"kerillian_waywatcher_movement_speed_on_special_kill"
---	}
---})
+--[[mod:modify_talent("we_waywatcher", 2, 1, {
+	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
+	name = "kerillian_waywatcher_movement_speed_on_special_kill",
+	num_ranks = 1,
+	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
+	description_values = {
+		{
+			value_type = "baked_percent",
+			value = 1.15
+		},
+		{
+			value = 10
+		}
+	},
+	buffs = {
+		"kerillian_waywatcher_movement_speed_on_special_kill"
+	}
+}) ]]
 
 mod:modify_talent("we_waywatcher", 2, 3, {
     description_values = {
@@ -1225,24 +1291,27 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
     duration = 10,
 	multiplier = 0.20
 })
---mod:modify_talent("we_waywatcher", 5, 1, {
---	description = "kerillian_waywatcher_extra_arrow_melee_kill_desc",
---	name = "kerillian_waywatcher_extra_arrow_melee_kill",
---	num_ranks = 1,
---	icon = "kerillian_waywatcher_extra_arrow_melee_kill",
---	description_values = {
---		{
---			value = 10
---		}
---	},
---	buffs = {
---		"kerillian_waywatcher_extra_arrow_melee_kill"
---	}
---})
-
+--[[ mod:modify_talent("we_waywatcher", 5, 1, {
+	description = "kerillian_waywatcher_extra_arrow_melee_kill_desc",
+	name = "kerillian_waywatcher_extra_arrow_melee_kill",
+	num_ranks = 1,
+	icon = "kerillian_waywatcher_extra_arrow_melee_kill",
+	description_values = {
+		{
+			value = 10
+		}
+	},
+	buffs = {
+		"kerillian_waywatcher_extra_arrow_melee_kill"
+	}
+}) ]]
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
 
---Handmaiden
+--[[
+
+	Handmaiden Talents
+
+]]
 local function is_server()
     return Managers.player.is_server
 end
@@ -1320,60 +1389,93 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_bloc
 })
 mod:add_text("kerillian_maidenguard_speed_on_block_desc", "Blocking an attack or pushing an enemy grants the next three strikes 30%% attack speed and 10%% power.")
 
--- Bounty Hunter Talents
+--[[
+
+	Sister of the Thorn Talents
+
+]]
+mod:modify_talent("we_thornsister", 6, 3, {
+    buffs = {
+        "tb_cd_thorn"
+    }
+})
+mod:add_talent_buff_template("wood_elf", "tb_cd_thorn", {
+	stat_buff = "activated_cooldown",
+	multiplier = -0.3,
+	max_stacks = 1
+})
+mod:add_text("kerillian_thorn_sister_debuff_wall_desc_2", "Thornwake instead causes roots to burst from the ground, staggering enemies and applying Blackvenom to them. Reduces cooldown by 30%%.")
+
+
+--[[
+
+░██████╗░█████╗░██╗░░░░░████████╗███████╗██████╗░██╗░░░██╗██████╗░███████╗
+██╔════╝██╔══██╗██║░░░░░╚══██╔══╝╚════██║██╔══██╗╚██╗░██╔╝██╔══██╗██╔════╝
+╚█████╗░███████║██║░░░░░░░░██║░░░░░███╔═╝██████╔╝░╚████╔╝░██████╔╝█████╗░░
+░╚═══██╗██╔══██║██║░░░░░░░░██║░░░██╔══╝░░██╔═══╝░░░╚██╔╝░░██╔══██╗██╔══╝░░
+██████╔╝██║░░██║███████╗░░░██║░░░███████╗██║░░░░░░░░██║░░░██║░░██║███████╗
+╚═════╝░╚═╝░░╚═╝╚══════╝░░░╚═╝░░░╚══════╝╚═╝░░░░░░░░╚═╝░░░╚═╝░░╚═╝╚══════╝
+
+]]
+--[[
+
+	Bounty Hunter Talents
+
+]]
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_railgun_delayed_add", {
     max_stacks = 1,
     multiplier = 0.8,
 })
 mod:add_text("victor_bountyhunter_activated_ability_railgun_desc_2", "Modifies Victor's sidearm to fire two powerful bullets in a straight line. Scoring a headshot with this attack will reduce the cooldown of Locked and Loaded by 80%%. This can only happen once")
---mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_increased_melee_damage_on_no_ammo_add", {
---    event = "on_hit"
---})
---
---mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_attack_speed_on_no_ammo_buff", {
---    multiplier = 0.15,
---    duration = 10
---})
---mod:add_text("victor_bountyhunter_power_burst_on_no_ammo_desc", "Ranged critical hits give 15%% ranged power and 15%% attack speed for 10 seconds.")
---mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_power_on_no_ammo_buff", {
---    multiplier = 0.15,
---    stat_buff = "power_level_ranged",
---    duration = 10
---})
---MeleeBuffTypes = {
---	MELEE_1H = true,
---	MELEE_2H = true
---}
---mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, params)
---    if Unit.alive(owner_unit) then
---        local buff_type = params[5]
---        local is_critical = params[6]
---
---        if is_critical and not MeleeBuffTypes[buff_type] then
---
---            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
---            local buff_template = buff.template
---            local buffs = buff_template.buffs_to_add
---
---            for i = 1, #buffs do
---                local buff_name = buffs[i]
---                local network_manager = Managers.state.network
---                local network_transmit = network_manager.network_transmit
---                local unit_object_id = network_manager:unit_game_object_id(owner_unit)
---                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
---
---                if is_server() then
---                    buff_extension:add_buff(buff_name, {
---                        attacker_unit = owner_unit
---                    })
---                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
---                else
---                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
---                end
---            end
---        end
---    end
---end)
+
+--[[ mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_increased_melee_damage_on_no_ammo_add", {
+    event = "on_hit"
+})
+
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_attack_speed_on_no_ammo_buff", {
+    multiplier = 0.15,
+    duration = 10
+})
+mod:add_text("victor_bountyhunter_power_burst_on_no_ammo_desc", "Ranged critical hits give 15%% ranged power and 15%% attack speed for 10 seconds.")
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_power_on_no_ammo_buff", {
+    multiplier = 0.15,
+    stat_buff = "power_level_ranged",
+    duration = 10
+})
+MeleeBuffTypes = {
+	MELEE_1H = true,
+	MELEE_2H = true
+}
+mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, params)
+    if Unit.alive(owner_unit) then
+        local buff_type = params[5]
+        local is_critical = params[6]
+
+        if is_critical and not MeleeBuffTypes[buff_type] then
+
+            local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+            local buff_template = buff.template
+            local buffs = buff_template.buffs_to_add
+
+            for i = 1, #buffs do
+                local buff_name = buffs[i]
+                local network_manager = Managers.state.network
+                local network_transmit = network_manager.network_transmit
+                local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+                local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+                if is_server() then
+                    buff_extension:add_buff(buff_name, {
+                        attacker_unit = owner_unit
+                    })
+                    network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+                else
+                    network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+                end
+            end
+        end
+    end
+end) ]]
 
 
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activate_passive_on_melee_kill", {
@@ -1433,7 +1535,12 @@ PassiveAbilitySettings.wh_2.perks = {
 mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
 mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
 
---Warrior Priest
+
+--[[
+
+	Warrior Priest Talents
+
+]]
 mod:modify_talent_buff_template("witch_hunter", "victor_priest_5_2", {
 	buff_to_add = "victor_priest_5_2_speed_buff",
 })
@@ -1448,8 +1555,10 @@ mod:add_talent_buff_template("witch_hunter", "victor_priest_5_2_speed_buff", {
 	},
 })
 
+mod:add_text("career_active_desc_wh_priest", "Saltzpyre imbues himself or an ally with a shield, rendering them immune to damage for 5 seconds. Upon expiring, the shield explodes, inflicting damage on nearby enemies. Hold to target allies.") -- just because FS formatting is awful
 mod:add_text("victor_priest_5_2_desc", "Bless the party with 10%% increased movement speed. Fly you fools.")
 mod:add_text("victor_priest_5_2", "Prayer of Flight")
+mod:add_text("victor_priest_6_2_desc", "Shield of Faith always affects Victor as well. Shield of Faith now lasts 3 seconds.")
 
 local spell_params = {}
 local spell_params_improved = {
@@ -1488,20 +1597,23 @@ mod:hook_origin(ActionCareerWHPriestUtility, "_add_buffs_to_target", function (t
 	end
 end)
 
---Sister of the thorn
-mod:modify_talent("we_thornsister", 6, 3, {
-    buffs = {
-        "tb_cd_thorn"
-    }
-})
-mod:add_talent_buff_template("wood_elf", "tb_cd_thorn", {
-	stat_buff = "activated_cooldown",
-	multiplier = -0.3,
-	max_stacks = 1
-})
-mod:add_text("kerillian_thorn_sister_debuff_wall_desc_2", "Thornwake instead causes roots to burst from the ground, staggering enemies and applying Blackvenom to them. Reduces cooldown by 30%%.")
 
--- Battle Wizard Talents
+--[[
+
+░██████╗██╗███████╗███╗░░██╗███╗░░██╗░█████╗░
+██╔════╝██║██╔════╝████╗░██║████╗░██║██╔══██╗
+╚█████╗░██║█████╗░░██╔██╗██║██╔██╗██║███████║
+░╚═══██╗██║██╔══╝░░██║╚████║██║╚████║██╔══██║
+██████╔╝██║███████╗██║░╚███║██║░╚███║██║░░██║
+╚═════╝░╚═╝╚══════╝╚═╝░░╚══╝╚═╝░░╚══╝╚═╝░░╚═╝
+
+]]
+
+--[[
+
+	Battle Wizard Talents
+
+]]
 mod:modify_talent_buff_template("bright_wizard", "sienna_adept_increased_burn_damage", {
     multiplier = 1.5, -- 1,
 })
@@ -1579,7 +1691,11 @@ mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_ex
 	multiplier = -0.2
 })
 
---Necromancer
+--[[
+
+	Necromancer Talents
+
+]]
 mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)
 	local is_crit = params [param_order.is_critical_strike]
 	if not is_crit then
@@ -1677,3 +1793,49 @@ mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
 	multiplier = 0
 })
 mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
+
+
+--[[
+
+███████╗██╗██╗░░██╗███████╗░██████╗
+██╔════╝██║╚██╗██╔╝██╔════╝██╔════╝
+█████╗░░██║░╚███╔╝░█████╗░░╚█████╗░
+██╔══╝░░██║░██╔██╗░██╔══╝░░░╚═══██╗
+██║░░░░░██║██╔╝╚██╗███████╗██████╔╝
+╚═╝░░░░░╚═╝╚═╝░░╚═╝╚══════╝╚═════╝░
+
+]]
+
+-- Fix clients getting too much ult recharge on explosions
+mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit, buff, params)
+	if Unit.alive(owner_unit) then
+		local attack_type = params[2]
+		local target_number = params[4]
+		local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+
+		if not attack_type or attack_type == "heavy_attack" or attack_type == "light_attack" then
+			career_extension:reduce_activated_ability_cooldown(buff.bonus)
+		elseif attack_type == "aoe" then
+            return
+		elseif target_number and target_number == 1 then
+			career_extension:reduce_activated_ability_cooldown(buff.bonus)
+		end
+	end
+end)
+
+-- Fix Stacking bug for lingering flames with Firebombs
+mod:hook_origin(StackingBuffFunctions, "fire_grenade_dot_add", function (unit, sub_buff_template, current_num_stacks, buff_extension, new_buff_params)
+	local should_add_buff = current_num_stacks < 1      -- should_add_buff = true    idk why changing this works
+	local breed = AiUtils.unit_breed(unit)
+	local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+	
+	if breed and breed.is_player then
+	local mechanism_name = Managers.mechanism:current_mechanism_name()
+	
+	if mechanism_name == "versus" then
+	should_add_buff = current_num_stacks < (sub_buff_template.max_player_stacks_in_versus or math.huge)
+	end
+	end
+	
+	return should_add_buff
+end)
