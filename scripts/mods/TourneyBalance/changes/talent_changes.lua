@@ -1793,7 +1793,7 @@ mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
 	multiplier = 0
 })
 mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
-
+mod:add_text("career_passive_desc_bw_necromancer_c", "Killing an enemy grants 2%% crit chance for 5 seconds. Max stacks 5.")
 
 --[[
 

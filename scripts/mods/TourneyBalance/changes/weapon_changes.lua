@@ -736,11 +736,8 @@ Weapons.staff_fireball_fireball_template_1.actions.action_one.shoot_charged.impa
 	damage_profile = "staff_fireball_charged",
 	aoe = ExplosionTemplates.fireball_charged
 }
-
-Weapons.staff_fireball_fireball_template_1.actions.action_one.default.impact_data.damage_profile = "staff_fireball_tourney"
-Weapons.staff_fireball_fireball_template_1.actions.action_one.shoot_charged.impact_data.damage_profile = "staff_fireball_charged_tourney"
 Weapons.staff_fireball_fireball_template_1.actions.action_one.shoot_charged.ignore_shield_hit = true
-
+Weapons.staff_fireball_fireball_template_1.actions.action_one.default.impact_data.damage_profile = "staff_fireball_tourney"
 NewDamageProfileTemplates.staff_fireball_tourney = {
 	charge_value = "projectile",
 	no_stagger_damage_reduction_ranged = true,
@@ -801,6 +798,12 @@ NewDamageProfileTemplates.staff_fireball_tourney = {
 		range_modifier_settings = carbine_dropoff_ranges,
 	},
 }
+
+DamageProfileTemplates.staff_fireball_charged.cleave_distribution.attack = 1.2
+DamageProfileTemplates.staff_fireball_charged.cleave_distribution.impact = 1.2
+DamageProfileTemplates.staff_fireball_charged.default_target.power_distribution_near.attack = 0.375
+DamageProfileTemplates.staff_fireball_charged.default_target.power_distribution_far.attack = 0.375
+DamageProfileTemplates.staff_fireball_charged.armor_modifier.attack[5] = 1.3
 
 -- Conflag
 DamageProfileTemplates.geiser.targets[1].power_distribution.attack = 0.5
