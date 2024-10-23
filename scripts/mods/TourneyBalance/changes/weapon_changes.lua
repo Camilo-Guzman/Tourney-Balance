@@ -1,29 +1,88 @@
 local mod = get_mod("TourneyBalance")
 local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
---Staff can lift chemists
---Weapons.staff_life.actions.action_two.default.prioritized_breeds.chaos_plague_sorcerer = 1
---Breeds.chaos_plague_sorcerer.controllable = true
 
---Bounty Shotgun ability FF reduction
-DamageProfileTemplates.shot_shotgun_ability.critical_strike.attack_armor_power_modifer = { 1, 0.1, 0.2, 0, 1, 0.025 }
-DamageProfileTemplates.shot_shotgun_ability.critical_strike.impact_armor_power_modifer = { 1, 0.5, 200, 0, 1, 0.05 }
-DamageProfileTemplates.shot_shotgun_ability.armor_modifier_near.attack = { 1, 0.1, 0.2, 0, 1, 0 }
-DamageProfileTemplates.shot_shotgun_ability.armor_modifier_near.impact = { 1, 0.5, 200, 0, 1, 0 }
-DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.attack = { 1, 0, 0.2, 0, 1, 0 }
-DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.impact = { 1, 0.5, 200, 0, 1, 0 }
+--[[
 
--- Bloodrazor Thicket 
-DamageProfileTemplates.thorn_wall_explosion_improved_damage.armor_modifier.attack = {
-	0.5,
-	0.1,
-	2,
-	0.75,
-	0.3,
-	0.25
-}
-BuffTemplates.thorn_sister_wall_bleed.buffs[1].duration = 3
+██████╗░░█████╗░███╗░░██╗░██████╗░███████╗██████╗░
+██╔══██╗██╔══██╗████╗░██║██╔════╝░██╔════╝██╔══██╗
+██████╔╝███████║██╔██╗██║██║░░██╗░█████╗░░██║░░██║
+██╔══██╗██╔══██║██║╚████║██║░░╚██╗██╔══╝░░██║░░██║
+██║░░██║██║░░██║██║░╚███║╚██████╔╝███████╗██████╔╝
+╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚══╝░╚═════╝░╚══════╝╚═════╝░
 
---Manbow
+]]
+
+--[[
+
+	GENERAL
+
+]]
+-- Flamethrowers (Flamestorm and Drakegun)
+Weapons.drakegun_template_1.actions.action_one.shoot_charged.damage_interval = 0.30
+Weapons.staff_flamethrower_template .actions.action_one.shoot_charged.damage_interval = 0.30
+
+local POSITION_TWEAK = -1.5
+local SPRAY_RANGE = math.abs(POSITION_TWEAK) + 10
+local MAX_TARGETS = 19
+
+mod:hook_origin(ActionFlamethrower, "_select_targets", function (self, world, show_outline)
+    local owner_unit = self.owner_unit
+	local first_person_extension = ScriptUnit.extension(owner_unit, "first_person_system")
+	local position_offset = Vector3(0, 0, -0.4)
+	local player_position = first_person_extension:current_position() + position_offset
+	local first_person_unit = self.first_person_unit
+	local player_rotation = Unit.world_rotation(first_person_unit, 0)
+	local player_direction = Vector3.normalize(Quaternion.forward(player_rotation))
+	local ignore_hitting_allies = not Managers.state.difficulty:get_difficulty_settings().friendly_fire_ranged
+	local start_point = player_position + player_direction * POSITION_TWEAK
+	local broadphase_radius = 6
+	local blackboard = BLACKBOARDS[owner_unit]
+	local side = blackboard.side
+	local ai_units = {}
+	local ai_units_n = AiUtils.broadphase_query(player_position + player_direction * broadphase_radius, broadphase_radius, ai_units)
+	local physics_world = World.get_data(world, "physics_world")
+
+	PhysicsWorld.prepare_actors_for_overlap(physics_world, start_point, SPRAY_RANGE * SPRAY_RANGE)
+
+	if ai_units_n > 0 then
+		local targets = self.targets
+		local v, q, m = Script.temp_count()
+		local num_hit = 0
+
+		for i = 1, ai_units_n do
+			local hit_unit = ai_units[i]
+			local hit_position = POSITION_LOOKUP[hit_unit] + Vector3.up()
+
+			if targets[hit_unit] == nil then
+				local is_enemy = side.enemy_units_lookup[hit_unit]
+
+				if (is_enemy or not ignore_hitting_allies) and self:_is_infront_player(player_position, player_direction, hit_position) and self:_check_within_cone(start_point, player_direction, hit_unit, is_enemy) then
+					targets[#targets + 1] = hit_unit
+					targets[hit_unit] = false
+
+					if is_enemy and ScriptUnit.extension(hit_unit, "health_system"):is_alive() then
+						num_hit = num_hit + 1
+					end
+				end
+
+				if MAX_TARGETS <= num_hit then
+					break
+				end
+			end
+		end
+
+		Script.set_temp_count(v, q, m)
+	end
+end)
+
+
+--[[
+
+	KRUBER
+
+]]
+
+-- Manbow
 function add_chain_actions(action_no, action_from, new_data)
     local value = "allowed_chain_actions"
     local row = #action_no[action_from][value] + 1
@@ -62,7 +121,6 @@ Weapons.longbow_empire_template.actions.action_two.default.heavy_aim_flow_event 
 Weapons.longbow_empire_template.actions.action_two.default.aim_zoom_delay = 100
 Weapons.longbow_empire_template.ammo_data.reload_time = 0
 Weapons.longbow_empire_template.ammo_data.reload_on_ammo_pickup = true
-
 
 SpreadTemplates.empire_longbow.continuous.still = {max_yaw = 0.25, max_pitch = 0.25 }
 SpreadTemplates.empire_longbow.continuous.moving = {max_yaw = 0.4, max_pitch = 0.4 }
@@ -113,6 +171,12 @@ DamageProfileTemplates.arrow_sniper_kruber.armor_modifier_near.attack = { 1, 1.2
 DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient = 0.6 -- 1.25
 DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient_headshot = 0.8 -- 1
 DamageProfileTemplates.arrow_sniper_kruber.critical_strike.attack_armor_power_modifer = { 1, 1, 1, 1, 0.75, 0.5 }
+
+--[[
+
+	BARDIN
+	
+]]
 
 -- Trollhammer
 DamageProfileTemplates.dr_deus_01_explosion.armor_modifier.attack = {
@@ -247,6 +311,12 @@ mod:hook(ActionGrenadeThrower, "client_owner_post_update", function(func, self, 
 	end
 end)
 
+--[[
+
+	KERILLIAN
+
+]]
+
 --Hagbane
 DamageProfileTemplates.poison = {
 	is_dot = true,
@@ -284,9 +354,6 @@ DamageProfileTemplates.poison = {
 		}
 	}
 }
---Deepwood Staff
-VortexTemplates.spirit_storm.time_of_life = { 5,5 }
-VortexTemplates.spirit_storm.reduce_duration_per_breed = { chaos_warrior = 0.5 }
 
 --Javelin
 DamageProfileTemplates.thrown_javelin.armor_modifier_near.attack = { 1, 0.7, 1.1, 1, 0.75, 0.25 }
@@ -308,11 +375,61 @@ DamageProfileTemplates.thrown_javelin.default_target = {
 	range_modifier_settings = {	dropoff_start = 30,	dropoff_end = 50 }
 }
 
+-- Moonfirebow
+-- Should be 1SHS all specials (full charge) w/ no power, Ska/Chaos/AS Properties
+DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_near.attack = 1.5
+DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_far.attack = 1.5
+DamageProfileTemplates.we_deus_01_charged.default_target.boost_curve_coefficient_headshot = 1.75
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[3] = 0.85
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[3] = 0.85
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[2] = 0.35
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[2] = 0.35
+
+--Deepwood Staff
+VortexTemplates.spirit_storm.time_of_life = { 5,5 }
+VortexTemplates.spirit_storm.reduce_duration_per_breed = { chaos_warrior = 0.5 }
+
+--Staff can lift chemists
+--Weapons.staff_life.actions.action_two.default.prioritized_breeds.chaos_plague_sorcerer = 1
+--Breeds.chaos_plague_sorcerer.controllable = true
+
+-- Bloodrazor Thicket 
+DamageProfileTemplates.thorn_wall_explosion_improved_damage.armor_modifier.attack = {
+	0.5,
+	0.1,
+	2,
+	0.75,
+	0.3,
+	0.25
+}
+BuffTemplates.thorn_sister_wall_bleed.buffs[1].duration = 3
+
+--[[
+
+	SALTZPYRE
+
+]]
+
+--Bounty Shotgun ability FF reduction
+DamageProfileTemplates.shot_shotgun_ability.critical_strike.attack_armor_power_modifer = { 1, 0.1, 0.2, 0, 1, 0.025 }
+DamageProfileTemplates.shot_shotgun_ability.critical_strike.impact_armor_power_modifer = { 1, 0.5, 200, 0, 1, 0.05 }
+DamageProfileTemplates.shot_shotgun_ability.armor_modifier_near.attack = { 1, 0.1, 0.2, 0, 1, 0 }
+DamageProfileTemplates.shot_shotgun_ability.armor_modifier_near.impact = { 1, 0.5, 200, 0, 1, 0 }
+DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.attack = { 1, 0, 0.2, 0, 1, 0 }
+DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.impact = { 1, 0.5, 200, 0, 1, 0 }
+
 --Duck foot
 local balanced_barrels =  { {	yaw = -1, pitch = 0, shot_count = 2 }, { yaw = -0.5, pitch = 0, shot_count = 2 },	{ yaw = 0, pitch = 0, shot_count = 4 }, { yaw = 0.5,  pitch = 0, shot_count = 2 }, { yaw = 1, pitch = 0, shot_count = 2 } }
 Weapons.wh_deus_01_template_1.actions.action_one.default.barrels = balanced_barrels
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.attack = 0.05
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.impact = 0.05
+
+--[[
+
+	SIENNA
+
+]]
+
 --Bolt
 DamageProfileTemplates.fire_spear_3.armor_modifier_near.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
 DamageProfileTemplates.fire_spear_3.armor_modifier_far.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
@@ -598,66 +715,9 @@ mod:add_buff_template("burning_magma_dot", {
         max_stacks = 15,
         perks = { buff_perks.burning }
 })
---Flamethrowers
-Weapons.drakegun_template_1.actions.action_one.shoot_charged.damage_interval = 0.30
-Weapons.staff_flamethrower_template .actions.action_one.shoot_charged.damage_interval = 0.30
 
-local POSITION_TWEAK = -1.5
-local SPRAY_RANGE = math.abs(POSITION_TWEAK) + 10
-local MAX_TARGETS = 19
-
-mod:hook_origin(ActionFlamethrower, "_select_targets", function (self, world, show_outline)
-    local owner_unit = self.owner_unit
-	local first_person_extension = ScriptUnit.extension(owner_unit, "first_person_system")
-	local position_offset = Vector3(0, 0, -0.4)
-	local player_position = first_person_extension:current_position() + position_offset
-	local first_person_unit = self.first_person_unit
-	local player_rotation = Unit.world_rotation(first_person_unit, 0)
-	local player_direction = Vector3.normalize(Quaternion.forward(player_rotation))
-	local ignore_hitting_allies = not Managers.state.difficulty:get_difficulty_settings().friendly_fire_ranged
-	local start_point = player_position + player_direction * POSITION_TWEAK
-	local broadphase_radius = 6
-	local blackboard = BLACKBOARDS[owner_unit]
-	local side = blackboard.side
-	local ai_units = {}
-	local ai_units_n = AiUtils.broadphase_query(player_position + player_direction * broadphase_radius, broadphase_radius, ai_units)
-	local physics_world = World.get_data(world, "physics_world")
-
-	PhysicsWorld.prepare_actors_for_overlap(physics_world, start_point, SPRAY_RANGE * SPRAY_RANGE)
-
-	if ai_units_n > 0 then
-		local targets = self.targets
-		local v, q, m = Script.temp_count()
-		local num_hit = 0
-
-		for i = 1, ai_units_n do
-			local hit_unit = ai_units[i]
-			local hit_position = POSITION_LOOKUP[hit_unit] + Vector3.up()
-
-			if targets[hit_unit] == nil then
-				local is_enemy = side.enemy_units_lookup[hit_unit]
-
-				if (is_enemy or not ignore_hitting_allies) and self:_is_infront_player(player_position, player_direction, hit_position) and self:_check_within_cone(start_point, player_direction, hit_unit, is_enemy) then
-					targets[#targets + 1] = hit_unit
-					targets[hit_unit] = false
-
-					if is_enemy and ScriptUnit.extension(hit_unit, "health_system"):is_alive() then
-						num_hit = num_hit + 1
-					end
-				end
-
-				if MAX_TARGETS <= num_hit then
-					break
-				end
-			end
-		end
-
-		Script.set_temp_count(v, q, m)
-	end
-end)
-
---Fireball
---Removed smokecloud on charged fireball
+-- Fireball
+-- Removed smokecloud on charged fireball
 ExplosionTemplates.fireball_charged.explosion = {
 	use_attacker_power_level = true,
 	radius_min = 1.25,
@@ -672,10 +732,144 @@ ExplosionTemplates.fireball_charged.explosion = {
 	damage_profile = "fireball_charged_explosion",
 	effect_name = "fx/wpnfx_drake_pistols_projectile_impact"
 }
-
 Weapons.staff_fireball_fireball_template_1.actions.action_one.shoot_charged.impact_data = {
 	damage_profile = "staff_fireball_charged",
 	aoe = ExplosionTemplates.fireball_charged
+}
+Weapons.staff_fireball_fireball_template_1.actions.action_one.shoot_charged.ignore_shield_hit = true
+Weapons.staff_fireball_fireball_template_1.actions.action_one.default.impact_data.damage_profile = "staff_fireball_tourney"
+NewDamageProfileTemplates.staff_fireball_tourney = {
+	charge_value = "projectile",
+	no_stagger_damage_reduction_ranged = true,
+	require_damage_for_dot = true,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.35,
+			1.5,
+			1,
+			1,
+			0.25,
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.6,
+			0,
+			0,
+			1,
+			0.25,
+		},
+	},
+	armor_modifier = {
+		attack = {
+			1,
+			0.35,
+			1.5,
+			1,
+			1,
+			0,
+		},
+		impact = {
+			1,
+			0.6,
+			0,
+			0,
+			0.5,
+			0,
+		},
+	},
+	cleave_distribution = {
+		attack = 0.1,
+		impact = 0.1,
+	},
+	default_target = {
+		attack_template = "fireball",
+		boost_curve_coefficient = 0.75,
+		boost_curve_coefficient_headshot = 1,
+		boost_curve_type = "linesman_curve",
+		power_distribution_near = {
+			attack = 0.44, --0.35,
+			impact = 0.3,
+		},
+		power_distribution_far = {
+			attack = 0.3, --0.15,
+			impact = 0.15,
+		},
+		range_modifier_settings = carbine_dropoff_ranges,
+	},
+}
+
+DamageProfileTemplates.staff_fireball_charged.cleave_distribution.attack = 1.2
+DamageProfileTemplates.staff_fireball_charged.cleave_distribution.impact = 1.2
+DamageProfileTemplates.staff_fireball_charged.default_target.power_distribution_near.attack = 0.375
+DamageProfileTemplates.staff_fireball_charged.default_target.power_distribution_far.attack = 0.375
+DamageProfileTemplates.staff_fireball_charged.armor_modifier.attack[5] = 1.3
+
+-- Conflag
+DamageProfileTemplates.geiser.targets[1].power_distribution.attack = 0.5
+ExplosionTemplates.conflag.aoe.duration = 10
+ExplosionTemplates.conflag.aoe.damage_interval = 2
+
+Weapons.staff_fireball_geiser_template_1.actions.action_one.default.impact_data.damage_profile = "staff_conflag_tourney"
+NewDamageProfileTemplates.staff_conflag_tourney = {
+	charge_value = "projectile",
+	no_stagger_damage_reduction_ranged = true,
+	require_damage_for_dot = true,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.35,
+			1.5,
+			1,
+			1,
+			0.25,
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.6,
+			0,
+			0,
+			1,
+			0.25,
+		},
+	},
+	armor_modifier = {
+		attack = {
+			1,
+			0.35,
+			1.5,
+			1,
+			1,
+			0,
+		},
+		impact = {
+			1,
+			0.6,
+			0,
+			0,
+			0.5,
+			0,
+		},
+	},
+	cleave_distribution = {
+		attack = 0.1,
+		impact = 0.1,
+	},
+	default_target = {
+		attack_template = "fireball",
+		boost_curve_coefficient = 0.75,
+		boost_curve_coefficient_headshot = 1,
+		boost_curve_type = "linesman_curve",
+		power_distribution_near = {
+			attack = 0.44, --0.35,
+			impact = 0.3,
+		},
+		power_distribution_far = {
+			attack = 0.3, --0.15,
+			impact = 0.15,
+		},
+		range_modifier_settings = carbine_dropoff_ranges,
+	},
 }
 
 --Burning Head
@@ -741,838 +935,23 @@ Weapons.sienna_scholar_career_skill_weapon.actions.action_career_hold.prioritize
     beastmen_standard_bearer = 1,
 }
 
+--[[
 
---Conflag
-DamageProfileTemplates.geiser.targets[1].power_distribution.attack = 0.5
-ExplosionTemplates.conflag.aoe.duration = 10
-ExplosionTemplates.conflag.aoe.damage_interval = 2
+███╗░░░███╗███████╗██╗░░░░░███████╗███████╗
+████╗░████║██╔════╝██║░░░░░██╔════╝██╔════╝
+██╔████╔██║█████╗░░██║░░░░░█████╗░░█████╗░░
+██║╚██╔╝██║██╔══╝░░██║░░░░░██╔══╝░░██╔══╝░░
+██║░╚═╝░██║███████╗███████╗███████╗███████╗
+╚═╝░░░░░╚═╝╚══════╝╚══════╝╚══════╝╚══════╝
 
---Melee
---Dual Daggers
-Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_left.additional_critical_strike_chance = 0.1
-Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_right.additional_critical_strike_chance = 0.1
-Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack.allowed_chain_actions[5].start_time = 0.35
-Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack_stab.allowed_chain_actions[5].start_time = 0.35
-Weapons.dual_wield_daggers_template_1.max_fatigue_points = 6
+]]
 
---Elf Spear
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.27
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.38
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.17
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.34
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33
+--[[
 
---Glaive
+	GENERAL
 
--- Buffs to push attack chain attack speed and linesman on bopp, removes linesman from heavy attack, makes both heavy attacks have the Heavy 2 profile--
-Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.hit_mass_count = LINESMAN_HIT_MASS_COUNT	--no modifier on live--
-Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left_upward.anim_time_scale = 0.95*1.15		-- 1.0--
-Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left.anim_time_scale = 0.95*1.4			-- 1.25--
-Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.anim_time_scale = 0.95*1.2			-- 1.15--
-Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.damage_profile = "heavy_slashing_smiter_glaive"
-Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.hit_mass_count = NONE
-
---buffs cleave and stagger cleave from 8.21 and 7.46 respectively to 10.74 each --
-DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.attack = 0.36
-DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.impact = 0.36
-
---Elf 1h Sword
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.damage_profile = "tb_1h_sword_light_1_2"
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_left.damage_profile = "tb_1h_sword_light_1_2"
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_bopp.damage_profile = "tb_1h_sword_light_1_2"
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.damage_profile = "light_slashing_smiter_finesse"
-Weapons.we_one_hand_sword_template_1.dodge_count = 4
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.range_mod = 1.3
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.range_mod = 1.4
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.anim_time_scale = 1.08
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_left.anim_time_scale = 1.08
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_bopp.anim_time_scale = 1.08
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.anim_time_scale = 0.81
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[1].start_time = 0.5
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[2].start_time = 0.5
-Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[3].start_time = 0.5
-
---2h sword elf
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_bopp.anim_time_scale = 0.95
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_right_upward.anim_time_scale = 1.25
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_left_upward.anim_time_scale = 1.25
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.anim_time_scale = 1.6
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_second.anim_time_scale = 1.6
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[1].external_multiplier = 1.5
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
-DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2
-DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].armor_modifier.attack = { 1, 0.9, 2.5, 1, 0.75 }
-DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.9, 3, 1, 1 }
-DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
-DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
-DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
-
---Crowbill
-Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_right.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_left.damage_profile = "light_slashing_smiter_stab_burn_tourney"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack_right_up.damage_profile = "heavy_attack_crowbill"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack_left.damage_profile = "heavy_attack_crowbill_left"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack.damage_profile = "heavy_attack_crowbill_right"
-
-
-NewDamageProfileTemplates.light_pointy_smiter_tourney = {
-	armor_modifier = {
-		attack = {
-			1.2,
-			1,
-			2,
-			1,
-			1,
-			0.5
-		},
-		impact = {
-			1,
-			0.5,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.1,
-			1,
-			2,
-			0.9,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "ninja_curve",
-		boost_curve_coefficient_headshot = 1.9,
-		attack_template = "blunt_smiter",
-		power_distribution = {
-			attack = 0.175,
-			impact = 0.1
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "smiter_curve",
-			attack_template = "slashing_smiter",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.075
-			}
-		}
-	}
-}
-
-NewDamageProfileTemplates.light_slashing_smiter_stab_burn_tourney = {
-	armor_modifier = {
-		attack = {
-			1.2,
-			0.5,
-			1.5,
-			1,
-			1.2
-		},
-		impact = {
-			1,
-			1.25,
-			1,
-			1,
-			0.75
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.1,
-			0.7,
-			2,
-			1,
-			0.9
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_coefficient_headshot = 2,
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 0.75,
-		attack_template = "stab_smiter",
-		power_distribution = {
-			attack = 0.1,
-			impact = 0.075
-		}
-	},
-	targets = {
-		{
-			boost_curve_coefficient_headshot = 1.9,
-			dot_template_name = "burning_3W_dot",
-			boost_curve_type = "ninja_curve",
-			boost_curve_coefficient = 0.75,
-			attack_template = "burning_stab_fencer",
-			power_distribution = {
-				attack = 0.2,
-				impact = 0.2
-			}
-		}
-	},
-}
-NewDamageProfileTemplates.heavy_attack_crowbill = {
-	armor_modifier = {
-		attack = {
-			1.31,
-			0.9,
-			2,
-			1,
-			1,
-			1.3
-		},
-		impact = {
-			1,
-			1,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			0.8,
-			2.5,
-			1,
-			1.2,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			0.8,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
-}
-NewDamageProfileTemplates.heavy_attack_crowbill_left = {
-	armor_modifier = {
-		attack = {
-			1.31,
-			0.9,
-			2,
-			1,
-			1,
-			1.3
-		},
-		impact = {
-			1,
-			1,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			1,
-			2,
-			1,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
-}
-NewDamageProfileTemplates.heavy_attack_crowbill_right = {
-	armor_modifier = {
-		attack = {
-			1.31,
-			0.8,
-			1.75,
-			1,
-			1.3
-		},
-		impact = {
-			1,
-			0.6,
-			1,
-			1,
-			0.75
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			0.8,
-			2.5,
-			1,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			0.8,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
-}
-
---Scythe
-Weapons.staff_scythe.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
-Weapons.staff_scythe.actions.action_one.heavy_attack_02.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
-
-Weapons.staff_scythe.actions.action_one.light_attack_03.hit_mass_count = LINESMAN_HIT_MASS_COUNT
-Weapons.staff_scythe.actions.action_one.light_attack_04.hit_mass_count = LINESMAN_HIT_MASS_COUNT
-
-local STATE_SCYTHE = "scythe"
-
-DamageProfileTemplates.heavy_slashing_linesman_scythe_diagonal.targets[1].power_distribution.attack = 0.55    --original 0.5
-
-Weapons.staff_scythe.actions.action_one.light_attack_01.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "medium_slashing_smiter"    --bret L3
-Weapons.staff_scythe.actions.action_one.light_attack_02.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "staff_scythe_L2_PA"
-Weapons.staff_scythe.actions.action_one.light_attack_bopp.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "staff_scythe_L2_PA"
-
-NewDamageProfileTemplates.staff_scythe_L2_PA = {
-    critical_strike = {
-        -- attack_armor_power_modifer = { 1, 0.5, 1.5, 1, 1 },
-        attack_armor_power_modifer = { 1, 0.8, 2.5, 1, 1 },
-        impact_armor_power_modifer = { 1, 1, 1, 1, 1 }
-    },
-    cleave_distribution = {
-        attack = 0.275,
-        impact = 0.25
-    },
-    armor_modifier = {
-        attack = { 0.9, 0, 1.8, 1, 0.75 },
-        impact = { 0.9, 0.5, 1, 1, 0.75 }
-    },
-    default_target = {
-        boost_curve_type = "linesman_curve",
-        attack_template = "light_slashing_linesman",
-        power_distribution = {
-            attack = 0.075,
-            impact = 0.075
-        }
-    },
-    targets = {
-        {
-            -- boost_curve_coefficient_headshot = 1.5,    --deleted
-            boost_curve_coefficient = 2,    --added
-            dot_template_name = "burning_dot_3tick",
-            dot_balefire_variant = true,
-            boost_curve_type = "linesman_curve",
-            attack_template = "heavy_slashing_linesman",
-            power_distribution = {
-                attack = 0.4,    --0.25
-                impact = 0.25    --0.2
-            },
-            armor_modifier = {
-                -- attack = { 1, 0.5, 1.8, 1, 0.75 },
-                -- impact = { 0.9, 0.75, 1, 1, 0.75 }
-                attack = { 1, 0.8, 1.75, 1, 0.75 },
-                impact = { 1, 0.6, 1, 1, 0.75 }
-            }
-        },
-        {
-            dot_template_name = "burning_dot_3tick",
-            dot_balefire_variant = true,
-            boost_curve_type = "linesman_curve",
-            attack_template = "slashing_linesman",
-            power_distribution = {
-                attack = 0.15,
-                impact = 0.125
-            }
-        },
-        {
-            boost_curve_type = "linesman_curve",
-            attack_template = "light_slashing_linesman",
-            power_distribution = {
-                attack = 0.1,
-                impact = 0.1
-            }
-        }
-    }
-}
-
-DamageProfileTemplates.scythe_discharge = {
-	no_stagger_damage_reduction = true,
-	charge_value = "heavy_attack",
-	is_discharge = true,
-	armor_modifier = {
-		attack = {
-			1,
-			0.25,
-			1.5,
-			1,
-			0.75,
-			0
-		},
-		impact = {
-			1,
-			0.75,
-			1,
-			1,
-			0.75,
-			0
-		}
-	},
-	default_target = {
-		attack_template = "drakegun",
-		damage_type = "drakegun",
-		power_distribution = {
-			attack = 0.07,
-			impact = 0.3-- 0.5 (Contols the stagger strength)
-		}
-	}
-}
-
---Wiz Mace
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.range_mod = 1.75
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.range_mod = 1.75
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_left.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_right.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_last.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_upper.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_bopp.range_mod = 1.5
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.slide_armour_hit = true
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.slide_armour_hit = true
-
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_last.damage_profile = "light_blunt_smiter_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_upper.damage_profile = "light_blunt_smiter_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_bopp.damage_profile = "light_blunt_tank_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_right.damage_profile = "light_blunt_tank_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_left.damage_profile = "light_blunt_tank_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack.damage_profile = "medium_blunt_smiter_heavy_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.damage_profile = "medium_blunt_tank_upper_1h_wiz"
-Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.damage_profile = "medium_blunt_tank_upper_1h_wiz"
-
-NewDamageProfileTemplates.medium_blunt_tank_upper_1h_wiz = {
-	stagger_duration_modifier = 1.5,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			1,
-			1.3,
-			1.3,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			0.5,
-			1,
-			1
-		}
-	},
-	charge_value = "heavy_attack",
-	cleave_distribution = {
-		attack = 0.6,
-		impact = 0.65
-	},
-	default_target = {
-		boost_curve_type = "tank_curve",
-		stagger_duration_modifier = 1.5,
-		boost_curve_coefficient_headshot = 1.4,
-		attack_template = "light_blunt_tank",
-		power_distribution = {
-			attack = 0.05,
-			impact = 0.05
-		}
-	},
-	targets = {
-		{
-			boost_curve_type = "tank_curve",
-			stagger_duration_modifier = 1.5,
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.3,
-				impact = 0.3
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			stagger_duration_modifier = 1.5,
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.15,
-				impact = 0.15
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			stagger_duration_modifier = 1.5,
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.1
-			}
-		}
-	},
-	armor_modifier = {
-		attack = {
-			1.5,
-			0.8,
-			1.3,
-			1.3,
-			1.6
-		},
-		impact = {
-			1,
-			1,
-			0.5,
-			1,
-			0.75
-		}
-	},
-}
-
-
-NewDamageProfileTemplates.medium_blunt_smiter_heavy_wiz = {
-	armor_modifier = {
-		attack = {
-			1,
-			0.9,
-			1.75,
-			1,
-			0.75
-		},
-		impact = {
-			1,
-			0.8,
-			1,
-			1,
-			0.7
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.8,
-			2.5,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			0.8,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		boost_curve_coefficient_headshot = 1.1,
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
-}
-
-NewDamageProfileTemplates.light_blunt_tank_wiz = {
-	stagger_duration_modifier = 1.25,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.3,
-			0.25,
-			1.5,
-			1,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			0.5,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.2,
-		impact = 0.6
-	},
-	default_target = {
-		boost_curve_type = "tank_curve",
-		attack_template = "light_blunt_tank",
-		boost_curve_coefficient_headshot = 1.4,
-		power_distribution = {
-			attack = 0.05,
-			impact = 0.15
-		}
-	},
-	targets = {
-		{
-			boost_curve_type = "tank_curve",
-			boost_curve_coefficient_headshot = 1.5,
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.175,
-				impact = 0.25
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.175
-			}
-		}
-	},
-	armor_modifier = {
-		attack = {
-			1.8,
-			0,
-			1,
-			1,
-			1.6
-		},
-		impact = {
-			1,
-			1,
-			0.5,
-			1,
-			1
-		}
-	}
-}
-
-NewDamageProfileTemplates.light_blunt_smiter_wiz = {
-	armor_modifier = {
-		attack = {
-			1.5,
-			1.1,
-			2.5,
-			1,
-			1.4,
-			0.6
-		},
-		impact = {
-			1,
-			0.5,
-			1,
-			1,
-			0.75,
-			0.25
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			0.9,
-			2.75,
-			1,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		attack_template = "slashing_smiter",
-		boost_curve_coefficient_headshot = 1.2,
-		power_distribution = {
-			attack = 0.25,
-			impact = 0.175
-		}
-	},
-	ignore_stagger_reduction = true,
-	targets = {
-		[2] = {
-			boost_curve_type = "smiter_curve",
-			attack_template = "slashing_smiter",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.075
-			}
-		}
-	}
-}
-
---Flaming Flail
-Weapons.one_handed_flails_flaming_template.actions.action_one.light_attack_left.hit_mass_count = TANK_HIT_MASS_COUNT
-Weapons.one_handed_flails_flaming_template.actions.action_one.light_attack_right.hit_mass_count = TANK_HIT_MASS_COUNT
-Weapons.one_handed_flails_flaming_template.actions.action_one.heavy_attack.anim_time_scale = 1
-DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.impact = 0.375
---DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.attack = 0.06
-DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.impact = 0.25
---DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.attack = 0.25
-
---Flail
+]]
+-- Flail
 --Light 1, 2, Bopp Attack Speed--
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_left.anim_time_scale = 1 * 1.25	-- 1.0
 Weapons.one_handed_flail_template_1.actions.action_one.light_attack_right.anim_time_scale = 1 * 1.35	-- 1.0
@@ -1957,7 +1336,8 @@ NewDamageProfileTemplates.tb_two_handed_sword_light = {
 	}
 }
 
---1h Axe
+-- 1h Axe
+-- lights
 Weapons.one_hand_axe_template_1.actions.action_one.light_attack_last.anim_time_scale = 1.3 --1.035
 Weapons.one_hand_axe_template_2.actions.action_one.light_attack_last.anim_time_scale = 1.3 --1.035
 Weapons.one_hand_axe_template_1.actions.action_one.light_attack_last.damage_profile = "light_1h_axe_tb"
@@ -1968,13 +1348,6 @@ Weapons.one_hand_axe_template_1.actions.action_one.light_attack_right.damage_pro
 Weapons.one_hand_axe_template_2.actions.action_one.light_attack_right.damage_profile = "light_1h_axe_tb"
 Weapons.one_hand_axe_template_1.actions.action_one.light_attack_bopp.damage_profile = "light_1h_axe_tb"
 Weapons.one_hand_axe_template_2.actions.action_one.light_attack_bopp.damage_profile = "light_1h_axe_tb"
-
---Heavy
-Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_left.range_mod = 1.2 --1
-Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_right.range_mod = 1.2 --1
-Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_left.range_mod = 1.2 --1
-Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_right.range_mod = 1.2 --1
-
 NewDamageProfileTemplates.light_1h_axe_tb = {
 	armor_modifier = {
 		attack = {
@@ -2052,205 +1425,43 @@ NewDamageProfileTemplates.light_1h_axe_tb = {
 		}
 	},
 }
+--Heavy
+Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_left.range_mod = 1.2 --1
+Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_right.range_mod = 1.2 --1
+Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_left.range_mod = 1.2 --1
+Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_right.range_mod = 1.2 --1
 
---2h Axe
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.damage_profile = "heavy_2h_axe_tb"
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.damage_profile = "heavy_2h_axe_tb"
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.slide_armour_hit = true --nil
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.slide_armour_hit = true --nil
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
-Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
-Weapons.two_handed_axes_template_1.actions.action_one.light_attack_up.anim_time_scale = 0.9 --0.81
-Weapons.two_handed_axes_template_1.actions.action_one.light_attack_bopp.additional_critical_strike_chance = 0.1
-Weapons.two_handed_axes_template_1.actions.action_one.light_attack_bopp.damage_profile = "bopp_2h_axe_tb"
-NewDamageProfileTemplates.heavy_2h_axe_tb = {
+Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_left.damage_profile = "heavy_1h_axe_tb"
+Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_right.damage_profile = "heavy_1h_axe_tb"
+Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_left.damage_profile = "heavy_1h_axe_tb"
+Weapons.one_hand_axe_template_2.actions.action_one.heavy_attack_right.damage_profile = "heavy_1h_axe_tb"
+
+NewDamageProfileTemplates.heavy_1h_axe_tb = {
 	armor_modifier = {
 		attack = {
-			0.9,
-			0,
-			1.5,
 			1,
-			0.75,
-			0
-		},
-		impact = {
-			0.9,
-			0.5,
-			1,
-			1,
-			0.75,
-			0.25
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.6,
+			0.8,
 			2,
 			1,
-			1,
-			0.75
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "heavy_attack",
-	cleave_distribution = {
-		attack = 0.6,
-		impact = 0.35
-	},
-	default_target = {
-		boost_curve_type = "linesman_curve",
-		boost_curve_coefficient_headshot = 0.75,
-		attack_template = "light_slashing_linesman",
-		power_distribution = {
-			attack = 0.1,
-			impact = 0.125
-		}
-	},
-	targets = {
-		{
-			boost_curve_coefficient_headshot = 0.75,
-			boost_curve_type = "linesman_curve",
-			attack_template = "heavy_slashing_linesman",
-			power_distribution = {
-				attack = 0.45,
-				impact = 0.5
-			},
-			armor_modifier = {
-				attack = {
-					0.9,
-					0.5,
-					2,
-					1,
-					0.75
-				},
-				impact = {
-					0.9,
-					0.75,
-					1,
-					1,
-					0.75
-				}
-			}
-		},
-		{
-			boost_curve_type = "linesman_curve",
-			boost_curve_coefficient_headshot = 0.75,
-			attack_template = "slashing_linesman",
-			power_distribution = {
-				attack = 0.25,
-				impact = 0.15
-			}
-		},
-		{
-			boost_curve_type = "linesman_curve",
-			boost_curve_coefficient_headshot = 0.75,
-			attack_template = "light_slashing_linesman",
-			power_distribution = {
-				attack = 0.25,
-				impact = 0.125
-			}
-		}
-	}
-}
-
-NewDamageProfileTemplates.bopp_2h_axe_tb = {
-	armor_modifier = {
-		attack = {
-			0.9,
-			0,
-			1.5,
-			1,
-			0.75
+			0.75,
+			1.3, -- 1,
 		},
 		impact = {
-			0.9,
-			0.5,
+			1,
+			0.8,
 			1,
 			1,
-			0.75
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.5,
-			1.5,
-			1,
-			1
+			0.75,
 		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
 	},
 	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.275,
-		impact = 0.6
-	},
-	default_target = {
-		boost_curve_type = "linesman_curve",
-		attack_template = "light_slashing_linesman",
-		power_distribution = {
-			attack = 0.075,
-			impact = 0.075
-		}
-	},
-	targets = {
-		{
-			boost_curve_coefficient_headshot = 1.5,
-			boost_curve_type = "linesman_curve",
-			attack_template = "heavy_slashing_linesman",
-			power_distribution = {
-				attack = 0.25,
-				impact = 0.2
-			},
-			armor_modifier = {
-				attack = {
-					1,
-					0.3,
-					1.5,
-					1,
-					0.75
-				},
-				impact = {
-					0.9,
-					0.75,
-					1,
-					1,
-					0.75
-				}
-			}
-		},
-		{
-			boost_curve_type = "linesman_curve",
-			attack_template = "slashing_linesman",
-			power_distribution = {
-				attack = 0.15,
-				impact = 0.125
-			}
-		},
-		{
-			boost_curve_type = "linesman_curve",
-			attack_template = "light_slashing_linesman",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	}
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = "critical_strike_blunt_smiter_2h_hammer_H",
+	default_target = "default_target_slashing_smiter_finesse",
+	shield_break = true,
+	targets = "targets_smiter_M",
 }
+
 
 --2h Hammer
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_right.damage_profile = "tb_2h_hammer_heavy"
@@ -2350,180 +1561,13 @@ NewDamageProfileTemplates.tb_2h_hammer_heavy = {
 	}
 }
 
---2h Hammer Priest
-Weapons.two_handed_hammer_priest_template.actions.action_one.light_attack_03.damage_profile = "tb_2h_hammer_light_3_priest"
-Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_02.damage_profile = "tb_2h_hammer_heavy_2_priest"
-DamageProfileTemplates.priest_hammer_heavy_blunt_tank_upper.targets[2].power_distribution.attack = 0.1
-DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[2] = 2.025
-DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[6] = 1.2
-DamageProfileTemplates.priest_hammer_blunt_smiter.critical_strike.attack_armor_power_modifer[2] = 1.8
-NewDamageProfileTemplates.tb_2h_hammer_light_3_priest = {
-	stagger_duration_modifier = 1.5,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.5,
-			1,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			0.5,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.3,
-		impact = 0.8
-	},
-	default_target = {
-		boost_curve_type = "tank_curve",
-		attack_template = "light_blunt_tank",
-		power_distribution = {
-			attack = 0.05,
-			impact = 0.05
-		}
-	},
-	targets = {
-		{
-			boost_curve_type = "tank_curve",
-			boost_curve_coefficient_headshot = 1,
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.2,
-				impact = 0.2
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.2,
-				impact = 0.15
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.1
-			}
-		}
-	},
-	armor_modifier = {
-		attack = {
-			1,
-			0.2,
-			1,
-			1,
-			0.75
-		},
-		impact = {
-			1,
-			1,
-			0.5,
-			1,
-			0.75
-		}
-	}
-}
 
-NewDamageProfileTemplates.tb_2h_hammer_heavy_2_priest = {
-	stagger_duration_modifier = 1.8,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.6,
-			2,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "heavy_attack",
-	cleave_distribution = {
-		attack = 0.4,
-		impact = 0.8
-	},
-	default_target = {
-		boost_curve_type = "tank_curve",
-		attack_template = "blunt_tank",
-		power_distribution = {
-			attack = 0.05,
-			impact = 0.125
-		}
-	},
-	targets = {
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "heavy_blunt_tank",
-			power_distribution = {
-				attack = 0.5,
-				impact = 0.3
-			},
-			armor_modifier = {
-				attack = {
-					1,
-					0.5,
-					2,
-					1,
-					0.75
-				},
-				impact = {
-					1.5,
-					1,
-					1,
-					1,
-					0.75
-				}
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "heavy_blunt_tank",
-			power_distribution = {
-				attack = 0.2,
-				impact = 0.225
-			}
-		},
-		{
-			boost_curve_type = "tank_curve",
-			attack_template = "blunt_tank",
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.2
-			}
-		}
-	},
-	armor_modifier = {
-		attack = {
-			1,
-			0,
-			1.5,
-			1,
-			0.75
-		},
-		impact = {
-			1,
-			1,
-			1,
-			1,
-			0.75
-		}
-	}
-}
 
+--[[
+
+	KRUBER
+
+]]
 --Mace and Sword
 --lights 1,2
 Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_left_diagonal.hit_mass_count = TANK_HIT_MASS_COUNT
@@ -2600,7 +1644,6 @@ NewDamageProfileTemplates.tb_1h_hammer_light_1_2 = {
 		}
 	}
 }
-
 
 --lights 3,4
 Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_left.damage_profile = "tb_1h_sword_light_1_2"
@@ -2780,81 +1823,6 @@ NewDamageProfileTemplates.mace_sword_heavy = {
 	melee_boost_override = 6
 }
 
---Falchion
-Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_left.damage_profile = "tb_falchion_lights"
-Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_right.damage_profile = "tb_falchion_lights"
-Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_bopp.damage_profile = "tb_falchion_lights"
-Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_down.damage_profile = "light_slashing_smiter_finesse"
-
-NewDamageProfileTemplates.tb_falchion_lights = {
-	armor_modifier = {
-		attack = {
-			1,
-			0.2,
-			2,
-			1,
-			1
-		},
-		impact = {
-			1,
-			0.3,
-			0.5,
-			1,
-			1
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.5,
-			2,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			0.5,
-			0.5,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.3,
-		impact = 0.2
-	},
-	default_target = {
-		boost_curve_type = "linesman_curve",
-		attack_template = "light_slashing_linesman",
-		power_distribution = {
-			attack = 0.125,
-			impact = 0.05
-		}
-	},
-	targets = {
-		{
-			boost_curve_coefficient_headshot = 2,
-			boost_curve_type = "ninja_curve",
-			boost_curve_coefficient = 2,
-			attack_template = "light_slashing_linesman_hs",
-			power_distribution = {
-				attack = 0.2,
-				impact = 0.1
-			}
-		},
-		{
-			boost_curve_type = "ninja_curve",
-			boost_curve_coefficient_headshot = 2,
-			attack_template = "light_slashing_linesman",
-			power_distribution = {
-				attack = 0.15,
-				impact = 0.075
-			}
-		}
-	},
-}
-
 --1h sword
 Weapons.one_handed_swords_template_1.dodge_count = 4
 --light 1,2
@@ -2950,126 +1918,6 @@ Weapons.one_handed_swords_template_1.actions.action_one.heavy_attack_right.range
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.cleave_distribution = "cleave_distribution_tank_L"
 DamageProfileTemplates.medium_slashing_tank_1h_finesse.critical_strike = "critical_strike_stab_smiter_H"
 
---1h hammer
-Weapons.one_handed_hammer_template_1.dodge_count = 4
-Weapons.one_handed_hammer_template_2.dodge_count = 4
-Weapons.one_handed_hammer_priest_template.dodge_count = 4
-
---light 1, 2, bop
---DamageProfileTemplates.light_blunt_tank.cleave_distribution.attack = 0.23
---DamageProfileTemplates.light_blunt_tank_diag.targets[1].boost_curve_coefficient_headshot = 2
---DamageProfileTemplates.light_blunt_tank_diag.targets[2].boost_curve_coefficient_headshot = 2
---DamageProfileTemplates.light_blunt_tank_diag.targets[1].power_distribution.attack = 0.225 --0.175
---DamageProfileTemplates.light_blunt_tank_diag.armor_modifier.attack = { 1, 0.35, 1, 1, 0.75, 0.25 } --{ 1, 0, 1, 1, 0 }
---DamageProfileTemplates.light_blunt_tank_diag.critical_strike.attack_armor_power_modifer = {	1, 0.5, 1, 0.75, 0.35 } --{ 1, 0.5, 1, 1, 0.25 }
-Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_left.damage_profile = "tb_1h_hammer_light_1_2"
-Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_left.damage_profile = "tb_1h_hammer_light_1_2"
-Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_01.damage_profile = "tb_1h_hammer_light_1_2"
-Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_right.damage_profile = "tb_1h_hammer_light_1_2"
-Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_right.damage_profile = "tb_1h_hammer_light_1_2"
-Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_02.damage_profile = "tb_1h_hammer_light_1_2"
-
---light 3, 4
-Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
-Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
-Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_04.anim_time_scale = 1.5 --1.35
-Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_last.damage_profile = "tb_1h_hammer_light_3_4"
-Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_last.damage_profile = "tb_1h_hammer_light_3_4"
-Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_03.damage_profile = "tb_1h_hammer_light_3_4"
-Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_down.damage_profile = "tb_1h_hammer_light_3_4"
-Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_down.damage_profile = "tb_1h_hammer_light_3_4"
-Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_04.damage_profile = "tb_1h_hammer_light_3_4"
-NewDamageProfileTemplates.tb_1h_hammer_light_3_4 = {
-	armor_modifier = {
-		attack = {
-			1.25,
-			0.65,
-			3,
-			1,
-			1.25,
-			0.6
-		},
-		impact = {
-			1,
-			0.5,
-			1,
-			1,
-			0.75,
-			0.25
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.25,
-			0.75,
-			2.75,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_coefficient_headshot = 2,
-		boost_curve_type = "smiter_curve",
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.25,
-			impact = 0.175
-		}
-	},
-	ignore_stagger_reduction = true,
-	targets = "targets_smiter_L"
-}
-
---Heavies
---DamageProfileTemplates.medium_blunt_smiter_1h.armor_modifier.attack = { 1, 0.8, 2.5, 0.75, 1 } -- { 1, 0.8, 1.75, 0.75, 0.8 }
-Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_left.range_mod = 1.2 --0
-Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_right.range_mod = 1.2 --0
-Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_left.range_mod = 1.2 --0
-Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_right.range_mod = 1.2 --0
-Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_01.range_mod = 1.2 --0
-Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_02.range_mod = 1.2 --0
-Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_left.damage_profile = "tb_1h_hammer_heavy"
-Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_right.damage_profile = "tb_1h_hammer_heavy"
-Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_left.damage_profile = "tb_1h_hammer_heavy"
-Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_right.damage_profile = "tb_1h_hammer_heavy"
-Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_01.damage_profile = "tb_1h_hammer_heavy"
-Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_02.damage_profile = "tb_1h_hammer_heavy"
-NewDamageProfileTemplates.tb_1h_hammer_heavy = {
-	armor_modifier = {
-		attack = {
-			1,
-			0.8,
-			2.5,
-			1,
-			1
-		},
-		impact = {
-			1,
-			0.6,
-			1,
-			1,
-			0.75
-		}
-	},
-	critical_strike = "critical_strike_smiter_M",
-	charge_value = "light_attack",
-	cleave_distribution = "cleave_distribution_smiter_default",
-	default_target = "default_target_smiter_M",
-	targets = "targets_smiter_M",
-	shield_break = true
-}
 --Halberd
 --light 1
 --DamageProfileTemplates.medium_slashing_axe_linesman.targets[2].power_distribution.attack = 0.225
@@ -3395,9 +2243,391 @@ NewDamageProfileTemplates.tb_halberd_light_chop = {
     melee_boost_override = 2.5,
 	shield_break = true
 }
+
 --Spear and Shield
 Weapons.es_deus_01_template.actions.action_one.light_attack_right.hit_mass_count = TANK_HIT_MASS_COUNT
 Weapons.es_deus_01_template.actions.action_one.heavy_attack_right.damage_profile = "medium_slashing_smiter_es_01"
+
+-- Bretonnian Longsword
+--Bret Sword Light 2, Heavy 1 & 2 buffs
+--1H Axe Heavy attack buff
+Weapons.bastard_sword_template.actions.action_one.light_attack_right.damage_profile = "bret_sword_light_2"
+Weapons.bastard_sword_template.actions.action_one.heavy_attack_left.damage_profile = "bret_sword_heavy_1_2"
+Weapons.bastard_sword_template.actions.action_one.heavy_attack_right.damage_profile = "bret_sword_heavy_1_2"
+--Light
+NewDamageProfileTemplates.bret_sword_light_2 = {
+	armor_modifier = "armor_modifier_linesman_M",
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_M",
+	critical_strike = "critical_strike_linesman_M",
+	default_target = "default_target_linesman_M",
+	targets = {
+		{
+			attack_template = "slashing_linesman",
+			boost_curve_coefficient = 2,
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "linesman_curve",
+			power_distribution = {
+				attack = 0.225,
+				impact = 0.15,
+			},
+		},
+		{
+			attack_template = "slashing_linesman",
+			boost_curve_type = "linesman_curve",
+			power_distribution = {
+				attack = 0.2, -- 0.125,
+				impact = 0.125,
+			},
+		},
+		{
+			attack_template = "light_slashing_linesman",
+			boost_curve_type = "linesman_curve",
+			power_distribution = {
+				attack = 0.15, -- 0.1,
+				impact = 0.1,
+			},
+		},
+	},
+}
+--Heavy
+NewDamageProfileTemplates.bret_sword_heavy_1_2 = {
+	armor_modifier = "armor_modifier_axe_linesman_H",
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.455, -- 0.35,
+		impact = 0.455, -- 0.35,
+	},
+	critical_strike = "critical_strike_axe_linesman_H",
+	default_target = "default_target_axe_linesman_H",
+	targets = "targets_axe_linesman_H",
+}
+
+
+--[[
+
+	BARDIN
+
+]]
+--2h Axe
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.damage_profile = "heavy_2h_axe_tb"
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.damage_profile = "heavy_2h_axe_tb"
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.slide_armour_hit = true --nil
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.slide_armour_hit = true --nil
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_right.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
+Weapons.two_handed_axes_template_1.actions.action_one.heavy_attack_left.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT --nil
+Weapons.two_handed_axes_template_1.actions.action_one.light_attack_up.anim_time_scale = 0.9 --0.81
+Weapons.two_handed_axes_template_1.actions.action_one.light_attack_bopp.additional_critical_strike_chance = 0.1
+Weapons.two_handed_axes_template_1.actions.action_one.light_attack_bopp.damage_profile = "bopp_2h_axe_tb"
+NewDamageProfileTemplates.heavy_2h_axe_tb = {
+	armor_modifier = {
+		attack = {
+			0.9,
+			0,
+			1.5,
+			1,
+			0.75,
+			0
+		},
+		impact = {
+			0.9,
+			0.5,
+			1,
+			1,
+			0.75,
+			0.25
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.6,
+			2,
+			1,
+			1,
+			0.75
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.6,
+		impact = 0.35
+	},
+	default_target = {
+		boost_curve_type = "linesman_curve",
+		boost_curve_coefficient_headshot = 0.75,
+		attack_template = "light_slashing_linesman",
+		power_distribution = {
+			attack = 0.1,
+			impact = 0.125
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 0.75,
+			boost_curve_type = "linesman_curve",
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.45,
+				impact = 0.5
+			},
+			armor_modifier = {
+				attack = {
+					0.9,
+					0.5,
+					2,
+					1,
+					0.75
+				},
+				impact = {
+					0.9,
+					0.75,
+					1,
+					1,
+					0.75
+				}
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient_headshot = 0.75,
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.15
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient_headshot = 0.75,
+			attack_template = "light_slashing_linesman",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.125
+			}
+		}
+	}
+}
+
+NewDamageProfileTemplates.bopp_2h_axe_tb = {
+	armor_modifier = {
+		attack = {
+			0.9,
+			0,
+			1.5,
+			1,
+			0.75
+		},
+		impact = {
+			0.9,
+			0.5,
+			1,
+			1,
+			0.75
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			1.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.275,
+		impact = 0.6
+	},
+	default_target = {
+		boost_curve_type = "linesman_curve",
+		attack_template = "light_slashing_linesman",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0.075
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "linesman_curve",
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.2
+			},
+			armor_modifier = {
+				attack = {
+					1,
+					0.3,
+					1.5,
+					1,
+					0.75
+				},
+				impact = {
+					0.9,
+					0.75,
+					1,
+					1,
+					0.75
+				}
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.15,
+				impact = 0.125
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "light_slashing_linesman",
+			power_distribution = {
+				attack = 0.1,
+				impact = 0.1
+			}
+		}
+	}
+}
+
+--1h hammer
+Weapons.one_handed_hammer_template_1.dodge_count = 4
+Weapons.one_handed_hammer_template_2.dodge_count = 4
+Weapons.one_handed_hammer_priest_template.dodge_count = 4
+
+--light 1, 2, bop
+--DamageProfileTemplates.light_blunt_tank.cleave_distribution.attack = 0.23
+--DamageProfileTemplates.light_blunt_tank_diag.targets[1].boost_curve_coefficient_headshot = 2
+--DamageProfileTemplates.light_blunt_tank_diag.targets[2].boost_curve_coefficient_headshot = 2
+--DamageProfileTemplates.light_blunt_tank_diag.targets[1].power_distribution.attack = 0.225 --0.175
+--DamageProfileTemplates.light_blunt_tank_diag.armor_modifier.attack = { 1, 0.35, 1, 1, 0.75, 0.25 } --{ 1, 0, 1, 1, 0 }
+--DamageProfileTemplates.light_blunt_tank_diag.critical_strike.attack_armor_power_modifer = {	1, 0.5, 1, 0.75, 0.35 } --{ 1, 0.5, 1, 1, 0.25 }
+Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_left.damage_profile = "tb_1h_hammer_light_1_2"
+Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_left.damage_profile = "tb_1h_hammer_light_1_2"
+Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_01.damage_profile = "tb_1h_hammer_light_1_2"
+Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_right.damage_profile = "tb_1h_hammer_light_1_2"
+Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_right.damage_profile = "tb_1h_hammer_light_1_2"
+Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_02.damage_profile = "tb_1h_hammer_light_1_2"
+
+--light 3, 4
+Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
+Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_down.anim_time_scale = 1.5 --1.35
+Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_04.anim_time_scale = 1.5 --1.35
+Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_last.damage_profile = "tb_1h_hammer_light_3_4"
+Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_last.damage_profile = "tb_1h_hammer_light_3_4"
+Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_03.damage_profile = "tb_1h_hammer_light_3_4"
+Weapons.one_handed_hammer_template_1.actions.action_one.light_attack_down.damage_profile = "tb_1h_hammer_light_3_4"
+Weapons.one_handed_hammer_template_2.actions.action_one.light_attack_down.damage_profile = "tb_1h_hammer_light_3_4"
+Weapons.one_handed_hammer_priest_template.actions.action_one.light_attack_04.damage_profile = "tb_1h_hammer_light_3_4"
+NewDamageProfileTemplates.tb_1h_hammer_light_3_4 = {
+	armor_modifier = {
+		attack = {
+			1.25,
+			0.65,
+			3,
+			1,
+			1.25,
+			0.6
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			0.75,
+			0.25
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.25,
+			0.75,
+			2.75,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_coefficient_headshot = 2,
+		boost_curve_type = "smiter_curve",
+		attack_template = "slashing_smiter",
+		power_distribution = {
+			attack = 0.25,
+			impact = 0.175
+		}
+	},
+	ignore_stagger_reduction = true,
+	targets = "targets_smiter_L"
+}
+
+--Heavies
+--DamageProfileTemplates.medium_blunt_smiter_1h.armor_modifier.attack = { 1, 0.8, 2.5, 0.75, 1 } -- { 1, 0.8, 1.75, 0.75, 0.8 }
+Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_left.range_mod = 1.2 --0
+Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_right.range_mod = 1.2 --0
+Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_left.range_mod = 1.2 --0
+Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_right.range_mod = 1.2 --0
+Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_01.range_mod = 1.2 --0
+Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_02.range_mod = 1.2 --0
+Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_left.damage_profile = "tb_1h_hammer_heavy"
+Weapons.one_handed_hammer_template_1.actions.action_one.heavy_attack_right.damage_profile = "tb_1h_hammer_heavy"
+Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_left.damage_profile = "tb_1h_hammer_heavy"
+Weapons.one_handed_hammer_template_2.actions.action_one.heavy_attack_right.damage_profile = "tb_1h_hammer_heavy"
+Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_01.damage_profile = "tb_1h_hammer_heavy"
+Weapons.one_handed_hammer_priest_template.actions.action_one.heavy_attack_02.damage_profile = "tb_1h_hammer_heavy"
+NewDamageProfileTemplates.tb_1h_hammer_heavy = {
+	armor_modifier = {
+		attack = {
+			1,
+			0.8,
+			2.5,
+			1,
+			1
+		},
+		impact = {
+			1,
+			0.6,
+			1,
+			1,
+			0.75
+		}
+	},
+	critical_strike = "critical_strike_smiter_M",
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	default_target = "default_target_smiter_M",
+	targets = "targets_smiter_M",
+	shield_break = true
+}
 
 --Dual Axes
 --Heavies
@@ -3407,6 +2637,1221 @@ Weapons.dual_wield_axes_template_1.actions.action_one.heavy_attack_3.additional_
 --push
 Weapons.dual_wield_axes_template_1.actions.action_one.push.damage_profile_inner = "light_push"
 Weapons.dual_wield_axes_template_1.actions.action_one.push.fatigue_cost = "action_stun_push"
+
+
+-- Warpick
+NewDamageProfileTemplates.tb_warpick_lights = {
+	armor_modifier = "armor_modifier_axe_linesman_M",
+	critical_strike = "critical_strike_axe_linesman_M",
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.4,
+		impact = 0.25
+	},
+	default_target = "default_target_axe_linesman_M",
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "linesman_curve",
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.2
+			},
+			armor_modifier = {
+				attack = {
+					1.25,
+					0.3,
+					1.5,
+					1,
+					0.75
+				},
+				impact = {
+					0.9,
+					0.75,
+					1,
+					1,
+					0.75
+				}
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.225,
+				impact = 0.125
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "light_slashing_linesman",
+			power_distribution = {
+				attack = 0.15,
+				impact = 0.1
+			}
+		}
+	}
+}
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.anim_time_scale = 0.9 * 1
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.anim_time_scale = 0.9 * 1
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.damage_profile = "tb_warpick_lights"
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.damage_profile = "tb_warpick_lights"
+
+--[[
+
+	KERILLIAN
+
+]]
+--Dual Daggers
+Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_left.additional_critical_strike_chance = 0.1
+Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_right.additional_critical_strike_chance = 0.1
+Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack.allowed_chain_actions[5].start_time = 0.35
+Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack_stab.allowed_chain_actions[5].start_time = 0.35
+Weapons.dual_wield_daggers_template_1.max_fatigue_points = 6
+
+--Elf Spear
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.27
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.38
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.17
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.34
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33
+
+--Glaive
+-- Buffs to push attack chain attack speed and linesman on bopp, removes linesman from heavy attack, makes both heavy attacks have the Heavy 2 profile--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.hit_mass_count = LINESMAN_HIT_MASS_COUNT	--no modifier on live--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left_upward.anim_time_scale = 0.95*1.15		-- 1.0--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left.anim_time_scale = 0.95*1.4			-- 1.25--
+Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.anim_time_scale = 0.95*1.2			-- 1.15--
+Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.damage_profile = "heavy_slashing_smiter_glaive"
+Weapons.two_handed_axes_template_2.actions.action_one.heavy_attack_down_first.hit_mass_count = NONE
+
+--buffs cleave and stagger cleave from 8.21 and 7.46 respectively to 10.74 each --
+DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.attack = 0.36
+DamageProfileTemplates.medium_slashing_axe_linesman.cleave_distribution.impact = 0.36
+
+--Elf 1h Sword
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.damage_profile = "tb_1h_sword_light_1_2"
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_left.damage_profile = "tb_1h_sword_light_1_2"
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_bopp.damage_profile = "tb_1h_sword_light_1_2"
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.damage_profile = "light_slashing_smiter_finesse"
+Weapons.we_one_hand_sword_template_1.dodge_count = 4
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.range_mod = 1.3
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.range_mod = 1.4
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_right.anim_time_scale = 1.08
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_left.anim_time_scale = 1.08
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_bopp.anim_time_scale = 1.08
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.anim_time_scale = 0.81
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[1].start_time = 0.5
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[2].start_time = 0.5
+Weapons.we_one_hand_sword_template_1.actions.action_one.light_attack_last.allowed_chain_actions[3].start_time = 0.5
+
+--2h sword elf
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_bopp.anim_time_scale = 0.95
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_right_upward.anim_time_scale = 1.25
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_left_upward.anim_time_scale = 1.25
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.anim_time_scale = 1.6
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_second.anim_time_scale = 1.6
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[1].external_multiplier = 1.5
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
+DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2
+DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].armor_modifier.attack = { 1, 0.9, 2.5, 1, 0.75 }
+DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_power_modifer = { 1, 0.9, 3, 1, 1 }
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
+DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
+
+--[[
+
+	SALTZPYRE
+
+]]
+--2h Hammer Priest
+Weapons.two_handed_hammer_priest_template.actions.action_one.light_attack_03.damage_profile = "tb_2h_hammer_light_3_priest"
+Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_02.damage_profile = "tb_2h_hammer_heavy_2_priest"
+DamageProfileTemplates.priest_hammer_heavy_blunt_tank_upper.targets[2].power_distribution.attack = 0.1
+DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[2] = 2.025
+DamageProfileTemplates.priest_hammer_blunt_smiter.armor_modifier.attack[6] = 1.2
+DamageProfileTemplates.priest_hammer_blunt_smiter.critical_strike.attack_armor_power_modifer[2] = 1.8
+NewDamageProfileTemplates.tb_2h_hammer_light_3_priest = {
+	stagger_duration_modifier = 1.5,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			1,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.3,
+		impact = 0.8
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		attack_template = "light_blunt_tank",
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.05
+		}
+	},
+	targets = {
+		{
+			boost_curve_type = "tank_curve",
+			boost_curve_coefficient_headshot = 1,
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.2
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.15
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.1
+			}
+		}
+	},
+	armor_modifier = {
+		attack = {
+			1,
+			0.2,
+			1,
+			1,
+			0.75
+		},
+		impact = {
+			1,
+			1,
+			0.5,
+			1,
+			0.75
+		}
+	}
+}
+
+NewDamageProfileTemplates.tb_2h_hammer_heavy_2_priest = {
+	stagger_duration_modifier = 1.8,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.6,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.4,
+		impact = 0.8
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		attack_template = "blunt_tank",
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.125
+		}
+	},
+	targets = {
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "heavy_blunt_tank",
+			power_distribution = {
+				attack = 0.5,
+				impact = 0.3
+			},
+			armor_modifier = {
+				attack = {
+					1,
+					0.5,
+					2,
+					1,
+					0.75
+				},
+				impact = {
+					1.5,
+					1,
+					1,
+					1,
+					0.75
+				}
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "heavy_blunt_tank",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.225
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.2
+			}
+		}
+	},
+	armor_modifier = {
+		attack = {
+			1,
+			0,
+			1.5,
+			1,
+			0.75
+		},
+		impact = {
+			1,
+			1,
+			1,
+			1,
+			0.75
+		}
+	}
+}
+
+--Falchion
+Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_left.damage_profile = "tb_falchion_lights"
+Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_right.damage_profile = "tb_falchion_lights"
+Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_bopp.damage_profile = "tb_falchion_lights"
+Weapons.one_hand_falchion_template_1.actions.action_one.light_attack_down.damage_profile = "light_slashing_smiter_finesse"
+
+NewDamageProfileTemplates.tb_falchion_lights = {
+	armor_modifier = {
+		attack = {
+			1,
+			0.2,
+			2,
+			1,
+			1
+		},
+		impact = {
+			1,
+			0.3,
+			0.5,
+			1,
+			1
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.3,
+		impact = 0.2
+	},
+	default_target = {
+		boost_curve_type = "linesman_curve",
+		attack_template = "light_slashing_linesman",
+		power_distribution = {
+			attack = 0.125,
+			impact = 0.05
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 2,
+			boost_curve_type = "ninja_curve",
+			boost_curve_coefficient = 2,
+			attack_template = "light_slashing_linesman_hs",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.1
+			}
+		},
+		{
+			boost_curve_type = "ninja_curve",
+			boost_curve_coefficient_headshot = 2,
+			attack_template = "light_slashing_linesman",
+			power_distribution = {
+				attack = 0.15,
+				impact = 0.075
+			}
+		}
+	},
+}
+
+-- Axe and Falchion
+-- Buff to Super Armor
+DamageProfileTemplates.light_slashing_smiter_dual.armor_modifier.attack[6] = 0.82
+-- buff to Armor to give 2SHS w/ 50% hs rate, assassin and 10% on charm
+DamageProfileTemplates.light_slashing_smiter_dual.armor_modifier.attack[2] = 0.82
+-- Linesman added to falchion lights (not PA).
+Weapons.dual_wield_axe_falchion_template.actions.action_one.light_attack_right_diagonal.hit_mass_count = LINESMAN_HIT_MASS_COUNT
+Weapons.dual_wield_axe_falchion_template.actions.action_one.light_attack_left_diagonal.hit_mass_count = LINESMAN_HIT_MASS_COUNT
+-- Linesman removed from push attack
+Weapons.dual_wield_axe_falchion_template.actions.action_one.light_attack_bopp.hit_mass_count = NONE
+
+--[[
+
+	SIENNA
+
+]]
+--Crowbill
+Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "light_pointy_smiter_tourney"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "light_pointy_smiter_tourney"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.damage_profile = "light_pointy_smiter_tourney"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_right.damage_profile = "light_pointy_smiter_tourney"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_left.damage_profile = "light_slashing_smiter_stab_burn_tourney"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack_right_up.damage_profile = "heavy_attack_crowbill"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack_left.damage_profile = "heavy_attack_crowbill_left"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack.damage_profile = "heavy_attack_crowbill_right"
+
+NewDamageProfileTemplates.light_pointy_smiter_tourney = {
+	armor_modifier = {
+		attack = {
+			1.2,
+			1,
+			2,
+			1,
+			1,
+			0.5
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.1,
+			1,
+			2,
+			0.9,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "ninja_curve",
+		boost_curve_coefficient_headshot = 1.9,
+		attack_template = "blunt_smiter",
+		power_distribution = {
+			attack = 0.175,
+			impact = 0.1
+		}
+	},
+	targets = {
+		[2] = {
+			boost_curve_type = "smiter_curve",
+			attack_template = "slashing_smiter",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.075
+			}
+		}
+	}
+}
+NewDamageProfileTemplates.light_slashing_smiter_stab_burn_tourney = {
+	armor_modifier = {
+		attack = {
+			1.2,
+			0.5,
+			1.5,
+			1,
+			1.2
+		},
+		impact = {
+			1,
+			1.25,
+			1,
+			1,
+			0.75
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.1,
+			0.7,
+			2,
+			1,
+			0.9
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_coefficient_headshot = 2,
+		boost_curve_type = "smiter_curve",
+		boost_curve_coefficient = 0.75,
+		attack_template = "stab_smiter",
+		power_distribution = {
+			attack = 0.1,
+			impact = 0.075
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 1.9,
+			dot_template_name = "burning_3W_dot",
+			boost_curve_type = "ninja_curve",
+			boost_curve_coefficient = 0.75,
+			attack_template = "burning_stab_fencer",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.2
+			}
+		}
+	},
+}
+NewDamageProfileTemplates.heavy_attack_crowbill = {
+	armor_modifier = {
+		attack = {
+			1.31,
+			0.9,
+			2,
+			1,
+			1,
+			1.3
+		},
+		impact = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.2,
+			0.8,
+			2.5,
+			1,
+			1.2,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.8,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		boost_curve_coefficient = 2,
+		attack_template = "slashing_smiter",
+		power_distribution = {
+			attack = 0.4,
+			impact = 0.25
+		}
+	},
+	targets = {
+		[2] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.1,
+				impact = 0.1
+			}
+		}
+	},
+	shield_break = true
+}
+NewDamageProfileTemplates.heavy_attack_crowbill_left = {
+	armor_modifier = {
+		attack = {
+			1.31,
+			0.9,
+			2,
+			1,
+			1,
+			1.3
+		},
+		impact = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.2,
+			1,
+			2,
+			1,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		boost_curve_coefficient = 2,
+		attack_template = "slashing_smiter",
+		power_distribution = {
+			attack = 0.4,
+			impact = 0.25
+		}
+	},
+	targets = {
+		[2] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.1,
+				impact = 0.1
+			}
+		}
+	},
+	shield_break = true
+}
+NewDamageProfileTemplates.heavy_attack_crowbill_right = {
+	armor_modifier = {
+		attack = {
+			1.31,
+			0.8,
+			1.75,
+			1,
+			1.3
+		},
+		impact = {
+			1,
+			0.6,
+			1,
+			1,
+			0.75
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.2,
+			0.8,
+			2.5,
+			1,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.8,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		boost_curve_coefficient = 2,
+		attack_template = "slashing_smiter",
+		power_distribution = {
+			attack = 0.4,
+			impact = 0.25
+		}
+	},
+	targets = {
+		[2] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.1,
+				impact = 0.1
+			}
+		}
+	},
+	shield_break = true
+}
+
+--Scythe
+Weapons.staff_scythe.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+Weapons.staff_scythe.actions.action_one.heavy_attack_02.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+
+Weapons.staff_scythe.actions.action_one.light_attack_03.hit_mass_count = LINESMAN_HIT_MASS_COUNT
+Weapons.staff_scythe.actions.action_one.light_attack_04.hit_mass_count = LINESMAN_HIT_MASS_COUNT
+
+local STATE_SCYTHE = "scythe"
+
+DamageProfileTemplates.heavy_slashing_linesman_scythe_diagonal.targets[1].power_distribution.attack = 0.55    --original 0.5
+
+Weapons.staff_scythe.actions.action_one.light_attack_01.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "medium_slashing_smiter"    --bret L3
+Weapons.staff_scythe.actions.action_one.light_attack_02.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "staff_scythe_L2_PA"
+Weapons.staff_scythe.actions.action_one.light_attack_bopp.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "staff_scythe_L2_PA"
+
+NewDamageProfileTemplates.staff_scythe_L2_PA = {
+    critical_strike = {
+        -- attack_armor_power_modifer = { 1, 0.5, 1.5, 1, 1 },
+        attack_armor_power_modifer = { 1, 0.8, 2.5, 1, 1 },
+        impact_armor_power_modifer = { 1, 1, 1, 1, 1 }
+    },
+	charge_value = "light_attack",
+    cleave_distribution = {
+        attack = 0.275,
+        impact = 0.25
+    },
+    armor_modifier = {
+        attack = { 0.9, 0, 1.8, 1, 0.75 },
+        impact = { 0.9, 0.5, 1, 1, 0.75 }
+    },
+    default_target = {
+        boost_curve_type = "linesman_curve",
+        attack_template = "light_slashing_linesman",
+        power_distribution = {
+            attack = 0.075,
+            impact = 0.075
+        }
+    },
+    targets = {
+        {
+            -- boost_curve_coefficient_headshot = 1.5,    --deleted
+            boost_curve_coefficient = 2,    --added
+            dot_template_name = "burning_dot_3tick",
+            dot_balefire_variant = true,
+            boost_curve_type = "linesman_curve",
+            attack_template = "heavy_slashing_linesman",
+            power_distribution = {
+                attack = 0.4,    --0.25
+                impact = 0.25    --0.2
+            },
+            armor_modifier = {
+                -- attack = { 1, 0.5, 1.8, 1, 0.75 },
+                -- impact = { 0.9, 0.75, 1, 1, 0.75 }
+                attack = { 1, 0.8, 1.75, 1, 0.75 },
+                impact = { 1, 0.6, 1, 1, 0.75 }
+            }
+        },
+        {
+            dot_template_name = "burning_dot_3tick",
+            dot_balefire_variant = true,
+            boost_curve_type = "linesman_curve",
+            attack_template = "slashing_linesman",
+            power_distribution = {
+                attack = 0.15,
+                impact = 0.125
+            }
+        },
+        {
+            boost_curve_type = "linesman_curve",
+            attack_template = "light_slashing_linesman",
+            power_distribution = {
+                attack = 0.1,
+                impact = 0.1
+            }
+        }
+    }
+}
+
+DamageProfileTemplates.scythe_discharge = {
+	no_stagger_damage_reduction = true,
+	charge_value = "heavy_attack",
+	is_discharge = true,
+	armor_modifier = {
+		attack = {
+			1,
+			0.25,
+			1.5,
+			1,
+			0.75,
+			0
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.75,
+			0
+		}
+	},
+	default_target = {
+		attack_template = "drakegun",
+		damage_type = "drakegun",
+		power_distribution = {
+			attack = 0.07,
+			impact = 0.3-- 0.5 (Contols the stagger strength)
+		}
+	}
+}
+
+--Wiz Mace
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.range_mod = 1.75
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.range_mod = 1.75
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_left.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_right.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_last.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_upper.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_bopp.range_mod = 1.5
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.slide_armour_hit = true
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.slide_armour_hit = true
+
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_last.damage_profile = "light_blunt_smiter_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_upper.damage_profile = "light_blunt_smiter_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_bopp.damage_profile = "light_blunt_tank_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_right.damage_profile = "light_blunt_tank_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.light_attack_left.damage_profile = "light_blunt_tank_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack.damage_profile = "medium_blunt_smiter_heavy_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_left.damage_profile = "medium_blunt_tank_upper_1h_wiz"
+Weapons.one_handed_hammer_wizard_template_1.actions.action_one.heavy_attack_right_up.damage_profile = "medium_blunt_tank_upper_1h_wiz"
+
+NewDamageProfileTemplates.medium_blunt_tank_upper_1h_wiz = {
+	stagger_duration_modifier = 1.5,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.2,
+			1,
+			1.3,
+			1.3,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.6,
+		impact = 0.65
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		stagger_duration_modifier = 1.5,
+		boost_curve_coefficient_headshot = 1.4,
+		attack_template = "light_blunt_tank",
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.05
+		}
+	},
+	targets = {
+		{
+			boost_curve_type = "tank_curve",
+			stagger_duration_modifier = 1.5,
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.3,
+				impact = 0.3
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			stagger_duration_modifier = 1.5,
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.15,
+				impact = 0.15
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			stagger_duration_modifier = 1.5,
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.1
+			}
+		}
+	},
+	armor_modifier = {
+		attack = {
+			1.5,
+			0.8,
+			1.3,
+			1.3,
+			1.6
+		},
+		impact = {
+			1,
+			1,
+			0.5,
+			1,
+			0.75
+		}
+	},
+}
+
+NewDamageProfileTemplates.medium_blunt_smiter_heavy_wiz = {
+	armor_modifier = {
+		attack = {
+			1,
+			0.9,
+			1.75,
+			1,
+			0.75
+		},
+		impact = {
+			1,
+			0.8,
+			1,
+			1,
+			0.7
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.8,
+			2.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.8,
+			1,
+			1,
+			1,
+			0.5
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		boost_curve_coefficient = 2,
+		boost_curve_coefficient_headshot = 1.1,
+		attack_template = "slashing_smiter",
+		power_distribution = {
+			attack = 0.4,
+			impact = 0.25
+		}
+	},
+	targets = {
+		[2] = {
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.1,
+				impact = 0.1
+			}
+		}
+	},
+	shield_break = true
+}
+
+NewDamageProfileTemplates.light_blunt_tank_wiz = {
+	stagger_duration_modifier = 1.25,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.3,
+			0.25,
+			1.5,
+			1,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.2,
+		impact = 0.6
+	},
+	default_target = {
+		boost_curve_type = "tank_curve",
+		attack_template = "light_blunt_tank",
+		boost_curve_coefficient_headshot = 1.4,
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.15
+		}
+	},
+	targets = {
+		{
+			boost_curve_type = "tank_curve",
+			boost_curve_coefficient_headshot = 1.5,
+			attack_template = "blunt_tank",
+			power_distribution = {
+				attack = 0.175,
+				impact = 0.25
+			}
+		},
+		{
+			boost_curve_type = "tank_curve",
+			attack_template = "light_blunt_tank",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.175
+			}
+		}
+	},
+	armor_modifier = {
+		attack = {
+			1.8,
+			0,
+			1,
+			1,
+			1.6
+		},
+		impact = {
+			1,
+			1,
+			0.5,
+			1,
+			1
+		}
+	}
+}
+
+NewDamageProfileTemplates.light_blunt_smiter_wiz = {
+	armor_modifier = {
+		attack = {
+			1.5,
+			1.1,
+			2.5,
+			1,
+			1.4,
+			0.6
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			0.75,
+			0.25
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.2,
+			0.9,
+			2.75,
+			1,
+			1.2
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "light_attack",
+	cleave_distribution = {
+		attack = 0.075,
+		impact = 0.075
+	},
+	default_target = {
+		boost_curve_type = "smiter_curve",
+		attack_template = "slashing_smiter",
+		boost_curve_coefficient_headshot = 1.2,
+		power_distribution = {
+			attack = 0.25,
+			impact = 0.175
+		}
+	},
+	ignore_stagger_reduction = true,
+	targets = {
+		[2] = {
+			boost_curve_type = "smiter_curve",
+			attack_template = "slashing_smiter",
+			armor_modifier = {
+				attack = {
+					1,
+					0.25,
+					1,
+					1,
+					0.75
+				},
+				impact = {
+					0.75,
+					0.25,
+					1,
+					1,
+					0.75
+				}
+			},
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.075
+			}
+		}
+	}
+}
+
+--Flaming Flail
+Weapons.one_handed_flails_flaming_template.actions.action_one.light_attack_left.hit_mass_count = TANK_HIT_MASS_COUNT
+Weapons.one_handed_flails_flaming_template.actions.action_one.light_attack_right.hit_mass_count = TANK_HIT_MASS_COUNT
+Weapons.one_handed_flails_flaming_template.actions.action_one.heavy_attack.anim_time_scale = 1
+DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.impact = 0.375
+--DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.attack = 0.06
+DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.impact = 0.25
+--DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.attack = 0.25
+
+
+--[[
+
+███████╗██╗██╗░░██╗███████╗░██████╗
+██╔════╝██║╚██╗██╔╝██╔════╝██╔════╝
+█████╗░░██║░╚███╔╝░█████╗░░╚█████╗░
+██╔══╝░░██║░██╔██╗░██╔══╝░░░╚═══██╗
+██║░░░░░██║██╔╝╚██╗███████╗██████╔╝
+╚═╝░░░░░╚═╝╚═╝░░╚═╝╚══════╝╚═════╝░
+
+]]
+
+--Shield crit fix
+DamageProfileTemplates.shield_slam_target = {
+	stagger_duration_modifier = 1.75,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			2
+		}
+	},
+	charge_value = "heavy_attack",
+	shield_break = true,
+	default_target = "default_target_slam_target_tank_M",
+	armor_modifier = "armor_modifier_slam_target_tank_M"
+}
+DamageProfileTemplates.shield_slam = {
+	stagger_duration_modifier = 1.75,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			0.5,
+			1,
+			1.5
+		}
+	},
+	charge_value = "heavy_attack",
+	armor_modifier = "armor_modifier_slam_tank_M",
+	default_target = "default_target_slam_tank_M"
+}
 
 --Weapon Swap Fixes (moonfire, Coru, MWP, Jav)
 Weapons.we_deus_01_template_1.actions.action_one.default.total_time = 0.7
@@ -4047,53 +4492,6 @@ Weapons.two_handed_cog_hammers_template_1.actions.action_one.heavy_attack_right.
 		action = "action_wield",
 		input = "action_wield"
 	}
-}
-
---Shield crit fix
-DamageProfileTemplates.shield_slam_target = {
-	stagger_duration_modifier = 1.75,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.5,
-			2,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			0.5,
-			1,
-			2
-		}
-	},
-	charge_value = "heavy_attack",
-	shield_break = true,
-	default_target = "default_target_slam_target_tank_M",
-	armor_modifier = "armor_modifier_slam_target_tank_M"
-}
-DamageProfileTemplates.shield_slam = {
-	stagger_duration_modifier = 1.75,
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1,
-			0.5,
-			2,
-			1,
-			1
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			0.5,
-			1,
-			1.5
-		}
-	},
-	charge_value = "heavy_attack",
-	armor_modifier = "armor_modifier_slam_tank_M",
-	default_target = "default_target_slam_tank_M"
 }
 
 
