@@ -3386,6 +3386,7 @@ NewDamageProfileTemplates.staff_scythe_L2_PA = {
         attack_armor_power_modifer = { 1, 0.8, 2.5, 1, 1 },
         impact_armor_power_modifer = { 1, 1, 1, 1, 1 }
     },
+	charge_value = "light_attack",
     cleave_distribution = {
         attack = 0.275,
         impact = 0.25
