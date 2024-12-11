@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="f229397e-a1d1-47c6-8b26-4842b92f9967" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/bundleV2/f029e3f32e288984.mod_bundle" beforeDir="false" afterPath="$PROJECT_DIR$/bundleV2/f029e3f32e288984.mod_bundle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/career_changes.lua" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/career_changes.lua" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/talent_changes.lua" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/talent_changes.lua" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/thp_stagger_changes.lua" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/mods/TourneyBalance/changes/thp_stagger_changes.lua" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -15,17 +13,22 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectId" id="1vH0Zq6dEduvzmVrOw4StGq9hsI" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/.." />
-  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "C:/Users/camil/Documents/V2 mods/Vermintide-Mod-Setup-master/Vermintide-Mod-Setup-master/vermintide-mod-builder/mods"
+  }
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
