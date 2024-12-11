@@ -198,118 +198,6 @@ DamageProfileTemplates.dr_deus_01_explosion.default_target.boost_curve_type = "t
 DamageProfileTemplates.dr_deus_01_glance.default_target.boost_curve_type = "tank_curve"
 DamageProfileTemplates.dr_deus_01.default_target.boost_curve_coefficient = 0.5
 
---Conservative doesnt proc if Trollhammer equiped
-mod:add_proc_function("replenish_ammo_on_headshot_ranged", function (owner_unit, buff, params)
-	local attack_type = params[2]
-	local hit_zone_name = params[3]
-
-	if Unit.alive(owner_unit) and hit_zone_name == "head" and (attack_type == "instant_projectile" or attack_type == "projectile") then
-		local ranged_buff_type = params[5]
-
-		if ranged_buff_type and ranged_buff_type == "RANGED_ABILITY" then
-			return
-		end
-
-		local weapon_slot = "slot_ranged"
-		local ammo_amount = buff.bonus
-		local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
-		local slot_data = inventory_extension:get_slot_data(weapon_slot)
-		local right_unit_1p = slot_data.right_unit_1p
-		local left_unit_1p = slot_data.left_unit_1p
-		local ammo_extension = GearUtils.get_ammo_extension(right_unit_1p, left_unit_1p)
-
-		if slot_data then
-			local item_data = slot_data.item_data
-			local item_name = item_data.name
-			if item_name == "dr_deus_01" then
-				return
-			end
-		end
-
-		if ammo_extension then
-			ammo_extension:add_ammo_to_reserve(ammo_amount)
-		end
-	end
-end)
-mod:hook(ActionGrenadeThrower, "client_owner_post_update", function(func, self, dt, t, world, can_damage)
-	if self.state == "waiting_to_shoot" and self.time_to_shoot <= t then
-		self.state = "shooting"
-	end
-
-	if self.state == "shooting" then
-		local owner_unit = self.owner_unit
-
-		if not Managers.player:owner(self.owner_unit).bot_player then
-			Managers.state.controller_features:add_effect("rumble", {
-				rumble_effect = "crossbow_fire"
-			})
-		end
-
-		local first_person_extension = ScriptUnit.extension(owner_unit, "first_person_system")
-		local position, rotation = first_person_extension:get_projectile_start_position_rotation()
-		local spread_extension = self.spread_extension
-		local current_action = self.current_action
-
-		if spread_extension then
-			rotation = spread_extension:get_randomised_spread(rotation)
-
-			spread_extension:set_shooting()
-		end
-
-		local angle = ActionUtils.pitch_from_rotation(rotation)
-		local speed = current_action.speed
-		local target_vector = Vector3.normalize(Vector3.flat(Quaternion.forward(rotation)))
-		local lookup_data = current_action.lookup_data
-
-		ActionUtils.spawn_player_projectile(owner_unit, position, rotation, 0, angle, target_vector, speed, self.item_name, lookup_data.item_template_name, lookup_data.action_name, lookup_data.sub_action_name, self._is_critical_strike, self.power_level)
-
-		local fire_sound_event = self.current_action.fire_sound_event
-
-		if fire_sound_event then
-			first_person_extension:play_hud_sound_event(fire_sound_event)
-		end
-
-		if self.ammo_extension and not self.extra_buff_shot then
-			local ammo_usage = current_action.ammo_usage
-			local _, procced = self.owner_buff_extension:apply_buffs_to_value(0, "not_consume_grenade")
-
-			self.ammo_extension:use_ammo(ammo_usage)
-		end
-
-		local add_spread = not self.extra_buff_shot
-
-		if self:_update_extra_shots(self.owner_buff_extension, 1) then
-			self.state = "waiting_to_shoot"
-			self.time_to_shoot = t + 0.1
-			self.extra_buff_shot = true
-		else
-			self.state = "shot"
-		end
-
-		first_person_extension:reset_aim_assist_multiplier()
-	end
-
-	if self.state == "shot" and self.active_reload_time then
-		local owner_unit = self.owner_unit
-		local input_extension = ScriptUnit.extension(owner_unit, "input_system")
-
-		if self.active_reload_time < t then
-			local ammo_extension = self.ammo_extension
-
-			if (input_extension:get("weapon_reload") or input_extension:get_buffer("weapon_reload")) and ammo_extension:can_reload() then
-				local status_extension = ScriptUnit.extension(self.owner_unit, "status_system")
-
-				status_extension:set_zooming(false)
-
-				local weapon_extension = ScriptUnit.extension(self.weapon_unit, "weapon_system")
-
-				weapon_extension:stop_action("reload")
-			end
-		elseif input_extension:get("weapon_reload") then
-			input_extension:add_buffer("weapon_reload", 0)
-		end
-	end
-end)
 
 --[[
 
@@ -376,14 +264,79 @@ DamageProfileTemplates.thrown_javelin.default_target = {
 }
 
 -- Moonfirebow
--- Should be 1SHS all specials (full charge) w/ no power, Ska/Chaos/AS Properties
-DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_near.attack = 1.5
-DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_far.attack = 1.5
+DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_near.attack = 0.75
+DamageProfileTemplates.we_deus_01_charged.default_target.power_distribution_far.attack = 0.75
 DamageProfileTemplates.we_deus_01_charged.default_target.boost_curve_coefficient_headshot = 1.75
-DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[3] = 0.85
-DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[3] = 0.85
-DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[2] = 0.35
-DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[2] = 0.35
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[1] = 1.2
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[1] = 1.2
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[2] = 0.8
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[2] = 0.8
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[3] = 1.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[3] = 1.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[4] = 0.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[4] = 0.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[5] = 1.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[5] = 1.5
+DamageProfileTemplates.we_deus_01_charged.armor_modifier.attack[6] = 0.25
+DamageProfileTemplates.we_deus_01_charged.armor_modifier_far.attack[6] = 0.25
+
+-- DoT Nerf from Bloh Bloh
+mod:add_buff_template("we_deus_01_dot_charged", {
+    apply_buff_func = "start_dot_damage",
+    damage_profile = "we_deus_01_dot",
+    damage_type = "burninating",
+    name = "we_deus_01_dot_charged",
+    ticks = 1,
+    time_between_dot_damages = 0.75,
+    update_func = "apply_dot_damage",
+    update_start_delay = 0.75,
+    perks = {
+        buff_perks.burning_elven_magic,
+    },
+})
+
+-- Swiftbow
+DamageProfileTemplates.arrow_machinegun.cleave_distribution.attack = 0.25
+DamageProfileTemplates.arrow_machinegun.cleave_distribution.impact = 0.25
+DamageProfileTemplates.arrow_carbine_shortbow.cleave_distribution.attack = 0.25
+DamageProfileTemplates.arrow_carbine_shortbow.cleave_distribution.impact = 0.25
+DamageProfileTemplates.arrow_machinegun.critical_strike.attack_armor_power_modifer = {
+								1,
+								0.25,
+								1,
+								1,
+								1,
+								0.25,
+							}
+DamageProfileTemplates.arrow_machinegun.armor_modifier_near.attack = {
+								1,
+								0.1,
+								1,
+								1,
+								0.5,
+								0,
+							}
+DamageProfileTemplates.arrow_machinegun.armor_modifier_far.attack = {
+								1,
+								0.1,
+								1,
+								1,
+								0.5,
+								0,
+							}
+DamageProfileTemplates.arrow_machinegun.default_target.boost_curve_coefficient = 0.6
+DamageProfileTemplates.arrow_machinegun.default_target.boost_curve_coefficient_headshot = 1
+DamageProfileTemplates.arrow_machinegun.default_target.boost_curve_type = "linesman_curve"
+DamageProfileTemplates.arrow_machinegun.default_target.power_distribution_near.attack = 0.3 	
+DamageProfileTemplates.arrow_machinegun.default_target.power_distribution_far.attack = 0.25	
+DamageProfileTemplates.arrow_machinegun.friendly_fire_multiplier = 0.15
+DamageProfileTemplates.arrow_machinegun.shield_break = false
+
+--Charged Shots
+DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.attack = 0.5
+DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.far = 0.4
+
+
 
 --Deepwood Staff
 VortexTemplates.spirit_storm.time_of_life = { 5,5 }
@@ -392,6 +345,86 @@ VortexTemplates.spirit_storm.reduce_duration_per_breed = { chaos_warrior = 0.5 }
 --Staff can lift chemists
 --Weapons.staff_life.actions.action_two.default.prioritized_breeds.chaos_plague_sorcerer = 1
 --Breeds.chaos_plague_sorcerer.controllable = true
+
+-- Trueflight FF crit reduced
+DamageProfileTemplates.arrow_sniper_trueflight = {
+    charge_value = "projectile",
+    no_stagger_damage_reduction_ranged = true,
+    critical_strike = {
+        attack_armor_power_modifer = {
+            1.5,
+            1,
+            1,
+            0.25,
+            1,
+            0.6
+        },
+        impact_armor_power_modifer = {
+            1,
+            1,
+            0,
+            1,
+            1,
+            1
+        }
+    },
+    armor_modifier_near = {
+        attack = {
+            1.5,
+            1,
+            1,
+            0.25,
+            1,
+            0.6
+        },
+        impact = {
+            1,
+            1,
+            0,
+            0,
+            1,
+            1
+        }
+    },
+    armor_modifier_far = {
+        attack = {
+            1.5,
+            1,
+            2,
+            0.25,
+            1,
+            0.6
+        },
+        impact = {
+            1,
+            1,
+            0,
+            0,
+            1,
+            0
+        }
+    },
+    cleave_distribution = {
+        attack = 0.375,
+        impact = 0.375
+    },
+    default_target = {
+        boost_curve_coefficient_headshot = 2.5,
+        boost_curve_type = "ninja_curve",
+        boost_curve_coefficient = 0.75,
+        attack_template = "arrow_sniper",
+        power_distribution_near = {
+            attack = 0.5,
+            impact = 0.3
+        },
+        power_distribution_far = {
+            attack = 0.5,
+            impact = 0.25
+        },
+        range_dropoff_settings = sniper_dropoff_ranges
+    },
+	friendly_fire_multiplier = 0.25
+}
 
 -- Bloodrazor Thicket 
 DamageProfileTemplates.thorn_wall_explosion_improved_damage.armor_modifier.attack = {
@@ -923,7 +956,6 @@ DamageProfileTemplates.fire_spear_trueflight.critical_strike.impact_armor_power_
 }
 DamageProfileTemplates.fire_spear_trueflight.cleave_distribution.attack = 0.5
 DamageProfileTemplates.fire_spear_trueflight.cleave_distribution.impact = 0.5
-DamageProfileTemplates.fire_spear_trueflight.max_friendly_damage = 0
 Weapons.sienna_scholar_career_skill_weapon.actions.action_career_hold.prioritized_breeds = {
     skaven_warpfire_thrower = 1,
     chaos_vortex_sorcerer = 1,
@@ -934,6 +966,7 @@ Weapons.sienna_scholar_career_skill_weapon.actions.action_career_hold.prioritize
     skaven_ratling_gunner = 1,
     beastmen_standard_bearer = 1,
 }
+DamageProfileTemplates.fire_spear_trueflight.friendly_fire_multiplier = 0 -- remove FF on Crit
 
 --[[
 
@@ -1129,7 +1162,7 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
 			power_distribution = {
-				attack = 0.25,
+				attack = 0.22, --0.25
 				impact = 0.3
 			}
 		},
@@ -1137,7 +1170,7 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
 			power_distribution = {
-				attack = 0.12,
+				attack = 0.10, --0.12
 				impact = 0.3
 			}
 		}
@@ -2640,13 +2673,27 @@ Weapons.dual_wield_axes_template_1.actions.action_one.push.fatigue_cost = "actio
 
 
 -- Warpick
+-- Animation Time for Lights reduced by 20%
+-- Damage for lights reduced by approx 10%
+-- Stagger Cleave set to same as damage cleave
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.anim_time_scale = 0.9 * 1.25
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.anim_time_scale = 0.9 * 1.25
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.damage_profile = "tb_warpick_lights"
+Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.damage_profile = "tb_warpick_lights"
+Weapons.two_handed_picks_template_1.dodge_count = 3
+
+--Heavies
+--DamageProfileTemplates.heavy_blunt_smiter_charged.armor_modifier.attack[3] = 2.25
+PowerLevelTemplates.armor_modifier_smiter_pick_H.attack[3] = 2.25
+
+--Lights
 NewDamageProfileTemplates.tb_warpick_lights = {
 	armor_modifier = "armor_modifier_axe_linesman_M",
 	critical_strike = "critical_strike_axe_linesman_M",
 	charge_value = "light_attack",
 	cleave_distribution = {
 		attack = 0.4,
-		impact = 0.25
+		impact = 0.4
 	},
 	default_target = "default_target_axe_linesman_M",
 	targets = {
@@ -2655,7 +2702,7 @@ NewDamageProfileTemplates.tb_warpick_lights = {
 			boost_curve_type = "linesman_curve",
 			attack_template = "heavy_slashing_linesman",
 			power_distribution = {
-				attack = 0.25,
+				attack = 0.225,
 				impact = 0.2
 			},
 			armor_modifier = {
@@ -2679,7 +2726,7 @@ NewDamageProfileTemplates.tb_warpick_lights = {
 			boost_curve_type = "linesman_curve",
 			attack_template = "slashing_linesman",
 			power_distribution = {
-				attack = 0.225,
+				attack = 0.21,
 				impact = 0.125
 			}
 		},
@@ -2687,16 +2734,13 @@ NewDamageProfileTemplates.tb_warpick_lights = {
 			boost_curve_type = "linesman_curve",
 			attack_template = "light_slashing_linesman",
 			power_distribution = {
-				attack = 0.15,
+				attack = 0.14,
 				impact = 0.1
 			}
 		}
 	}
 }
-Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.anim_time_scale = 0.9 * 1
-Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.anim_time_scale = 0.9 * 1
-Weapons.two_handed_picks_template_1.actions.action_one.light_attack_right.damage_profile = "tb_warpick_lights"
-Weapons.two_handed_picks_template_1.actions.action_one.light_attack_left.damage_profile = "tb_warpick_lights"
+
 
 --[[
 
@@ -2761,6 +2805,174 @@ DamageProfileTemplates.heavy_slashing_smiter_stab.critical_strike.attack_armor_p
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[1].power_distribution.attack = 0.325
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[2].power_distribution.attack = 0.25
 DamageProfileTemplates.heavy_slashing_linesman_executioner.targets[3].power_distribution.attack = 0.15
+
+-- Dual Swords
+-- Lights
+Weapons.dual_wield_swords_template_1.actions.action_one.light_attack_left.damage_profile = "tb_dual_swords_light"
+Weapons.dual_wield_swords_template_1.actions.action_one.light_attack_right.damage_profile = "tb_dual_swords_light"
+NewDamageProfileTemplates.tb_dual_swords_light = {
+    armor_modifier = {
+        attack = {
+            1,
+            0,
+            2,
+            1,
+            1
+        },
+        impact = {
+            1,
+            0.3,
+            0.5,
+            1,
+            1
+        }
+    },
+    critical_strike = {
+        attack_armor_power_modifer = {
+            0.75,
+            0.5,
+            1.5,
+            1,
+            1
+        },
+        impact_armor_power_modifer = {
+            1,
+            0.5,
+            0.5,
+            1,
+            1
+        }
+    },
+    charge_value = "light_attack",
+    cleave_distribution = {
+        attack = 0.3,
+        impact = 0.2
+    },
+    default_target = {
+        boost_curve_type = "linesman_curve",
+        attack_template = "light_slashing_linesman",
+        power_distribution = {
+            attack = 0.125,
+            impact = 0.05
+        }
+    },
+    targets = {
+        {
+            boost_curve_coefficient_headshot = 2,
+            boost_curve_type = "ninja_curve",
+            boost_curve_coefficient = 2,
+            attack_template = "light_slashing_linesman_hs",
+            power_distribution = {
+                attack = 0.2,
+                impact = 0.1
+            }
+        },
+        {
+            boost_curve_type = "ninja_curve",
+            boost_curve_coefficient_headshot = 2,
+            attack_template = "light_slashing_linesman",
+            power_distribution = {
+                attack = 0.15,
+                impact = 0.075
+            }
+        }
+    },
+}
+
+-- Heavy
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack_2.damage_profile_right = "tb_dual_swords_heavy"
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack_2.damage_profile_left = "tb_dual_swords_heavy"
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_right = "tb_dual_swords_heavy"
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_left = "tb_dual_swords_heavy"
+NewDamageProfileTemplates.tb_dual_swords_heavy = {
+	armor_modifier = {
+		attack = {
+			1,
+			0.25,
+			2,
+			1,
+			0.6
+		},
+		impact = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.45,
+		impact = 0.4
+	},
+	default_target = {
+		boost_curve_type = "linesman_curve",
+		boost_curve_coefficient_headshot = 0.25,
+		attack_template = "light_slashing_linesman",
+		power_distribution = {
+			attack = 0.07,
+			impact = 0.05
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 1,
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient = 2,
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.3,
+				impact = 0.275
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient_headshot = 1,
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.15
+			},
+			armor_modifier = {
+				attack = { 1, 0.2, 2, 1, 0.6 },
+				impact = { 1, 0.5, 0.5, 1, 1}
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.125,
+				impact = 0.1
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.075
+			}
+		}
+	}
+}
 
 --[[
 

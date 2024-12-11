@@ -651,6 +651,7 @@ function mod.modify_talent(self, career_name, tier, index, new_talent_data)
 end
 
 local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+
 -- THP & Stagger Buffs
 mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
@@ -713,6 +714,11 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 		local heal_amount = stagger_calulation * multiplier
 		local death_extension = ScriptUnit.has_extension(hit_unit, "death_system")
 		local is_corpse = death_extension.death_is_done == false
+		local is_shield_slam = nil
+
+		if damage_profile.default_target.attack_template and damage_profile.default_target.attack_template == "heavy_blunt_fencer" then
+			is_shield_slam = true
+		end
 
 		if is_push then
 			heal_amount = 0.6
@@ -724,15 +730,25 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 
 		if slot_data then
 			local item_data = slot_data.item_data
+			local weapon_template = item_data.template
 			local item_name = item_data.name
+			local damage_profile_aoe = Weapons[weapon_template].actions.action_one[attack_type] and Weapons[weapon_template].actions.action_one[attack_type].damage_profile_aoe or nil
+
 			if item_name == "wh_2h_billhook" and heal_amount == 9 then
 				heal_amount = 2
 			end
 			if item_name == "bw_ghost_scythe" and is_discharge and not is_push and heal_amount > 0 then
 				heal_amount = 0.25	-- Change this number to adjust thp gain per target
 			end
+            if 	(item_name == "dr_shield_axe" or "dr_shield_hammer" or "es_mace_shield" or "es_sword_shield" or "wh_hammer_shield")
+			 	and attack_type == "heavy_attack"
+				and is_shield_slam
+				and heal_amount > 0 then
+					if damage_profile_aoe then
+                		heal_amount = 1 -- nerf shield thp gain
+					end
+            end
     	end
-
 		if target_index and target_index < 5 and breed and not breed.is_hero and (attack_type == "light_attack" or attack_type == "heavy_attack" or attack_type == "action_push") and not is_corpse then
 			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
 		end
@@ -1431,3 +1447,14 @@ mod:modify_trait("necklace_heal_self_on_heal_other", {
 	buff_name = "conqueror",
 	advanced_description = "conqueror_desc_3",
 })
+
+-- Shield Push Nerfs
+-- Nerfs all shields' damage_profile_inner to "medium push"
+Weapons.one_handed_sword_shield_template_1.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_sword_shield_template_2.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_hammer_shield_template_1.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_hammer_shield_template_2.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_hand_axe_shield_template_1.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_spears_shield_template.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_hammer_shield_priest_template.actions.action_one.push.damage_profile_inner = "medium_push"
+Weapons.one_handed_flail_shield_template.actions.action_one.push.damage_profile_inner = "medium_push"

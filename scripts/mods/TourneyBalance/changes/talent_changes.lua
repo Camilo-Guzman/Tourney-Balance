@@ -11,6 +11,9 @@ local mod = get_mod("TourneyBalance")
 
 ]]
 
+local function is_server()
+    return Managers.player.is_server
+end
 local function merge(dst, src)
     for k, v in pairs(src) do
         dst[k] = v
@@ -161,9 +164,66 @@ end
 	Mercenary Talents
 
 ]]
+
+-- Helborg's Tutelage
+-- Added in random crits.
+Talents.empire_soldier[43].perks = nil
+mod:modify_talent("es_mercenary", 2, 3, {
+    description = "markus_mercenary_helborg_desc",
+    description_values = {},
+})
+mod:add_text("markus_mercenary_helborg_desc", "Every 5 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
+
+-- Enhanced Training (removed downside of the talent to compete against others in the row)
+mod:add_text("markus_mercenary_passive_improved_desc", "Paced Strikes now increases attack speed by 20.0%%")
 mod:modify_talent_buff_template("empire_soldier", "markus_mercenary_passive_improved", {
     targets = 3
 })
+mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit, buff, params)
+	if not Managers.state.network.is_server then
+		return
+	end
+
+	local buff_template = buff.template
+	local target_number = params[4]
+	local attack_type = params[2]
+	local buff_to_add = buff_template.buff_to_add
+	local buff_system = Managers.state.entity:system("buff_system")
+	local buff_applied = true
+
+	if ALIVE[owner_unit] and target_number and target_number >= buff_template.targets and (attack_type == "light_attack" or attack_type == "heavy_attack") then
+		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+
+		if talent_extension:has_talent("markus_mercenary_passive_improved", "empire_soldier", true) then
+			if target_number >= 3 then
+				buff_system:add_buff(owner_unit, "markus_mercenary_passive_improved", owner_unit, false)
+			else
+				buff_applied = false
+			end
+		elseif talent_extension:has_talent("markus_mercenary_passive_group_proc", "empire_soldier", true) then
+			local side = Managers.state.side.side_by_unit[owner_unit]
+			local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+			local num_units = #player_and_bot_units
+
+			for i = 1, num_units do
+				local unit = player_and_bot_units[i]
+
+				if HEALTH_ALIVE[unit] then
+					buff_system:add_buff(unit, buff_to_add, owner_unit, false)
+				end
+			end
+		elseif talent_extension:has_talent("markus_mercenary_passive_power_level_on_proc", "empire_soldier", true) then
+			buff_system:add_buff(owner_unit, "markus_mercenary_passive_power_level", owner_unit, false)
+			buff_system:add_buff(owner_unit, buff_to_add, owner_unit, false)
+		else
+			buff_system:add_buff(owner_unit, buff_to_add, owner_unit, false)
+		end
+
+		if talent_extension:has_talent("markus_mercenary_passive_defence_on_proc", "empire_soldier", true) and buff_applied then
+			buff_system:add_buff(owner_unit, "markus_mercenary_passive_defence", owner_unit, false)
+		end
+	end
+end)
 
 --[[
 
@@ -513,6 +573,9 @@ mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increas
 	Grail Knight
 
 ]]
+mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_ability_buff_on_kill_movement_speed", {
+    duration = 25
+})
 mod:modify_talent("es_questingknight", 6, 2, {
     buffs = {
         "tb_cd_grail",
@@ -524,7 +587,7 @@ mod:add_talent_buff_template("empire_soldier", "tb_cd_grail", {
 	multiplier = -0.3,
 	max_stacks = 1
 })
-mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade increases movement speed by 35%% for 15 seconds. Reduces cooldown by 30%%.")
+mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade increases movement speed by 35%% for 25 seconds. Reduces cooldown by 30%%.")
 
 
 --[[
@@ -543,9 +606,23 @@ mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an ene
 	Ranger Veteran Talents
 
 ]]
+
+
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_passive", {
 	buff_func = "gs_bardin_ranger_scavenge_proc"
 })
+
+-- Foe Feller
+-- Now grants 15% AS. (5% before)
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_attack_speed", {
+	multiplier = 0.15
+})
+mod:modify_talent("dr_ranger", 2, 3, {
+    description = "ranger_veteran_foe_feller_attack_speed_desc",
+    description_values = {},
+})
+mod:add_text("ranger_veteran_foe_feller_attack_speed_desc", "Increases attack speed by 15.0%.")
+
 
 --Ales
 Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8
@@ -1102,6 +1179,7 @@ mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nea
 	Outcast Engineer Talents
 
 ]]
+--[[ Removed due to new Balance Patch of the official Game (6.0.0)
 mod:add_talent_buff_template("dwarf_ranger", "bardin_engineer_ranged_crit_count", {
 	buff_to_add = "bardin_engineer_ranged_crit_counter_buff",
 	max_stacks = 1,
@@ -1148,6 +1226,7 @@ mod:modify_talent("dr_engineer", 2,1, {
 
 mod:add_text("bardin_engineer_improved_explosives_desc", "Every 4th Ranged Attack is a guaranteed Critical Hit.")
 mod:add_text("bardin_engineer_melee_power_ranged_power_desc", "Melee Power is increased by 10%%. Every 5 Melee Strikes makes Bardin's next Ranged Attack grant 15%% Ranged Power for 10 seconds.")
+]]
 
 --[[
 
@@ -1312,11 +1391,8 @@ mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe al
 	Handmaiden Talents
 
 ]]
-local function is_server()
-    return Managers.player.is_server
-end
-
---Focused Spirit
+-- Focused Spirit
+-- Buffed to grant 30% power.
 mod:add_proc_function("lr_maidenguard_reset_unharmed_buff", function (owner_unit, buff, params)
     local attacker_unit = params[1]
     local damage_amount = params[2]
@@ -1356,10 +1432,10 @@ mod:add_proc_function("lr_maidenguard_reset_unharmed_buff", function (owner_unit
         return true
     end
 end)
-
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_power_level_on_unharmed", {
-    multiplier = 0.20,
-    buff_func = "lr_maidenguard_reset_unharmed_buff"
+    multiplier = 0.30,
+    buff_func = "lr_maidenguard_reset_unharmed_buff",
+	stat_buff = "power_level_melee",
 })
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_power_level_on_unharmed_cooldown", {
     duration = 4
@@ -1368,14 +1444,31 @@ mod:modify_talent("we_maidenguard", 2, 1, {
     description = "elf_hm_hitless_desc",
     description_values = {},
 })
-mod:add_text("elf_hm_hitless_desc", "After not taking damage for 4 seconds, increases Kerillian's power by 20.0%. Reset upon taking damage, friendly fire will not reset the buff.")
+mod:add_text("elf_hm_hitless_desc", "After not taking damage for 4 seconds, increases Kerillian's melee power by 30.0%. Reset upon taking damage, friendly fire will not reset the buff.")
 
+
+-- Oak Stance
+-- Also grants 30% crit power.
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_crit_chance", {
 	bonus = 0.1
 })
+mod:add_talent_buff_template("wood_elf", "handmaiden_crit_power", {
+	stat_buff = "critical_strike_effectiveness",
+	multiplier = 0.3,
+	max_stacks = 1
+})
+mod:modify_talent("we_maidenguard", 2, 2, {
+    buffs = {
+        "handmaiden_crit_power",
+		"kerillian_maidenguard_crit_chance"
+    },
+    description = "elf_hm_increased_crit_chance_crit_power_desc",
+    description_values = {},
+})
+mod:add_text("elf_hm_increased_crit_chance_crit_power_desc", "Increases critical strike chance by 10.0% and critical strike damage by 30.0%.")
 
-mod:add_text("kerillian_maidenguard_crit_chance_desc", "Increases critical strike chance by 10%%.")
 
+-- Asrai Alacrity
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_push", {
     amount_to_add = 3,
     max_sub_buff_stacks = 3,
@@ -1388,6 +1481,45 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_speed_on_bloc
     max_stacks = 3
 })
 mod:add_text("kerillian_maidenguard_speed_on_block_desc", "Blocking an attack or pushing an enemy grants the next three strikes 30%% attack speed and 10%% power.")
+
+
+-- Dance of Blades
+-- Now grants ~~20%~~15% damage lasting for 3.5 seconds.
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_power_on_dodge", {
+	duration = 3.5,
+	multiplier = 0.15
+})
+mod:modify_talent("we_maidenguard", 4, 2, {
+    description = "elf_hm_power_or_better_dodge_desc",
+    description_values = {},
+})
+mod:add_text("elf_hm_power_or_better_dodge_desc", "Dodging while blocking increases dodge range by 20%. Dodging while not blocking increases Kerillian's power by 15% for 3.5 seconds.")
+
+
+-- Heart of Oak
+-- Now grants 20% extra max health.
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_max_health", {
+	multiplier = 0.2
+})
+mod:modify_talent("we_maidenguard", 5, 1, {
+    description = "elf_hm_increased_max_health_desc",
+    description_values = {},
+})
+mod:add_text("elf_hm_increased_max_health_desc", "Increases max health by 20.0%.")
+
+
+-- Quiver of Plenty
+-- Now grants 80% increased ammo.
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_max_ammo", {
+	multiplier = 0.8
+})
+mod:modify_talent("we_maidenguard", 5, 3, {
+    description = "elf_hm_increased_max_ammo_desc",
+    description_values = {},
+})
+mod:add_text("elf_hm_increased_max_ammo_desc", "Increases ammunition amount by 80.0%.")
+
+
 
 --[[
 
@@ -1534,6 +1666,33 @@ PassiveAbilitySettings.wh_2.perks = {
 }
 mod:add_text("rebaltourn_career_passive_name_wh_2d", "Blessed Kill")
 mod:add_text("rebaltourn_career_passive_desc_wh_2d_2", "Melee kills reset the cooldown of Blessed Shots.")
+
+--[[
+
+	Zealot
+
+]]
+
+-- Smite
+-- Added in random crits.
+Talents.witch_hunter[4].perks = nil
+mod:modify_talent("wh_zealot", 2, 2, {
+    description = "zealot_crit_smite_desc",
+    description_values = {},
+})
+mod:add_text("zealot_crit_smite_desc", "Every 5 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
+
+-- Unbending Purpose
+-- Now grants 20% melee power.
+mod:modify_talent_buff_template("witch_hunter", "victor_zealot_power", {
+	stat_buff = "power_level_melee",
+	multiplier = 0.2
+})
+mod:modify_talent("wh_zealot", 2, 3, {
+    description = "zealot_unbending_purpose_desc",
+    description_values = {},
+})
+mod:add_text("zealot_unbending_purpose_desc", "Increases melee power by 20.0%.")
 
 
 --[[
@@ -1690,6 +1849,20 @@ mod:add_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_ex
     stat_buff = "activated_cooldown",
 	multiplier = -0.2
 })
+
+--[[
+
+	Pyromancer Talents
+
+]]
+mod:modify_talent_buff_template("bright_wizard", "sienna_scholar_increased_attack_speed", {
+	multiplier = 0.1
+})
+mod:modify_talent("bw_scholar", 2, 2, {
+    description = "pyro_martial_study_desc",
+    description_values = {},
+})
+mod:add_text("pyro_martial_study_desc", "Increases attack speed by 10%.")
 
 --[[
 

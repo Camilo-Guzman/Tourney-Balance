@@ -1,7 +1,21 @@
 local mod = get_mod("TourneyBalance")
 
--- Passive Changes
--- Footknight
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+
+--[[
+██████╗░░█████╗░░██████╗░██████╗██╗██╗░░░██╗███████╗░██████╗
+██╔══██╗██╔══██╗██╔════╝██╔════╝██║██║░░░██║██╔════╝██╔════╝
+██████╔╝███████║╚█████╗░╚█████╗░██║╚██╗░██╔╝█████╗░░╚█████╗░
+██╔═══╝░██╔══██║░╚═══██╗░╚═══██╗██║░╚████╔╝░██╔══╝░░░╚═══██╗
+██║░░░░░██║░░██║██████╔╝██████╔╝██║░░╚██╔╝░░███████╗██████╔╝
+╚═╝░░░░░╚═╝░░╚═╝╚═════╝░╚═════╝░╚═╝░░░╚═╝░░░╚══════╝╚═════╝░
+]]
+
+--[[
+
+	Footknight
+
+]]
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
     range = 20
 })
@@ -138,14 +152,50 @@ mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_al
 })
 mod:add_text("markus_knight_damage_taken_ally_proximity_desc_2", "Increases damage protection from Protective Presence by 3.33%% for each nearby ally")
 
--- Bounty Hunter
+--[[
+
+	Ranger Veteran
+
+]]
+-- New Ranged damage and effective range passive
+mod:add_talent_buff_template("dwarf_ranger", "dwarf_ranger_ranged_power", {
+	max_stacks = 1,
+	multiplier = 0.1,
+	stat_buff = "power_level_ranged",
+})
+table.insert(PassiveAbilitySettings.dr_3.buffs, "dwarf_ranger_ranged_power")
+table.insert(PassiveAbilitySettings.dr_3.buffs, "markus_huntsman_passive_no_damage_dropoff")
+mod:add_text("career_passive_desc_dr_3c_2", "Double effective range for ranged weapons, 10% increased ranged power, and 15% increased reload speed.")
+
+--[[
+
+	Bounty Hunter
+
+]]
 table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
 
--- Ultimate Changes
---Huntsman
+--[[
+
+██╗░░░██╗██╗░░░░░████████╗██╗███╗░░░███╗░█████╗░████████╗███████╗
+██║░░░██║██║░░░░░╚══██╔══╝██║████╗░████║██╔══██╗╚══██╔══╝██╔════╝
+██║░░░██║██║░░░░░░░░██║░░░██║██╔████╔██║███████║░░░██║░░░█████╗░░
+██║░░░██║██║░░░░░░░░██║░░░██║██║╚██╔╝██║██╔══██║░░░██║░░░██╔══╝░░
+╚██████╔╝███████╗░░░██║░░░██║██║░╚═╝░██║██║░░██║░░░██║░░░███████╗
+░╚═════╝░╚══════╝░░░╚═╝░░░╚═╝╚═╝░░░░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚══════╝
+]]
+
+--[[
+
+	Huntsman
+
+]]
 ActivatedAbilitySettings.es_1[1].cooldown = 75
 
--- Footknight
+--[[
+	
+	Footknight
+
+]]
 -- Made Widecharge the standard Footknight ult
 ActivatedAbilitySettings.es_2[1].cooldown = 40
 mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
@@ -308,55 +358,12 @@ mod:hook_origin(CareerAbilityESKnight, "_run_ability", function(self)
 	career_extension:start_activated_ability_cooldown()
 	self:_play_vo()
 end)
---Fix Hero Time not proccing if ally already disabled
-mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
-    if not Managers.state.network.is_server then
-        return
-    end
 
-    local side = Managers.state.side.side_by_unit[owner_unit]
-    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
-    local num_units = #player_and_bot_units
-    local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-    local buff_system = Managers.state.entity:system("buff_system")
-    local template = buff.template
-    local buff_to_add = template.buff_to_add
-    local disabled_allies = 0
+--[[
 
-    for i = 1, num_units, 1 do
-        local unit = player_and_bot_units[i]
-        local status_extension = ScriptUnit.extension(unit, "status_system")
-        local is_disabled = status_extension:is_disabled()
+	Grail Knight
 
-        if is_disabled then
-            disabled_allies = disabled_allies + 1
-        end
-    end
-
-	if not buff.disabled_allies then
-		buff.disabled_allies = 0
-	end
-
-    if buff_extension:has_buff_type(buff_to_add) then
-        if disabled_allies <= buff.disabled_allies then
-            local buff_id = buff.buff_id
-
-            if buff_id then
-                buff_system:remove_server_controlled_buff(owner_unit, buff_id)
-
-                buff.buff_id = nil
-            end
-        end
-    elseif disabled_allies > 0 and disabled_allies > buff.disabled_allies then
-        buff.buff_id = buff_system:add_buff(owner_unit, buff_to_add, owner_unit, true)
-    end
-
-	buff.disabled_allies = disabled_allies
-end)
-
-
-
--- Grail Knight Changes
+]]
 ActivatedAbilitySettings.es_4[1].cooldown = 60
 mod:add_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 3 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
 mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
@@ -383,184 +390,33 @@ mod:hook_origin(PassiveAbilityQuestingKnight, "_get_side_quest_challenge", funct
 	return side_quest_challenge
 end)
 
---Handmaiden
---CareerSettings.we_maidenguard.attributes.max_hp = 150
-table.insert(PassiveAbilitySettings.we_2.buffs, "kerillian_maidenguard_passive_damage_reduction")
-mod:add_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_damage_reduction", {
-	stat_buff = "damage_taken",
-	multiplier = -0.3
+-- Sweep Nerf (no infinite damage cleave)
+--infinite stagger cleave stays
+--old damage numbers but heavy linesman instead (potentially too good against berzerkers)
+--start window shorter for better visual feedback
+Weapons.markus_questingknight_career_skill_weapon.actions.action_career_release.default_tank.unlimited_cleave = false
+Weapons.markus_questingknight_career_skill_weapon.actions.action_career_release.default_tank.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+Weapons.markus_questingknight_career_skill_weapon.actions.action_career_release.default_tank.damage_window_start = 0.05
+DamageProfileTemplates.questing_knight_career_sword_tank.cleave_distribution.attack = 0.5
+
+--[[
+
+	Ranger Veteran
+
+]]
+-- surprise guest now has 30% CDR
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_activated_ability_stealth_outside_of_smoke", {
+	stat_buff = "activated_cooldown",
+	multiplier = -0.3,
+	max_stacks = 1
 })
-PassiveAbilitySettings.we_2.perks = {
-	{
-        display_name = "career_passive_name_we_2b",
-        description = "career_passive_desc_we_2b_2"
-    },
-    {
-        display_name = "career_passive_name_we_2c",
-        description = "career_passive_desc_we_2c_2"
-    },
-	{
-		display_name = "rebaltourn_career_passive_name_we_2d",
-		description = "rebaltourn_career_passive_desc_we_2d_2"
-	}
-}
-mod:add_text("rebaltourn_career_passive_name_we_2d", "Bendy")
-mod:add_text("rebaltourn_career_passive_desc_we_2d_2", "Reduces damage taken by 30%.")
+mod:add_text("bardin_ranger_activated_ability_stealth_outside_of_smoke_desc", "Disengage's stealth does not break on moving beyond the smoke cloud. Reduces the cooldown of Disengage by 30%")
 
-mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
-	range = 20
-})
+--[[
+	
+	Waystalker
 
---Ult hitbox
-mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
-    func(self, ...)
-
-    local owner_unit = self._owner_unit
-    local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
-    local bleed = talent_extension:has_talent("kerillian_maidenguard_activated_ability_damage")
-
-    if bleed then
-        local status_extension = self._status_extension
-        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
-        status_extension.do_lunge.damage.width = 1.5    --1.5    --width of hitbox
-        status_extension.do_lunge.damage.depth_padding = 0.4   --0.4    --length of hitbox
-        status_extension.do_lunge.damage.offset_forward = 0   --0    --position of hitbox
-    else
-        local status_extension = self._status_extension
-        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
-        status_extension.do_lunge.damage.width = 6.0    --1.5    --width of hitbox
-        status_extension.do_lunge.damage.depth_padding = 6.0   --0.4    --length of hitbox
-        status_extension.do_lunge.damage.offset_forward = 6.0   --0    --position of hitbox
-    end
-end)
-
---Sister of the Thorn
-ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
-mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
-	multiplier = 0.10
-})
-
-mod:hook_origin(PassiveAbilityThornsister, "_update_extra_abilities_info", function(self, talent_extension)
-    if not talent_extension then
-        return
-    end
-
-    local career_ext = self._career_extension
-
-    if not career_ext then
-        return
-    end
-
-    local max_uses = self._ability_init_data.max_stacks
-
-    if talent_extension:has_talent("kerillian_double_passive") then
-        max_uses = max_uses + 1
-    end
-
-    career_ext:update_extra_ability_uses_max(max_uses)
-
-    local cooldown = self._ability_init_data.cooldown
-
-    if talent_extension:has_talent("kerillian_thorn_sister_faster_passive") then
-        cooldown = cooldown * 0.75
-    end
-
-    career_ext:update_extra_ability_charge(cooldown)
-end)
-
-local WALL_TYPES = table.enum("default", "bleed")
-local UNIT_NAMES = {
-	default = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01",
-	bleed = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01_bleed"
-}
-
-SpawnUnitTemplates.thornsister_thorn_wall_unit = {
-	spawn_func = function (source_unit, position, rotation, state_int, group_spawn_index)
-		local UNIT_NAME = UNIT_NAMES[WALL_TYPES.default]
-		local UNIT_TEMPLATE_NAME = "thornsister_thorn_wall_unit"
-		local wall_index = state_int
-		local despawn_sound_event = "career_ability_kerillian_sister_wall_disappear"
-		local life_time = 6
-		local area_damage_params = {
-			aoe_dot_damage = 0,
-			radius = 0.3,
-			area_damage_template = "we_thornsister_thorn_wall",
-			invisible_unit = false,
-			nav_tag_volume_layer = "temporary_wall",
-			create_nav_tag_volume = true,
-			aoe_init_damage = 0,
-			damage_source = "career_ability",
-			aoe_dot_damage_interval = 0,
-			damage_players = false,
-			source_attacker_unit = source_unit,
-			life_time = life_time
-		}
-		local props_params = {
-			life_time = life_time,
-			owner_unit = source_unit,
-			despawn_sound_event = despawn_sound_event,
-			wall_index = wall_index
-		}
-		local health_params = {
-			health = 20
-		}
-		local buffs_to_add = nil
-		local source_talent_extension = ScriptUnit.has_extension(source_unit, "talent_system")
-
-		if source_talent_extension then
-			if source_talent_extension:has_talent("kerillian_thorn_sister_tanky_wall") then
-				local life_time_mult = 1
-				local life_time_bonus = 4.2
-				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
-				props_params.life_time = 6 /10 *(props_params.life_time * life_time_mult + life_time_bonus)
-			elseif source_talent_extension:has_talent("kerillian_thorn_sister_debuff_wall") then
-				local life_time_mult = 0.17
-				local life_time_bonus = 0
-				area_damage_params.create_nav_tag_volume = false
-				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
-				props_params.life_time = props_params.life_time * life_time_mult + life_time_bonus
-				UNIT_NAME = UNIT_NAMES[WALL_TYPES.bleed]
-			end
-		end
-
-		local extension_init_data = {
-			area_damage_system = area_damage_params,
-			props_system = props_params,
-			health_system = health_params,
-			death_system = {
-				death_reaction_template = "thorn_wall",
-				is_husk = false
-			},
-			hit_reaction_system = {
-				is_husk = false,
-				hit_reaction_template = "level_object"
-			}
-		}
-		local wall_unit = Managers.state.unit_spawner:spawn_network_unit(UNIT_NAME, UNIT_TEMPLATE_NAME, extension_init_data, position, rotation)
-		local random_rotation = Quaternion(Vector3.up(), math.random() * 2 * math.pi - math.pi)
-
-		Unit.set_local_rotation(wall_unit, 0, random_rotation)
-
-		local buff_extension = ScriptUnit.has_extension(wall_unit, "buff_system")
-
-		if buff_extension and buffs_to_add then
-			for i = 1, #buffs_to_add do
-				buff_extension:add_buff(buffs_to_add[i])
-			end
-		end
-
-		local thorn_wall_extension = ScriptUnit.has_extension(wall_unit, "props_system")
-
-		if thorn_wall_extension then
-			thorn_wall_extension.group_spawn_index = group_spawn_index
-		end
-	end
-}
-
-mod:add_text("kerillian_thorn_sister_tanky_wall_desc_2", "Increase the width of the Thorn Wall.")
-mod:add_text("kerillian_thorn_sister_faster_passive_desc", "Reduce the cooldown of Radiance by 25%%, taking damage sets the cooldown back 2 seconds.")
-
---Waystalker
+]]
 ActivatedAbilitySettings.we_3[1].cooldown = 65
 local sniper_dropoff_ranges = {
 	dropoff_start = 30,
@@ -713,7 +569,65 @@ mod:add_proc_function("kerillian_waywatcher_consume_extra_shot_buff", function (
     return should_consume_shot
 end)
 
---Shade
+--[[
+
+	Handmaiden
+
+]]
+table.insert(PassiveAbilitySettings.we_2.buffs, "kerillian_maidenguard_passive_damage_reduction")
+mod:add_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_damage_reduction", {
+	stat_buff = "damage_taken",
+	multiplier = -0.3
+})
+PassiveAbilitySettings.we_2.perks = {
+	{
+        display_name = "career_passive_name_we_2b",
+        description = "career_passive_desc_we_2b_2"
+    },
+    {
+        display_name = "career_passive_name_we_2c",
+        description = "career_passive_desc_we_2c_2"
+    },
+	{
+		display_name = "rebaltourn_career_passive_name_we_2d",
+		description = "rebaltourn_career_passive_desc_we_2d_2"
+	}
+}
+mod:add_text("rebaltourn_career_passive_name_we_2d", "Bendy")
+mod:add_text("rebaltourn_career_passive_desc_we_2d_2", "Reduces damage taken by 30%.")
+
+mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
+	range = 20
+})
+
+--Ult hitbox
+mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
+    func(self, ...)
+
+    local owner_unit = self._owner_unit
+    local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+    local bleed = talent_extension:has_talent("kerillian_maidenguard_activated_ability_damage")
+
+    if bleed then
+        local status_extension = self._status_extension
+        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
+        status_extension.do_lunge.damage.width = 1.5    --1.5    --width of hitbox
+        status_extension.do_lunge.damage.depth_padding = 0.4   --0.4    --length of hitbox
+        status_extension.do_lunge.damage.offset_forward = 0   --0    --position of hitbox
+    else
+        local status_extension = self._status_extension
+        -- hitbox is a rectangular cube / cuboid with given width, height and length, and offset_forward changes its position relative to character's
+        status_extension.do_lunge.damage.width = 5.0    --1.5    --width of hitbox
+        status_extension.do_lunge.damage.depth_padding = 5.0   --0.4    --length of hitbox
+        status_extension.do_lunge.damage.offset_forward = 0   --0    --position of hitbox
+    end
+end)
+
+--[[
+
+	Shade
+
+]]
 Breeds.chaos_exalted_sorcerer.boost_curve_multiplier_override = 2
 Breeds.chaos_exalted_sorcerer_drachenfels.boost_curve_multiplier_override = 2
 Breeds.chaos_spawn.boost_curve_multiplier_override = 2
@@ -741,10 +655,141 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_par
 })
 mod:add_text("career_active_desc_we_1_2", "Kerillian becomes undetectable, can pass through enemies, and deals greatly increased melee damage. Lasts for 2.5 seconds or until she deals damage.")
 
--- Bounty Hunter
-table.insert(PassiveAbilitySettings.wh_2.buffs, "victor_bountyhunter_activate_passive_on_melee_kill")
+--[[ 
 
---Zealot
+	Sister of the Thorn
+
+]]
+ActivatedAbilitySettings.we_thornsister[1].cooldown = 60
+mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_temp_health_funnel_aura_buff", {
+	multiplier = 0.10
+})
+
+mod:hook_origin(PassiveAbilityThornsister, "_update_extra_abilities_info", function(self, talent_extension)
+    if not talent_extension then
+        return
+    end
+
+    local career_ext = self._career_extension
+
+    if not career_ext then
+        return
+    end
+
+    local max_uses = self._ability_init_data.max_stacks
+
+    if talent_extension:has_talent("kerillian_double_passive") then
+        max_uses = max_uses + 1
+    end
+
+    career_ext:update_extra_ability_uses_max(max_uses)
+
+    local cooldown = self._ability_init_data.cooldown
+
+    if talent_extension:has_talent("kerillian_thorn_sister_faster_passive") then
+        cooldown = cooldown * 0.75
+    end
+
+    career_ext:update_extra_ability_charge(cooldown)
+end)
+
+local WALL_TYPES = table.enum("default", "bleed")
+local UNIT_NAMES = {
+	default = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01",
+	bleed = "units/beings/player/way_watcher_thornsister/abilities/ww_thornsister_thorn_wall_01_bleed"
+}
+
+SpawnUnitTemplates.thornsister_thorn_wall_unit = {
+	spawn_func = function (source_unit, position, rotation, state_int, group_spawn_index)
+		local UNIT_NAME = UNIT_NAMES[WALL_TYPES.default]
+		local UNIT_TEMPLATE_NAME = "thornsister_thorn_wall_unit"
+		local wall_index = state_int
+		local despawn_sound_event = "career_ability_kerillian_sister_wall_disappear"
+		local life_time = 6
+		local area_damage_params = {
+			aoe_dot_damage = 0,
+			radius = 0.3,
+			area_damage_template = "we_thornsister_thorn_wall",
+			invisible_unit = false,
+			nav_tag_volume_layer = "temporary_wall",
+			create_nav_tag_volume = true,
+			aoe_init_damage = 0,
+			damage_source = "career_ability",
+			aoe_dot_damage_interval = 0,
+			damage_players = false,
+			source_attacker_unit = source_unit,
+			life_time = life_time
+		}
+		local props_params = {
+			life_time = life_time,
+			owner_unit = source_unit,
+			despawn_sound_event = despawn_sound_event,
+			wall_index = wall_index
+		}
+		local health_params = {
+			health = 20
+		}
+		local buffs_to_add = nil
+		local source_talent_extension = ScriptUnit.has_extension(source_unit, "talent_system")
+
+		if source_talent_extension then
+			if source_talent_extension:has_talent("kerillian_thorn_sister_tanky_wall") then
+				local life_time_mult = 1
+				local life_time_bonus = 4.2
+				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
+				props_params.life_time = 6 /10 *(props_params.life_time * life_time_mult + life_time_bonus)
+			elseif source_talent_extension:has_talent("kerillian_thorn_sister_debuff_wall") then
+				local life_time_mult = 0.17
+				local life_time_bonus = 0
+				area_damage_params.create_nav_tag_volume = false
+				area_damage_params.life_time = area_damage_params.life_time * life_time_mult + life_time_bonus
+				props_params.life_time = props_params.life_time * life_time_mult + life_time_bonus
+				UNIT_NAME = UNIT_NAMES[WALL_TYPES.bleed]
+			end
+		end
+
+		local extension_init_data = {
+			area_damage_system = area_damage_params,
+			props_system = props_params,
+			health_system = health_params,
+			death_system = {
+				death_reaction_template = "thorn_wall",
+				is_husk = false
+			},
+			hit_reaction_system = {
+				is_husk = false,
+				hit_reaction_template = "level_object"
+			}
+		}
+		local wall_unit = Managers.state.unit_spawner:spawn_network_unit(UNIT_NAME, UNIT_TEMPLATE_NAME, extension_init_data, position, rotation)
+		local random_rotation = Quaternion(Vector3.up(), math.random() * 2 * math.pi - math.pi)
+
+		Unit.set_local_rotation(wall_unit, 0, random_rotation)
+
+		local buff_extension = ScriptUnit.has_extension(wall_unit, "buff_system")
+
+		if buff_extension and buffs_to_add then
+			for i = 1, #buffs_to_add do
+				buff_extension:add_buff(buffs_to_add[i])
+			end
+		end
+
+		local thorn_wall_extension = ScriptUnit.has_extension(wall_unit, "props_system")
+
+		if thorn_wall_extension then
+			thorn_wall_extension.group_spawn_index = group_spawn_index
+		end
+	end
+}
+
+mod:add_text("kerillian_thorn_sister_tanky_wall_desc_2", "Increase the width of the Thorn Wall.")
+mod:add_text("kerillian_thorn_sister_faster_passive_desc", "Reduce the cooldown of Radiance by 25%%, taking damage sets the cooldown back 2 seconds.")
+
+--[[
+
+	Zealot
+
+]]
 --Turn green hp into white hp on ult
 mod:hook_safe(CareerAbilityWHZealot, "_run_ability", function(self)
     local unit = self._owner_unit
@@ -753,11 +798,14 @@ mod:hook_safe(CareerAbilityWHZealot, "_run_ability", function(self)
     health_extension:convert_to_temp(perm_health)
 end)
 
--- Battle Wizard Changes
+--[[
+
+	Battle Wizard
+
+]]
 ActivatedAbilitySettings.bw_2[1].cooldown = 60
 
 --Firetrail nerf (Fatshark please)
-local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 mod:add_buff_template("sienna_adept_ability_trail", {
     leave_linger_time = 1.5,
     name = "sienna_adept_ability_trail",
@@ -774,25 +822,12 @@ mod:add_buff_template("sienna_adept_ability_trail", {
     max_stacks = 1,
     perks = { buff_perks.burning }
 })
---Firebomb fix
-mod:add_buff_template("burning_dot_fire_grenade", {
-	duration = 6,
-	name = "burning dot",
-	end_flow_event = "smoke",
-	start_flow_event = "burn",
-	death_flow_event = "burn_death",
-	 update_start_delay = 0.75,
-	apply_buff_func = "start_dot_damage",
-	time_between_dot_damages = 1,
-	damage_type = "burninating",
-	damage_profile = "burning_dot_firegrenade",
-	update_func = "apply_dot_damage",
-	perks = { buff_perks.burning }
-})
 
-DamageProfileTemplates.burning_dot_firegrenade.default_target.armor_modifier.attack[6] = 0.25
+--[[
 
---Unchained
+	Unchained
+
+]]
 PlayerCharacterStateOverchargeExploding.on_exit = function (self, unit, input, dt, context, t, next_state)
     if not Managers.state.network:game() or not next_state then
         return
@@ -813,7 +848,6 @@ end
 mod:hook_safe(PlayerProjectileHuskExtension, "init", function(self, extension_init_data)
     self.owner_unit = extension_init_data.owner_unit
 end)
-
 mod:hook_origin(ActionMeleeStart, "client_owner_post_update", function (self, dt, t, world)
 	local action = self.current_action
 	local owner_unit = self.owner_unit
@@ -854,7 +888,6 @@ mod:hook_origin(ActionMeleeStart, "client_owner_post_update", function (self, dt
 		end
 	end
 end)
-
 mod:hook_origin(ActionBlock, "client_owner_start_action", function (self, new_action, t)
 	ActionBlock.super.client_owner_start_action(self, new_action, t)
 
@@ -884,7 +917,6 @@ mod:hook_origin(ActionBlock, "client_owner_start_action", function (self, new_ac
 	status_extension.timed_block = t + 0.5
 	status_extension.timed_block_long = t + 0.75
 end)
-
 mod:hook_origin(GenericStatusExtension, "init", function (self, extension_init_context, unit, extension_init_data)
 	self.world = extension_init_context.world
 	self.profile_id = extension_init_data.profile_id
@@ -993,7 +1025,6 @@ mod:hook_origin(GenericStatusExtension, "init", function (self, extension_init_c
 	self._assisted_respawn_outline_id = -1
 	self._invisible_outline_id = -1
 end)
-
 mod:hook_origin(GenericStatusExtension, "blocked_attack", function (self, fatigue_type, attacking_unit, fatigue_point_costs_multiplier, improved_block, attack_direction)
 	local unit = self.unit
 	local inventory_extension = self.inventory_extension
@@ -1086,5 +1117,77 @@ mod:hook_origin(GenericStatusExtension, "blocked_attack", function (self, fatigu
 		World.create_particles(self.world, "fx/wpnfx_sword_spark_parry", particle_position)
 	end
 end)
-
 table.insert(ProcEvents, "on_timed_block_long")
+
+
+--[[
+███████╗██╗██╗░░██╗███████╗░██████╗
+██╔════╝██║╚██╗██╔╝██╔════╝██╔════╝
+█████╗░░██║░╚███╔╝░█████╗░░╚█████╗░
+██╔══╝░░██║░██╔██╗░██╔══╝░░░╚═══██╗
+██║░░░░░██║██╔╝╚██╗███████╗██████╔╝
+╚═╝░░░░░╚═╝╚═╝░░╚═╝╚══════╝╚═════╝░
+]]
+
+--Firebomb fix
+mod:add_buff_template("burning_dot_fire_grenade", {
+	duration = 6,
+	name = "burning dot",
+	end_flow_event = "smoke",
+	start_flow_event = "burn",
+	death_flow_event = "burn_death",
+	 update_start_delay = 0.75,
+	apply_buff_func = "start_dot_damage",
+	time_between_dot_damages = 1,
+	damage_type = "burninating",
+	damage_profile = "burning_dot_firegrenade",
+	update_func = "apply_dot_damage",
+	perks = { buff_perks.burning }
+})
+DamageProfileTemplates.burning_dot_firegrenade.default_target.armor_modifier.attack[6] = 0.25
+
+--Fix Hero Time not proccing if ally already disabled
+mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
+    if not Managers.state.network.is_server then
+        return
+    end
+
+    local side = Managers.state.side.side_by_unit[owner_unit]
+    local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+    local num_units = #player_and_bot_units
+    local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+    local buff_system = Managers.state.entity:system("buff_system")
+    local template = buff.template
+    local buff_to_add = template.buff_to_add
+    local disabled_allies = 0
+
+    for i = 1, num_units, 1 do
+        local unit = player_and_bot_units[i]
+        local status_extension = ScriptUnit.extension(unit, "status_system")
+        local is_disabled = status_extension:is_disabled()
+
+        if is_disabled then
+            disabled_allies = disabled_allies + 1
+        end
+    end
+
+	if not buff.disabled_allies then
+		buff.disabled_allies = 0
+	end
+
+    if buff_extension:has_buff_type(buff_to_add) then
+        if disabled_allies <= buff.disabled_allies then
+            local buff_id = buff.buff_id
+
+            if buff_id then
+                buff_system:remove_server_controlled_buff(owner_unit, buff_id)
+
+                buff.buff_id = nil
+            end
+        end
+    elseif disabled_allies > 0 and disabled_allies > buff.disabled_allies then
+        buff.buff_id = buff_system:add_buff(owner_unit, buff_to_add, owner_unit, true)
+    end
+
+	buff.disabled_allies = disabled_allies
+end)
