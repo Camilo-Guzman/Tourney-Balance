@@ -1997,6 +1997,7 @@ mod:add_proc_function("reduce_activated_ability_cooldown", function (owner_unit,
 end)
 
 -- Fix Stacking bug for lingering flames with Firebombs
+--[[ -- In theory fixed by FS last update
 mod:hook_origin(StackingBuffFunctions, "fire_grenade_dot_add", function (unit, sub_buff_template, current_num_stacks, buff_extension, new_buff_params)
 	local should_add_buff = current_num_stacks < 1      -- should_add_buff = true    idk why changing this works
 	local breed = AiUtils.unit_breed(unit)
@@ -2011,4 +2012,4 @@ mod:hook_origin(StackingBuffFunctions, "fire_grenade_dot_add", function (unit, s
 	end
 	
 	return should_add_buff
-end)
+end)]]
