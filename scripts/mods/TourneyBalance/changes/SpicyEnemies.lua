@@ -24,6 +24,7 @@ Managers.package:load("resource_packages/mutators/mutator_curse_grey_wings", "gl
 Managers.package:load("resource_packages/mutators/mutator_curse_corrupted_flesh", "global")
 Managers.package:load("resource_packages/mutators/mutator_curse_khorne_champions", "global")
 Managers.package:load("resource_packages/mutators/mutator_curse_blood_storm", "global")
+Managers.package:load("resource_packages/dlcs/morris_ingame", "global")
 
 mod:add_buff_function("side_buff_aura", function(owner_unit, buff, params)
     local template = buff.template
@@ -485,7 +486,14 @@ mod:add_buff_template("degenerating", {
     update_func = "apply_dot_damage",
     update_start_delay = 1,
 })
-
+mod:add_buff_template("degenerating_times_2", {
+    apply_buff_func = "start_dot_damage",
+    damage_profile = "dot_degenerating",
+    name = "mutator player dot",
+    time_between_dot_damages = 0.5,
+    update_func = "apply_dot_damage",
+    update_start_delay = 1,
+})
 mod:add_buff_template("degenerating_times_4", {
     apply_buff_func = "start_dot_damage",
     damage_profile = "dot_degenerating",
@@ -494,3 +502,55 @@ mod:add_buff_template("degenerating_times_4", {
     update_func = "apply_dot_damage",
     update_start_delay = 1,
 })
+
+NewDamageProfileTemplates.dot_degenerating = {
+	charge_value = "n/a",
+	no_stagger = true,
+	no_stagger_damage_reduction_ranged = true,
+	armor_modifier = {
+		attack = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			1
+		},
+		impact = {
+			0,
+			0,
+			0,
+			0,
+			0,
+			0
+		}
+	},
+	default_target = {
+		damage_type = "burninating",
+		boost_curve_type = "tank_curve",
+		boost_curve_coefficient = 0.2,
+		attack_template = "light_blunt_tank",
+		power_distribution = {
+			attack = 1.5,
+			impact = 0.1
+		},
+		armor_modifier = {
+			attack = {
+				1,
+				1,
+				1,
+				1,
+				1,
+				1
+			},
+			impact = {
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			}
+		}
+	}
+}
