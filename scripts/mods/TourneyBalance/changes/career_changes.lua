@@ -422,7 +422,6 @@ local sniper_dropoff_ranges = {
 	dropoff_start = 30,
 	dropoff_end = 50
 }
-DamageProfileTemplates.arrow_sniper_ability_piercing.max_friendly_damage = 30
 DamageProfileTemplates.arrow_sniper_trueflight = {
     charge_value = "projectile",
     no_stagger_damage_reduction_ranged = true,
