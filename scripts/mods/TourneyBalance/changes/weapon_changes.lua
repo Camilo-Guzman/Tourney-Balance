@@ -425,6 +425,9 @@ DamageProfileTemplates.arrow_sniper_trueflight = {
     },
 	friendly_fire_multiplier = 0.25
 }
+DamageProfileTemplates.arrow_sniper_ability_piercing.friendly_fire_multiplier = 0.25
+
+
 
 -- Bloodrazor Thicket 
 DamageProfileTemplates.thorn_wall_explosion_improved_damage.armor_modifier.attack = {
