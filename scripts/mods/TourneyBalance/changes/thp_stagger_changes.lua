@@ -72,7 +72,7 @@ local damage_source_procs = {
 	charge_ability_hit = "on_charge_ability_hit"
 }
 local unit_get_data = Unit.get_data
-mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, target_unit, hit_zone_name, hit_position, attack_direction, hit_ragdoll_actor, damage_source, power_level, damage_profile, target_index, boost_curve_multiplier, is_critical_strike, can_damage, can_stagger, blocking, shield_breaking_hit, backstab_multiplier, first_hit, total_hits, source_attacker_unit)
+mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, target_unit, hit_zone_name, hit_position, attack_direction, hit_ragdoll_actor, damage_source, power_level, damage_profile, target_index, boost_curve_multiplier, is_critical_strike, can_damage, can_stagger, blocking, shield_breaking_hit, backstab_multiplier, first_hit, total_hits, source_attacker_unit, optional_predicted_damage)
 	source_attacker_unit = source_attacker_unit or attacker_unit
 
 	local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
@@ -1126,6 +1126,12 @@ local POSITION_LOOKUP = POSITION_LOOKUP
 mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, attacked_unit, attacker_unit, damage_source, victim_units, damage_type, buff_attack_type, first_hit, source_attacker_unit)
 	local damage = current_damage
 	local network_manager = Managers.state.network
+	local attacker_unit_buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system") or ScriptUnit.has_extension(source_attacker_unit, "buff_system")
+
+	if attacker_unit_buff_extension then
+		attacker_unit_buff_extension:trigger_procs("damage_calculation_started", attacked_unit)
+	end
+
 	local attacked_player = Managers.player:owner(attacked_unit)
 	local attacker_player = Managers.player:owner(attacker_unit)
 
@@ -1134,6 +1140,7 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 	end
 
 	victim_units[#victim_units + 1] = attacked_unit
+
 	local health_extension = ScriptUnit.extension(attacked_unit, "health_system")
 
 	if health_extension:has_assist_shield() and not IGNORED_SHARED_DAMAGE_TYPES[damage_source] then
@@ -1220,10 +1227,14 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 			end
 		end
 
-		local attacker_unit_buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
-
 		if attacker_unit_buff_extension then
-			local has_burning_perk = attacker_unit_buff_extension:has_buff_perk("burning")
+			local is_grenade = buff_attack_type == AttackTypes.grenade or DamageUtils.attacker_is_fire_bomb(attacker_unit)
+
+			if is_grenade then
+				damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "explosion_damage")
+			end
+
+			local has_burning_perk = attacker_unit_buff_extension:has_buff_perk("burning") or attacker_unit_buff_extension:has_buff_perk("burning_balefire") or attacker_unit_buff_extension:has_buff_perk("burning_elven_magic")
 
 			if has_burning_perk then
 				local side_manager = Managers.state.side
@@ -1341,23 +1352,21 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 		end
 	end
 
-	local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
-	if buff_extension then
-
-		local item_data = rawget(ItemMasterList, damage_source)
-		local weapon_template_name = item_data and item_data.template
+	if attacker_unit_buff_extension then
 		local attacked_buff_extension = ScriptUnit.has_extension(attacked_unit, "buff_system")
 
 		if attacker_player then
+			local item_data = rawget(ItemMasterList, damage_source)
+			local weapon_template_name = item_data and item_data.template
 
 			if weapon_template_name then
 				local weapon_template = Weapons[weapon_template_name]
 				local buff_type = weapon_template.buff_type
 
 				if buff_type then
-					damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage")
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage")
 
-					if buff_extension:has_buff_perk("missing_health_damage") then
+					if attacker_unit_buff_extension:has_buff_perk("missing_health_damage") then
 						local attacked_health_extension = ScriptUnit.extension(attacked_unit, "health_system")
 						local missing_health_percentage = 1 - attacked_health_extension:current_health_percent()
 						local damage_mult = 1 + missing_health_percentage / 2
@@ -1369,27 +1378,27 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 				local is_ranged = RangedBuffTypes[buff_type]
 
 				if is_melee then
-					damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee")
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee")
 
 					if buff_type == "MELEE_1H" then
-						damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_1h")
+						damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_1h")
 					elseif buff_type == "MELEE_2H" then
-						damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_2h")
+						damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_2h")
 					end
 
 					if buff_attack_type == "heavy_attack" then
-						damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_heavy_attack")
+						damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_heavy_attack")
 					end
 
 					if first_hit then
-						damage = buff_extension:apply_buffs_to_value(damage, "first_melee_hit_damage")
+						damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "first_melee_hit_damage")
 					end
 				elseif is_ranged then
-					damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_ranged")
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_ranged")
 					local attacked_health_extension = ScriptUnit.extension(attacked_unit, "health_system")
 
 					if attacked_health_extension:current_health_percent() <= 0.9 or attacked_health_extension:current_max_health_percent() <= 0.9 then
-						damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_ranged_to_wounded")
+						damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_ranged_to_wounded")
 					end
 				end
 
@@ -1397,11 +1406,11 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 
 				if weapon_type then
 					local stat_buff = WeaponSpecificStatBuffs[weapon_type].damage
-					damage = buff_extension:apply_buffs_to_value(damage, stat_buff)
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, stat_buff)
 				end
 
 				if is_melee or is_ranged then
-					damage = buff_extension:apply_buffs_to_value(damage, "reduced_non_burn_damage")
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "reduced_non_burn_damage")
 				end
 			end
 
@@ -1409,30 +1418,28 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function(current_damage, a
 				local has_poison_or_bleed = attacked_buff_extension:has_buff_perk("poisoned") or attacked_buff_extension:has_buff_perk("bleeding")
 
 				if has_poison_or_bleed then
-					damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_poisoned_or_bleeding")
+					damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_poisoned_or_bleeding")
 				end
 			end
 
 			if damage_type == "burninating" then
-				damage = buff_extension:apply_buffs_to_value(damage, "increased_burn_dot_damage")
+				damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_burn_dot_damage")
 			end
 		end
 
-		damage = buff_extension:apply_buffs_to_value(damage, "damage_dealt")
+		damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "damage_dealt")
 
 		local has_balefire, applied_this_frame = Managers.state.status_effect:has_status(attacked_unit, StatusEffectNames.burning_balefire)
 		if has_balefire and not applied_this_frame then
-			damage = buff_extension:apply_buffs_to_value(damage, "increased_damage_to_balefire")
+			damage = attacker_unit_buff_extension:apply_buffs_to_value(damage, "increased_damage_to_balefire")
 		end
 	end
 
-	local attacker_buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
-
-	if attacker_buff_extension then
-		damage = attacker_buff_extension:apply_buffs_to_value(damage, "damage_dealt")
-	end
-
 	Managers.state.game_mode:damage_taken(attacked_unit, attacker_unit, damage, damage_source, damage_type)
+
+	if attacker_unit_buff_extension then
+		attacker_unit_buff_extension:trigger_procs("damage_calculation_ended", attacked_unit)
+	end
 
 	return damage
 end)
