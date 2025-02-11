@@ -75,6 +75,13 @@ mod:hook_origin(ActionFlamethrower, "_select_targets", function (self, world, sh
 	end
 end)
 
+-- Handgun (Bardin and Kruber)
+local handgun_dropoff_ranges = {
+	dropoff_end = 100,
+	dropoff_start = 50,
+}
+DamageProfileTemplates.shot_sniper.default_target.range_modifier_settings = handgun_dropoff_ranges
+
 
 --[[
 
@@ -171,6 +178,7 @@ DamageProfileTemplates.arrow_sniper_kruber.armor_modifier_near.attack = { 1, 1.2
 DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient = 0.6 -- 1.25
 DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient_headshot = 0.8 -- 1
 DamageProfileTemplates.arrow_sniper_kruber.critical_strike.attack_armor_power_modifer = { 1, 1, 1, 1, 0.75, 0.5 }
+
 
 --[[
 
@@ -333,8 +341,8 @@ DamageProfileTemplates.arrow_machinegun.friendly_fire_multiplier = 0.15
 DamageProfileTemplates.arrow_machinegun.shield_break = false
 
 --Charged Shots
-DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.attack = 0.5
-DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.far = 0.4
+DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.attack = 0.44 -- 0.5
+DamageProfileTemplates.arrow_carbine_shortbow.default_target.power_distribution_near.far = 0.35	--0.4
 
 
 
@@ -459,6 +467,10 @@ local balanced_barrels =  { {	yaw = -1, pitch = 0, shot_count = 2 }, { yaw = -0.
 Weapons.wh_deus_01_template_1.actions.action_one.default.barrels = balanced_barrels
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.attack = 0.05
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.impact = 0.05
+
+-- Brace of Pistols buff
+Weapons.brace_of_pistols_template_1.ammo_data.max_ammo = 50
+Weapons.brace_of_pistols_template_1.ammo_data.reload_time = 0.8
 
 --[[
 
@@ -1138,7 +1150,7 @@ NewDamageProfileTemplates.heavy_1h_flail_tb = {
 		[1] = {
 			boost_curve_type = "tank_curve",
 			attack_template = "blunt_tank",
-			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_coefficient_headshot = 1, --1.5
 			armor_modifier = {
 				attack = {
 					1.3,
@@ -2816,7 +2828,7 @@ Weapons.dual_wield_swords_template_1.actions.action_one.light_attack_right.damag
 NewDamageProfileTemplates.tb_dual_swords_light = {
     armor_modifier = {
         attack = {
-            1,
+            0.85, --1
             0,
             2,
             1,
@@ -2885,8 +2897,8 @@ NewDamageProfileTemplates.tb_dual_swords_light = {
 -- Heavy
 Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack_2.damage_profile_right = "tb_dual_swords_heavy"
 Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack_2.damage_profile_left = "tb_dual_swords_heavy"
-Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_right = "tb_dual_swords_heavy"
-Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_left = "tb_dual_swords_heavy"
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_right = "tb_dual_swords_heavy_1"
+Weapons.dual_wield_swords_template_1.actions.action_one.heavy_attack.damage_profile_left = "tb_dual_swords_heavy_1"
 NewDamageProfileTemplates.tb_dual_swords_heavy = {
 	armor_modifier = {
 		attack = {
@@ -2895,6 +2907,95 @@ NewDamageProfileTemplates.tb_dual_swords_heavy = {
 			2,
 			1,
 			0.6
+		},
+		impact = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = {
+		attack = 0.45,
+		impact = 0.4
+	},
+	default_target = {
+		boost_curve_type = "linesman_curve",
+		boost_curve_coefficient_headshot = 0.25,
+		attack_template = "light_slashing_linesman",
+		power_distribution = {
+			attack = 0.07,
+			impact = 0.05
+		}
+	},
+	targets = {
+		{
+			boost_curve_coefficient_headshot = 1,
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient = 2,
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.3,
+				impact = 0.275
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			boost_curve_coefficient_headshot = 1,
+			attack_template = "heavy_slashing_linesman",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.15
+			},
+			armor_modifier = {
+				attack = { 1, 0.2, 2, 1, 0.6 },
+				impact = { 1, 0.5, 0.5, 1, 1}
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.125,
+				impact = 0.1
+			}
+		},
+		{
+			boost_curve_type = "linesman_curve",
+			attack_template = "slashing_linesman",
+			power_distribution = {
+				attack = 0.075,
+				impact = 0.075
+			}
+		}
+	}
+}
+NewDamageProfileTemplates.tb_dual_swords_heavy_1 = {
+	armor_modifier = {
+		attack = {
+			0.75,		--1
+			0.25,
+			2,
+			1,
+			0.5		--0.6
 		},
 		impact = {
 			1,
@@ -3248,162 +3349,115 @@ Weapons.dual_wield_axe_falchion_template.actions.action_one.light_attack_bopp.hi
 
 ]]
 --Crowbill
-Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_right.damage_profile = "light_pointy_smiter_tourney"
-Weapons.one_handed_crowbill.actions.action_one.light_attack_left.damage_profile = "light_slashing_smiter_stab_burn_tourney"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack_right_up.damage_profile = "heavy_attack_crowbill"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack_left.damage_profile = "heavy_attack_crowbill_left"
-Weapons.one_handed_crowbill.actions.action_one.heavy_attack.damage_profile = "heavy_attack_crowbill_right"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack.damage_profile = "crowbill_heavy_1"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack_left.damage_profile = "crowbill_heavy_2"
+Weapons.one_handed_crowbill.actions.action_one.heavy_attack_right_up.damage_profile = "crowbill_heavy_3"
 
-NewDamageProfileTemplates.light_pointy_smiter_tourney = {
+Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "crowbill_light_1"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "crowbill_light_2"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_right.damage_profile = "crowbill_light_3"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_left.damage_profile = "crowbill_light_4"
+
+Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.damage_profile = "crowbill_push_attack"
+Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.additional_critical_strike_chance = 0.05
+
+NewDamageProfileTemplates.crowbill_heavy_1 = { -- high damage, very difficult to headshot with
 	armor_modifier = {
 		attack = {
-			1.2,
-			1,
+			1.66, -- 1
+			1.2, -- 0.9
 			2,
 			1,
 			1,
-			0.5
+			1.2, -- 0.9
 		},
 		impact = {
 			1,
+			1,
+			1,
+			1,
+			1,
 			0.5,
-			1,
-			1,
-			1,
-			0.5
-		}
+		},
 	},
 	critical_strike = {
 		attack_armor_power_modifer = {
-			1.1,
+			1.25, -- 1
+			0.93, -- 0.8
+			2.5,
 			1,
-			2,
-			0.9,
-			1
+			1,
+			1, -- 0.8
 		},
 		impact_armor_power_modifer = {
 			1,
+			0.8,
 			1,
 			1,
 			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "ninja_curve",
-		boost_curve_coefficient_headshot = 1.9,
-		attack_template = "blunt_smiter",
-		power_distribution = {
-			attack = 0.175,
-			impact = 0.1
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "smiter_curve",
-			attack_template = "slashing_smiter",
-			armor_modifier = {
-				attack = {
-					1,
-					0.25,
-					1,
-					1,
-					0.75
-				},
-				impact = {
-					0.75,
-					0.25,
-					1,
-					1,
-					0.75
-				}
-			},
-			power_distribution = {
-				attack = 0.075,
-				impact = 0.075
-			}
-		}
-	}
-}
-NewDamageProfileTemplates.light_slashing_smiter_stab_burn_tourney = {
-	armor_modifier = {
-		attack = {
-			1.2,
 			0.5,
-			1.5,
-			1,
-			1.2
 		},
-		impact = {
-			1,
-			1.25,
-			1,
-			1,
-			0.75
-		}
 	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.1,
-			0.7,
-			2,
-			1,
-			0.9
-		},
-		impact_armor_power_modifer = {
-			1,
-			1,
-			1,
-			1,
-			1
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
 	default_target = {
-		boost_curve_coefficient_headshot = 2,
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 0.75,
-		attack_template = "stab_smiter",
+		attack_template = "light_blunt_tank",
+		boost_curve_coefficient = 1,
+		boost_curve_type = "tank_curve",
 		power_distribution = {
 			attack = 0.1,
-			impact = 0.075
-		}
+			impact = 0.1,
+		},
 	},
 	targets = {
 		{
-			boost_curve_coefficient_headshot = 1.9,
-			dot_template_name = "burning_3W_dot",
-			boost_curve_type = "ninja_curve",
-			boost_curve_coefficient = 0.75,
-			attack_template = "burning_stab_fencer",
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
 			power_distribution = {
-				attack = 0.2,
-				impact = 0.2
-			}
-		}
+				attack = 0.4,
+				impact = 0.25,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.325,
+				impact = 0.21,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.175,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.175,
+				impact = 0.14,
+			},
+		},
 	},
+	shield_break = true,
 }
-NewDamageProfileTemplates.heavy_attack_crowbill = {
+NewDamageProfileTemplates.crowbill_heavy_2 = { -- lots of crit cleave
 	armor_modifier = {
 		attack = {
-			1.31,
+			1.3, -- 1
 			0.9,
 			2,
 			1,
 			1,
-			1.3
+			0.9,
 		},
 		impact = {
 			1,
@@ -3411,138 +3465,113 @@ NewDamageProfileTemplates.heavy_attack_crowbill = {
 			1,
 			1,
 			1,
-			0.5
-		}
+			0.5,
+		},
 	},
 	critical_strike = {
 		attack_armor_power_modifer = {
-			1.2,
-			0.8,
-			2.5,
 			1,
-			1.2,
-			1.2
-		},
-		impact_armor_power_modifer = {
-			1,
-			0.8,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
-	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
-		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
-	},
-	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
-			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
-}
-NewDamageProfileTemplates.heavy_attack_crowbill_left = {
-	armor_modifier = {
-		attack = {
-			1.31,
-			0.9,
+			0.77, -- 1
 			2,
 			1,
+			0.83, -- 1
 			1,
-			1.3
-		},
-		impact = {
-			1,
-			1,
-			1,
-			1,
-			1,
-			0.5
-		}
-	},
-	critical_strike = {
-		attack_armor_power_modifer = {
-			1.2,
-			1,
-			2,
-			1,
-			1.2
 		},
 		impact_armor_power_modifer = {
 			1,
 			1,
 			1,
 			1,
-			1
-		}
+			1,
+			1,
+		},
 	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
 	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
+		attack_template = "light_blunt_tank",
+		boost_curve_coefficient = 1,
+		boost_curve_type = "tank_curve",
 		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
+			attack = 0.1,
+			impact = 0.1,
+		},
 	},
 	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
 			power_distribution = {
-				attack = 0.1,
-				impact = 0.1
-			}
-		}
+				attack = 0.4,
+				impact = 0.25,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.34,
+				impact = 0.22,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.28,
+				impact = 0.19,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.22,
+				impact = 0.16,
+			},
+		},
+		{
+			attack_template = "slashing_smiter",
+			boost_curve_coefficient = 2,
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.16,
+				impact = 0.13,
+			},
+		},
 	},
-	shield_break = true
+	shield_break = true,
 }
-NewDamageProfileTemplates.heavy_attack_crowbill_right = {
+NewDamageProfileTemplates.crowbill_heavy_3 = { -- high headshot damage,
 	armor_modifier = {
 		attack = {
-			1.31,
+			1,
 			0.8,
 			1.75,
 			1,
-			1.3
+			0.83, -- 0.75
 		},
 		impact = {
 			1,
 			0.6,
 			1,
 			1,
-			0.75
-		}
+			0.75,
+			1,
+		},
 	},
 	critical_strike = {
 		attack_armor_power_modifer = {
-			1.2,
-			0.8,
-			2.5,
 			1,
-			1.2
+			0.73, -- 0.8
+			1.75, -- 2.5
+			1,
+			1,
+			0.8,
 		},
 		impact_armor_power_modifer = {
 			1,
@@ -3550,35 +3579,455 @@ NewDamageProfileTemplates.heavy_attack_crowbill_right = {
 			1,
 			1,
 			1,
-			0.5
-		}
+			0.5,
+		},
 	},
-	charge_value = "light_attack",
-	cleave_distribution = {
-		attack = 0.075,
-		impact = 0.075
-	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
 	default_target = {
-		boost_curve_type = "smiter_curve",
-		boost_curve_coefficient = 2,
-		attack_template = "slashing_smiter",
+		attack_template = "light_blunt_tank",
+		boost_curve_type = "tank_curve",
 		power_distribution = {
-			attack = 0.4,
-			impact = 0.25
-		}
+			attack = 0.1,
+			impact = 0.1,
+		},
 	},
 	targets = {
-		[2] = {
-			boost_curve_type = "tank_curve",
-			attack_template = "light_blunt_tank",
+		{
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient = 2,
+			boost_curve_coefficient_headshot = 2, -- 1
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.4,
+				impact = 0.25,
+			},
+		},
+		{
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient = 2,
+			boost_curve_coefficient_headshot = 1.75, -- 1
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.325,
+				impact = 0.21,
+			},
+		},
+		{
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient = 2,
+			boost_curve_coefficient_headshot = 1.5, -- 1
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.25,
+				impact = 0.175,
+			},
+		},
+		{
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient = 2,
+			boost_curve_coefficient_headshot = 1.25, -- 1
+			boost_curve_type = "smiter_curve",
+			power_distribution = {
+				attack = 0.175,
+				impact = 0.14,
+			},
+		},
+	},
+	shield_break = true,
+}
+NewDamageProfileTemplates.crowbill_light_1 = {
+	armor_modifier = {
+		attack = {
+			1.143, -- 1
+			1,
+			2,
+			1,
+			1,
+			0.85, -- 0.5
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			1,
+			0.5,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.1, -- 1
+			0.94, -- 1
+			1.8, -- 2
+			1,
+			1,
+			0.9, -- 1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = {
+		attack_template = "slashing_smiter",
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0.075,
+		},
+	},
+	targets = {
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.21, -- 0.175
+				impact = 0.1,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.32,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.165,
+				impact = 0.91,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.16,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.12,
+				impact = 0.82,
+			},
+		},
+	},
+}
+NewDamageProfileTemplates.crowbill_light_2 = { -- Needs to do more damage than Light 1 to avoid Light 1->BC shennanigans
+	armor_modifier = {
+		attack = {
+			1.14, -- 1
+			1.06, -- 1
+			2,
+			1,
+			1.05, -- 1, 1.32
+			0.85, -- 0.5
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			1,
+			0.5,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.94, -- 1
+			2,
+			1,
+			0.97, -- 1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = {
+		attack_template = "slashing_smiter",
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0.075,
+		},
+	},
+	targets = {
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.245, -- 0.175
+				impact = 0.1,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.4,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.211, -- 0.175
+				impact = 0.95,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.3,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.177, -- 0.175
+				impact = 0.9,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.2,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.143, -- 0.175
+				impact = 0.85,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.1,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.109, -- 0.175
+				impact = 0.8,
+			},
+		},
+	},
+}
+NewDamageProfileTemplates.crowbill_light_3 = {
+	armor_modifier = {
+		attack = {
+			1.2, -- 1
+			1.1, -- 1
+			2,
+			1,
+			1.1, -- 1
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.1, -- 1
+			1,
+			2,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = {
+		attack_template = "slashing_smiter",
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0.075,
+		},
+	},
+	targets = {
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.255, -- 0.175, 0.237
+				impact = 0.1,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.375,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.21, -- 0.175, 0.237
+				impact = 0.94,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.25,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.165, -- 0.175, 0.237
+				impact = 0.87,
+			},
+		},
+		{	
+			attack_template = "blunt_linesman",
+			boost_curve_coefficient_headshot = 1.125,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.120, -- 0.175, 0.237
+				impact = 0.81,
+			},
+		},
+	}
+}
+NewDamageProfileTemplates.crowbill_light_4 = { -- high headshot damage, low bodyshot damage
+	armor_modifier = {
+		attack = {
+			1, -- 1
+			1.1, -- 0.5
+			2.2, -- 1.5
+			1,
+			1.1, -- 0.75
+			1.25, -- 0.5
+		},
+		impact = {
+			1,
+			1.25,
+			1,
+			1,
+			0.75,
+		},
+	},
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			1, -- 0.5
+			2,
+			1,
+			1,
+			1.1, -- 1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	default_target = {
+		attack_template = "stab_smiter",
+		boost_curve_coefficient = 0.75,
+		boost_curve_coefficient_headshot = 2,
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.1,
+			impact = 0.075,
+		},
+	},
+	targets = {
+		{
+			attack_template = "burning_stab_fencer",
+			boost_curve_coefficient = 0.75,
+			boost_curve_coefficient_headshot = 2.5, -- 1.5
+			boost_curve_type = "ninja_curve",
+			dot_balefire_variant = true,
+			dot_template_name = "burning_dot_3tick",
+			power_distribution = {
+				attack = 0.2,
+				impact = 0.2,
+			},
+		},
+		{
+			attack_template = "burning_stab_fencer",
+			boost_curve_coefficient = 0.75,
+			boost_curve_coefficient_headshot = 2.32, -- 1.5
+			boost_curve_type = "ninja_curve",
+			dot_balefire_variant = true,
+			dot_template_name = "burning_dot_3tick",
+			power_distribution = {
+				attack = 0.167,
+				impact = 0.158,
+			},
+		},
+		{
+			attack_template = "burning_stab_fencer",
+			boost_curve_coefficient = 0.75,
+			boost_curve_coefficient_headshot = 2.16, -- 1.5
+			boost_curve_type = "ninja_curve",
+			dot_balefire_variant = true,
+			dot_template_name = "burning_dot_3tick",
+			power_distribution = {
+				attack = 0.133,
+				impact = 0.118,
+			},
+		},
+	}
+}
+NewDamageProfileTemplates.crowbill_push_attack = { -- 5% crit chance to give this attack a reason to exist, should help necro
+	armor_modifier = "armor_modifier_pointy_smiter_L",
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = "critical_strike_pointy_smiter_L",
+	default_target = {
+		attack_template = "slashing_smiter",
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0.075,
+		},
+	},
+	targets = {
+		{
+			attack_template = "blunt_tank_uppercut",
+			boost_curve_coefficient_headshot = 1.5,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.175,
+				impact = 0.1,
+			},
+		},
+		{
+			attack_template = "blunt_tank_uppercut",
+			boost_curve_coefficient_headshot = 1.375,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.15,
+				impact = 0.94,
+			},
+		},
+		{
+			attack_template = "blunt_tank_uppercut",
+			boost_curve_coefficient_headshot = 1.25,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.125,
+				impact = 0.88,
+			},
+		},
+		{
+			attack_template = "blunt_tank_uppercut",
+			boost_curve_coefficient_headshot = 1.125,
+			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.1,
-				impact = 0.1
-			}
-		}
-	},
-	shield_break = true
+				impact = 0.82,
+			},
+		},
+	}
 }
+
 
 --Scythe
 Weapons.staff_scythe.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT

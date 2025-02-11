@@ -14,6 +14,11 @@ local mod = get_mod("TourneyBalance")
 local function is_server()
     return Managers.player.is_server
 end
+local function is_local(unit)
+	local player = Managers.player:owner(unit)
+
+	return player and not player.remote
+end
 local function merge(dst, src)
     for k, v in pairs(src) do
         dst[k] = v
@@ -465,63 +470,48 @@ mod:add_text("gs_hs_4_3_desc", "Ranged kills restore thp equal to a quarter of b
 
 ]]
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_ability_cooldown_on_damage_taken", {
-   bonus = 0.35
-})
+	bonus = 0.35
+ })
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_on_stagger_elite_buff", {
-    duration = 15
+	duration = 15
 })
 mod:modify_talent("es_knight", 2, 2, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
-        },
-        {
-            value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
-        }
-    },
-})
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
-    duration = 5
-})
-mod:modify_talent("es_knight", 2, 1, {
-    description = "markus_knight_free_pushes_on_block_desc",
-	name = "markus_knight_free_pushes_on_block",
-	num_ranks = 1,
-	icon = "markus_knight_free_pushes_on_block",
 	description_values = {
 		{
-			value = 1
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.multiplier
+		},
+		{
+			value = 15 --BuffTemplates.markus_knight_power_level_on_stagger_elite_buff.duration
 		}
 	},
-	buffs = {
-		"markus_knight_free_pushes_on_block"
-	}
+})
+mod:modify_talent_buff_template("empire_soldier", "markus_knight_attack_speed_on_push_buff", {
+	duration = 5
 })
 mod:modify_talent("es_knight", 2, 3, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.15 --BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
-        },
-        {
-            value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
-        }
-    },
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.15 --BuffTemplates.markus_knight_attack_speed_on_push_buff.multiplier
+		},
+		{
+			value = 5 --BuffTemplates.markus_knight_attack_speed_on_push_buff.duration
+		}
+	},
 })
 mod:add_buff_function("markus_hero_time_reset", function (unit, buff, params)
-    local player_unit = unit
+	local player_unit = unit
 
-    if Unit.alive(player_unit) then
-        local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
+	if Unit.alive(player_unit) then
+		local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
 
-        career_extension:reduce_activated_ability_cooldown_percent(0.7)
-    end
+		career_extension:reduce_activated_ability_cooldown_percent(0.7)
+	end
 end)
 mod:add_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 70% of cooldown upon allied incapacitation")
-
-mod:modify_talent("es_knight", 5, 2, {
-    description = "markus_knight_power_level_impact_desc",
+mod:modify_talent("es_knight", 2, 1, {
+	description = "markus_knight_power_level_impact_desc",
 	name = "markus_knight_power_level_impact",
 	buffer = "server",
 	num_ranks = 1,
@@ -537,38 +527,21 @@ mod:modify_talent("es_knight", 5, 2, {
 	}
 })
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_power_level_impact", {
-    multiplier = 0.2
+	multiplier = 0.2
 })
 mod:add_text("markus_knight_power_level_impact_descmarkus_knight_power_level_impact_desc", "Increases stagger power by 20%.")
 
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_on_stagger_elite", {
-    buff_func = "buff_on_stagger_enemy"
+	buff_func = "buff_on_stagger_enemy"
 })
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
-    duration = 1.5,
-    multiplier = 2,
+	duration = 1.5,
+	multiplier = 2,
 	icon = "markus_knight_improved_passive_defence_aura"
 })
 mod:add_text("markus_knight_cooldown_on_stagger_elite_desc", "Subjecting an elite enemy to a stagger state grants the player an accelerated cooldown of their career skill by a magnitude of 200%% for 1500 milliseconds.")
 
-mod:add_talent_buff_template("empire_soldier", "markus_knight_heavy_buff", {
-    max_stacks = 1,
-    stat_buff = "power_level_melee",
-    icon = "markus_knight_ability_hit_target_damage_taken",
-    multiplier = 0.5,
-    duration = 6,
-    refresh_durations = true,
-})
-mod:modify_talent("es_knight", 6, 2, {
-    buffs = {
-        "markus_knight_heavy_buff",
-    },
-    description = "rebaltourn_markus_knight_heavy_buff_desc",
-    description_values = {},
-})
-mod:add_text("rebaltourn_markus_knight_heavy_buff_desc", "Valiant Charge increases Melee Power by 50.0% for 6 seconds.")
-
---[[
+ --[[
 
 	Grail Knight
 
@@ -881,16 +854,14 @@ mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	career_extension:start_activated_ability_cooldown()
 end)
 
+-- Rune-Etched Shield description correction
+mod:add_text("bardin_ironbreaker_party_power_on_blocked_attacks_desc", "Blocking an attack increases Bardin's melee power (and that of nearby allies) by 2.0%% for 10 seconds. Stacks 5 times.")
+
 --[[
 
 	Slayer Talents
 
 ]]
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_increased_defence", {
-	stat_buff = "damage_taken",
-	multiplier = -0.15
-})
-table.insert(PassiveAbilitySettings.dr_2.buffs, "gs_bardin_slayer_increased_defence")
 PassiveAbilitySettings.dr_2.perks = {
 	{
 		display_name = "career_passive_name_dr_2b",
@@ -899,38 +870,22 @@ PassiveAbilitySettings.dr_2.perks = {
 	{
 		display_name = "career_passive_name_dr_2c",
 		description = "career_passive_desc_dr_2c"
-	},
-	{
-		display_name = "rebaltourn_career_passive_name_dr_2d",
-		description = "rebaltourn_career_passive_desc_dr_2d_2"
 	}
 }
-mod:add_text("rebaltourn_career_passive_name_dr_2d", "Juggernaut")
-mod:add_text("rebaltourn_career_passive_desc_dr_2d_2", "Reduces damage taken by 15%.")
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_damage_reduction_on_melee_charge_action_buff", {
-	multiplier = -0.3
+	multiplier = -0.4
 })
 mod:modify_talent("dr_slayer", 5, 2, {
 	description_values = {
 		{
 			value_type = "percent",
-			value = -0.3
+			value = -0.4
 		},
 		{
 			value = 5
 		}
 	}
 })
-mod:modify_talent("dr_slayer", 2, 1, {
-	description = "gs_slayer_weapon_combos_desc",
-	description_values = {},
-	buffs = {
-		"bardin_slayer_attack_speed_on_double_one_handed_weapons",
-		"bardin_slayer_power_on_double_two_handed_weapons"
-	}
-})
-mod:add_text("gs_slayer_weapon_combos_desc", "Gain 15% power if wielding 2 two-handed weapons. Gain 10% attack speed if wielding 2 one-handed weapons.")
-
 mod:modify_talent("dr_slayer", 2, 3, {
 	description = "gs_bardin_slayer_crit_chance_desc"
 })
@@ -946,11 +901,6 @@ mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, 
 		local buff_name = "bardin_slayer_passive_stacking_damage_buff"
 		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
 		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-
-		if talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_name = "gs_bardin_slayer_passive_increased_max_stacks"
-		end
-		buff_system:add_buff(owner_unit, buff_name, owner_unit, false)
 
 		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
 			buff_system:add_buff(owner_unit, "bardin_slayer_passive_movement_speed", owner_unit, false)
@@ -984,29 +934,6 @@ end)
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_stacking_damage_buff_on_hit", {
 	buff_func = "gs_add_bardin_slayer_passive_buff"
 })
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_increased_max_stacks", {
-	max_stacks = 4,
-	multiplier = 0.1,
-	duration = 2,
-	refresh_durations = true,
-	icon = "bardin_slayer_passive",
-	stat_buff = "increased_weapon_damage"
-})
-
-mod:add_talent("dr_slayer", 2, 2, "gs_bardin_slayer_passive_increased_max_stacks",{
-	description = "bardin_slayer_passive_increased_max_stacks_desc",
-	name = "bardin_slayer_passive_increased_max_stacks",
-	buffer = "server",
-	num_ranks = 1,
-	icon = "bardin_slayer_passive_increased_max_stacks",
-	description_values = {
-		{
-			value = 1
-		}
-	},
-	buffs = {}
-})
-
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_movement_speed_extra", {
 	max_stacks = 4,
 	multiplier = 1.1,
@@ -1087,17 +1014,6 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_stacking_
 	duration = 2,
 	multiplier = 0.05
 })
-mod:add_talent("dr_slayer", 4, 2, "gs_bardin_slayer_passive_stacking_crit_buff", {
-	description = "bardin_slayer_passive_stacking_crit_buff_desc",
-	name = "bardin_slayer_passive_stacking_crit_buff_name",
-	buffer = "server",
-	num_ranks = 1,
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	description_values = {},
-	buffs = {}
-})
-mod:add_text("bardin_slayer_passive_stacking_crit_buff_desc", "Each stack of Trophy Hunter increases power by 5%.")
-mod:add_text("bardin_slayer_passive_stacking_crit_buff_name", "Blood Drunk")
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_reduction", {
 	icon = "bardin_slayer_passive_cooldown_reduction_on_max_stacks",
 	stat_buff = "cooldown_regen",
@@ -1119,7 +1035,6 @@ mod:modify_talent("dr_slayer", 4, 3, {
 	description_values = {}
 })
 mod:add_text("gs_bardin_slayer_passive_cooldown_reduction_desc", "Each stack of Trophy Hunter increases cooldown regeneration by 67%.")
-
 mod:add_talent_buff_template("dwarf_ranger", "bardin_slayer_dodge_speed", {
 	multiplier = 1.1,
 	remove_buff_func = "remove_movement_buff",
@@ -1138,31 +1053,6 @@ mod:add_talent_buff_template("dwarf_ranger", "bardin_slayer_dodge_range", {
 		"distance_modifier"
 	}
 })
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_dr_scaling_buff", {
-	icon = "bardin_slayer_push_on_dodge",
-	stat_buff = "damage_taken",
-	max_stacks = 1,
-	multiplier = -0.3
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_dr_scaling", {
-	activation_health = 0.3,
-	activate_below = true,
-	buff_to_add = "gs_bardin_slayer_dr_scaling_buff",
-	update_func = "activate_buff_on_health_percent"
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_dr_scaling_buff_2", {
-	icon = "bardin_slayer_push_on_dodge",
-	stat_buff = "damage_taken",
-	max_stacks = 1,
-	multiplier = -0.3
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_dr_scaling_2", {
-	activation_health = 0.5,
-	activate_below = true,
-	buff_to_add = "gs_bardin_slayer_dr_scaling_buff_2",
-	update_func = "activate_buff_on_health_percent"
-})
-
 mod:modify_talent("dr_slayer", 5, 3, {
 	description = "gs_bardin_slayer_push_on_dodge_desc",
 	server = "both",
@@ -1173,6 +1063,24 @@ mod:modify_talent("dr_slayer", 5, 3, {
 	}
 })
 mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10%.")
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_attack_speed_on_double_one_handed_weapons", {
+	multiplier = 0.15
+})
+mod:add_text("bardin_slayer_attack_speed_on_double_one_handed_weapons_desc", "Gain 15.0%% attack speed if wielding 2 one-handed weapons.")
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_push_on_dodge", {
+	stat_buff = "damage_taken",
+	multiplier = -0.15
+})
+mod:modify_talent("dr_slayer", 5, 3, {
+	buffs = {
+		"bardin_slayer_push_on_dodge"
+	}
+})
+mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nearby small enemies out of the way. Increases dodge range by 10% and reduces damage taken by 15%.")
+
+-- level 20
+-- Impatience - added unlisted dodge range modifier
+mod:add_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%% and dodge range by 5.0%%.")
 
 --[[
 
@@ -1509,15 +1417,171 @@ mod:add_text("elf_hm_increased_max_health_desc", "Increases max health by 20.0%.
 
 
 -- Quiver of Plenty
--- Now grants 80% increased ammo.
+-- Now grants 70% increased ammo.
 mod:modify_talent_buff_template("wood_elf", "kerillian_maidenguard_max_ammo", {
-	multiplier = 0.8
+	multiplier = 0.7
 })
 mod:modify_talent("we_maidenguard", 5, 3, {
     description = "elf_hm_increased_max_ammo_desc",
     description_values = {},
 })
-mod:add_text("elf_hm_increased_max_ammo_desc", "Increases ammunition amount by 80.0%.")
+mod:add_text("elf_hm_increased_max_ammo_desc", "Increases ammunition amount by 70.0%.")
+
+--[[
+
+	Shade
+
+]]
+-- Cruelty
+-- Now gives 80% crit power and 5% crit chance
+mod:modify_talent_buff_template("wood_elf", "kerillian_shade_increased_critical_strike_damage", {
+	multiplier = 0.8
+})
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_increased_critical_strike_damage_chance_tb", {
+	stat_buff = "critical_strike_chance",
+	bonus = 0.05
+})
+mod:modify_talent("we_shade", 2, 1, {
+	description = "kerillian_shade_increased_critical_strike_damage_desc",
+	description_values = {},
+	buffs = {
+		"kerillian_shade_increased_critical_strike_damage",
+		"kerillian_shade_increased_critical_strike_damage_chance_tb",
+	},
+})
+mod:add_text("kerillian_shade_increased_critical_strike_damage_desc", "Increases critical strike damage bonus by 80.0% and critical strike chance by 5.0%.")
+
+-- Bloodfletcher
+-- Now gives 5% Ammo on backstab
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_backstabs_replenishes_ammunition_tb", {
+	buff_func = "ammo_fraction_gain_on_backstab_tb",
+	event = "on_backstab",
+	ammo_bonus_fraction = 0.05,
+})
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_backstabs_replenishes_ammunition_cooldown_tb", {
+	icon = "kerillian_shade_backstabs_replenishes_ammunition",
+	duration = 2,
+})
+ProcFunctions.ammo_fraction_gain_on_backstab_tb = function (owner_unit, buff, params)
+    local player = Managers.player:owner(owner_unit)
+
+    if player and player.remote then
+        return
+    end
+
+	local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+
+	if buff_extension and not buff_extension:has_buff_type("kerillian_shade_backstabs_replenishes_ammunition_cooldown_tb") then
+
+		if Unit.alive(owner_unit) then
+			local buff_template = buff.template
+			local weapon_slot = "slot_ranged"
+			local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
+			local slot_data = inventory_extension:get_slot_data(weapon_slot)
+			local right_unit_1p = slot_data.right_unit_1p
+			local left_unit_1p = slot_data.left_unit_1p
+			local ammo_extension = GearUtils.get_ammo_extension(right_unit_1p, left_unit_1p)
+			local ammo_bonus_fraction = buff_template.ammo_bonus_fraction
+
+			if ammo_extension then
+				local ammo_amount = math.max(math.round(ammo_extension:max_ammo() * ammo_bonus_fraction), 1)
+				ammo_extension:add_ammo_to_reserve(ammo_amount)
+			end
+		end
+
+		buff_extension:add_buff("kerillian_shade_backstabs_replenishes_ammunition_cooldown_tb")
+	end
+end
+mod:modify_talent("we_shade", 4, 3, {
+    description = "kerillian_shade_backstabs_replenishes_ammunition_tb_desc",
+    description_values = {},
+	buffs = {
+		"kerillian_shade_backstabs_replenishes_ammunition_tb",
+	},
+})
+mod:add_text("kerillian_shade_backstabs_replenishes_ammunition_tb_desc", "Backstabs return 5% of maximum ammunition. 2 second cooldown.")
+
+-- Shimmer Strike
+-- protects from proccing multiple times per swing
+mod:add_talent_buff_template("wood_elf", "shimmer_abuser", {
+	duration = 0.1,
+	max_stacks = 1
+})
+-- removes a shimmer charge when you kill an elite/special
+mod:add_talent_buff_template("wood_elf", "shimmer_handler", {
+	buff_func = "shimmer_control",
+	buff_to_remove = "shimmer_charges",
+	event = "on_kill_elite_special",
+	max_stacks = 1
+})
+mod:add_talent_buff_template("wood_elf", "shimmer_activator", {
+	buff_func = "add_buff_reff_buff_stack",
+	buff_to_add = "shimmer_charges",
+	event = "on_ability_activated",
+	max_stacks = 1,
+	amount_to_add = 4,                                                -- gives 4 shimmer uses when you ult
+	reference_buff = "shimmer_handler"
+})
+-- controls how many shimmer uses you have left
+mod:add_talent_buff_template("wood_elf", "shimmer_charges", {
+	buff_func = "shade_activated_ability_on_hit",
+	max_stacks = 4,                                              -- maximum shimmer uses at once
+	icon = "kerillian_shade_passive_stealth_on_backstab_kill"
+})
+mod:add_talent_buff_template("wood_elf", "kerillian_shade_ult_invis_combo_window", {
+	buff_func = "shade_combo_stealth_extend_on_kill",
+	duration = 0.3,
+	refresh_durations = true,
+	event = "on_kill_elite_special",
+	extend_time = 1,                                           
+	max_stacks = 1,
+	icon = "kerillian_shade_passive_stealth_on_backstab_kill",
+	remove_buff_func = "kerillian_shade_missed_combo_window"
+})
+mod:add_proc_function("shade_combo_stealth_on_hit", function (owner_unit, buff, params)
+	if ALIVE[owner_unit] then
+		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+		
+		if not buff_extension:has_buff_type("kerillian_shade_ult_invis_combo_blocker") then
+			if buff_extension:num_buff_stacks("shimmer_charges") > 0 then                    -- only gives shimmer buff if you have charges
+				buff_extension:add_buff("kerillian_shade_ult_invis_combo_window")
+			end
+			if buff_extension:num_buff_stacks("shimmer_charges") <= 0 then                   -- always removes invis if you have no charges and hit an enemy
+				buff_extension:remove_buff(buff.id)
+			end
+		end
+	end
+end)
+mod:add_proc_function("shimmer_control", function (owner_unit, buff, params)
+	if ALIVE[owner_unit] then
+		local buff_template = buff.template
+		local buff_name = buff_template.buff_to_remove
+		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+		local buffs = buff_extension:get_stacking_buff(buff_name)
+		
+		if buffs then
+			local num_stacks = #buffs
+			
+			if not buff_extension:has_buff_type("shimmer_abuser") then
+				if num_stacks > 0 then
+					local buff_id = buffs[num_stacks].id
+
+					buff_extension:remove_buff(buff_id)
+					buff_extension:add_buff("shimmer_abuser")
+				end
+			end
+		end
+	end
+end)
+mod:modify_talent("we_shade", 6, 1, {
+	description = "kerillian_shade_activated_stealth_combo_desc_tb",
+	description_values = {},
+	buffs = {
+		"shimmer_activator",             -- adds necessary buffs to shimmer talent to handle having capped uses
+		"shimmer_handler"
+	}
+})
+mod:add_text("kerillian_shade_activated_stealth_combo_desc_tb", "Leaving Infiltrate grants stealth for 3 seconds. Killing an Elite or Special extends this duration by 1 second up to a maximum of 4 times.")
 
 
 
@@ -1526,6 +1590,18 @@ mod:add_text("elf_hm_increased_max_ammo_desc", "Increases ammunition amount by 8
 	Sister of the Thorn Talents
 
 ]]
+
+-- longer duration for radiant inheritance
+mod:modify_talent_buff_template("wood_elf", "kerillian_thorn_sister_team_buff_aura", {
+	duration = 20
+})
+mod:modify_talent("we_thornsister", 4, 3, {
+    description = "sister_inheritance_desc",
+    description_values = {},
+})
+mod:add_text("sister_inheritance_desc", "Consuming Radiance grants Kerillian and nearby allies 15% power and 5% critical strike chance for 20 seconds.")
+
+-- shorter cd for burst ult
 mod:modify_talent("we_thornsister", 6, 3, {
     buffs = {
         "tb_cd_thorn"
@@ -1714,6 +1790,10 @@ mod:add_talent_buff_template("witch_hunter", "victor_priest_5_2_speed_buff", {
 	},
 })
 
+-- reduce long bubble to 7 seconds (Unyielding Blessing)
+CareerConstants.wh_priest.talent_6_1_improved_ability_duration = 7 --10 --this should already change the description as well
+mod:add_text("victor_priest_6_1_desc_new", "Shield of Faith now lasts 7 seconds. The shielded hero's attacks cause the shield to pulse, staggering nearby enemies.")
+
 mod:add_text("career_active_desc_wh_priest", "Saltzpyre imbues himself or an ally with a shield, rendering them immune to damage for 5 seconds. Upon expiring, the shield explodes, inflicting damage on nearby enemies. Hold to target allies.") -- just because FS formatting is awful
 mod:add_text("victor_priest_5_2_desc", "Bless the party with 10%% increased movement speed. Fly you fools.")
 mod:add_text("victor_priest_5_2", "Prayer of Flight")
@@ -1863,6 +1943,66 @@ mod:modify_talent("bw_scholar", 2, 2, {
     description_values = {},
 })
 mod:add_text("pyro_martial_study_desc", "Increases attack speed by 10%.")
+
+
+--[[
+
+	Unchained Talents
+
+]]
+-- Prevent interaction between Unchained Abandon and WP bubble
+--[[
+mod:modify_talent_buff_template("bright_wizard", "sienna_unchained_health_to_ult", {
+	update_func = "activate_buff_stacks_based_on_overcharge_chunks_unchained_tb",
+})
+BuffFunctionTemplates.functions.activate_buff_stacks_based_on_overcharge_chunks_unchained_tb = function (unit, buff, params)
+    if is_local(unit) then
+
+        local buff_extension = ScriptUnit.extension(unit, "buff_system")
+        local has_buff = buff_extension:has_buff_type("victor_priest_activated_ability_invincibility")
+
+        if has_buff then
+            return
+        end
+
+        local overcharge_extension = ScriptUnit.extension(unit, "overcharge_system")
+        local buff_extension = ScriptUnit.extension(unit, "buff_system")
+        local overcharge, threshold, max_overcharge = overcharge_extension:current_overcharge_status()
+        local template = buff.template
+        local chunk_size = template.chunk_size
+        local buff_to_add = template.buff_to_add
+        local max_stacks = template.max_stacks
+
+        if not buff.stack_ids then
+            buff.stack_ids = {}
+        end
+
+        local num_chunks = math.min(math.floor(overcharge / chunk_size), max_stacks)
+        local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+        if num_buff_stacks < num_chunks then
+            local difference = num_chunks - num_buff_stacks
+
+            for i = 1, difference do
+                local buff_id = buff_extension:add_buff(buff_to_add)
+                local stack_ids = buff.stack_ids
+
+                stack_ids[#stack_ids + 1] = buff_id
+            end
+        elseif num_chunks < num_buff_stacks then
+            local difference = num_buff_stacks - num_chunks
+
+            for i = 1, difference do
+                local stack_ids = buff.stack_ids
+                local buff_id = table.remove(stack_ids, 1)
+
+                buff_extension:remove_buff(buff_id)
+            end
+        end
+    end
+end
+]]
+
 
 --[[
 
