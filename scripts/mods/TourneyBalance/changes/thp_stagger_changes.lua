@@ -745,7 +745,7 @@ mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owne
 				and is_shield_slam
 				and heal_amount > 0 then
 					if damage_profile_aoe then
-                		heal_amount = 1 -- nerf shield thp gain
+                		heal_amount = 0.75 -- nerf shield thp gain
 					end
             end
     	end
@@ -833,7 +833,7 @@ mod:add_text("bloodlust_name", "Bloodlust")
 mod:add_text("reaper_name", "Reaper")
 mod:add_text("vanguard_name", "Vanguard")
 mod:add_text("regrowth_name", "Regrowth")
-mod:add_text("rebaltourn_regrowth_desc", "Melee critical stikes gives you 1.5 temporary health and melee headshots restore 3 temporary health. Melee critical headshots restore 4.5 temporary health.")
+mod:add_text("rebaltourn_regrowth_desc", "Melee critical strikes gives you 1.5 temporary health and melee headshots restore 3 temporary health. Melee critical headshots restore 4.5 temporary health.")
 mod:add_text("smiter_name", "Smiter")
 mod:add_text("enhanced_power_name", "Enhanced Power")
 mod:add_text("assassin_name", "Assassin")
