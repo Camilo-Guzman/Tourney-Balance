@@ -3352,12 +3352,10 @@ Weapons.dual_wield_axe_falchion_template.actions.action_one.light_attack_bopp.hi
 Weapons.one_handed_crowbill.actions.action_one.heavy_attack.damage_profile = "crowbill_heavy_1"
 Weapons.one_handed_crowbill.actions.action_one.heavy_attack_left.damage_profile = "crowbill_heavy_2"
 Weapons.one_handed_crowbill.actions.action_one.heavy_attack_right_up.damage_profile = "crowbill_heavy_3"
-
 Weapons.one_handed_crowbill.actions.action_one.light_attack_last.damage_profile = "crowbill_light_1"
 Weapons.one_handed_crowbill.actions.action_one.light_attack_upper.damage_profile = "crowbill_light_2"
 Weapons.one_handed_crowbill.actions.action_one.light_attack_right.damage_profile = "crowbill_light_3"
 Weapons.one_handed_crowbill.actions.action_one.light_attack_left.damage_profile = "crowbill_light_4"
-
 Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.damage_profile = "crowbill_push_attack"
 Weapons.one_handed_crowbill.actions.action_one.light_attack_bopp.additional_critical_strike_chance = 0.05
 
@@ -3699,7 +3697,7 @@ NewDamageProfileTemplates.crowbill_light_1 = {
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.165,
-				impact = 0.91,
+				impact = 0.091,
 			},
 		},
 		{	
@@ -3708,7 +3706,7 @@ NewDamageProfileTemplates.crowbill_light_1 = {
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.12,
-				impact = 0.82,
+				impact = 0.082,
 			},
 		},
 	},
@@ -3774,7 +3772,7 @@ NewDamageProfileTemplates.crowbill_light_2 = { -- Needs to do more damage than L
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.211, -- 0.175
-				impact = 0.95,
+				impact = 0.095,
 			},
 		},
 		{	
@@ -3783,7 +3781,7 @@ NewDamageProfileTemplates.crowbill_light_2 = { -- Needs to do more damage than L
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.177, -- 0.175
-				impact = 0.9,
+				impact = 0.09,
 			},
 		},
 		{	
@@ -3792,7 +3790,7 @@ NewDamageProfileTemplates.crowbill_light_2 = { -- Needs to do more damage than L
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.143, -- 0.175
-				impact = 0.85,
+				impact = 0.085,
 			},
 		},
 		{	
@@ -3801,7 +3799,7 @@ NewDamageProfileTemplates.crowbill_light_2 = { -- Needs to do more damage than L
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.109, -- 0.175
-				impact = 0.8,
+				impact = 0.08,
 			},
 		},
 	},
@@ -3865,7 +3863,7 @@ NewDamageProfileTemplates.crowbill_light_3 = {
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.21, -- 0.175, 0.237
-				impact = 0.94,
+				impact = 0.094,
 			},
 		},
 		{	
@@ -3874,7 +3872,7 @@ NewDamageProfileTemplates.crowbill_light_3 = {
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.165, -- 0.175, 0.237
-				impact = 0.87,
+				impact = 0.087,
 			},
 		},
 		{	
@@ -3883,7 +3881,7 @@ NewDamageProfileTemplates.crowbill_light_3 = {
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.120, -- 0.175, 0.237
-				impact = 0.81,
+				impact = 0.081,
 			},
 		},
 	}
@@ -4004,7 +4002,7 @@ NewDamageProfileTemplates.crowbill_push_attack = { -- 5% crit chance to give thi
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.15,
-				impact = 0.94,
+				impact = 0.094,
 			},
 		},
 		{
@@ -4013,7 +4011,7 @@ NewDamageProfileTemplates.crowbill_push_attack = { -- 5% crit chance to give thi
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.125,
-				impact = 0.88,
+				impact = 0.088,
 			},
 		},
 		{
@@ -4022,11 +4020,12 @@ NewDamageProfileTemplates.crowbill_push_attack = { -- 5% crit chance to give thi
 			boost_curve_type = "ninja_curve",
 			power_distribution = {
 				attack = 0.1,
-				impact = 0.82,
+				impact = 0.082,
 			},
 		},
 	}
 }
+
 
 
 --Scythe

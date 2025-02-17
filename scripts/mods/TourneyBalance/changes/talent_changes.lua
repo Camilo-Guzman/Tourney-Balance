@@ -931,9 +931,6 @@ mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, 
 		end
 	end
 end)
-mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_stacking_damage_buff_on_hit", {
-	buff_func = "gs_add_bardin_slayer_passive_buff"
-})
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_movement_speed_extra", {
 	max_stacks = 4,
 	multiplier = 1.1,

@@ -147,11 +147,6 @@ mod:add_buff_function("activate_party_buff_stacks_on_ally_proximity", function (
 	end
 end)
 
-mod:modify_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
-	multiplier = -0.033
-})
-mod:add_text("markus_knight_damage_taken_ally_proximity_desc_2", "Increases damage protection from Protective Presence by 3.33%% for each nearby ally")
-
 --[[
 
 	Ranger Veteran
@@ -198,6 +193,34 @@ ActivatedAbilitySettings.es_1[1].cooldown = 75
 ]]
 -- Made Widecharge the standard Footknight ult
 ActivatedAbilitySettings.es_2[1].cooldown = 40
+
+-- baseline ult buff
+mod:hook(CareerAbilityESKnight, "_run_ability", function (func, self, ...)
+	func(self, ...)
+
+    local owner_unit = self._owner_unit
+    local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
+	local status_extension = self._status_extension
+
+	-- increase radius of explosion and double cleave of explosion and normal charge
+	status_extension.do_lunge.damage.on_interrupt_blast.radius = 4 --3
+	PowerLevelTemplates.cleave_distribution_markus_knight_charge = {
+		attack = 4, --2 
+		impact = 4, --2
+	}
+
+	if talent_extension:has_talent("markus_knight_wide_charge", "empire_soldier", true) then
+		-- remove buffs from baseline ult if battering ram is selected
+		PowerLevelTemplates.cleave_distribution_markus_knight_charge = {
+			attack = 2,
+			impact = 2,
+		}
+		status_extension.do_lunge.damage.on_interrupt_blast.radius = 3 --3 --remove buff from baseline for battering ram specifically
+		status_extension.do_lunge.damage.width = 5
+		status_extension.do_lunge.damage.interrupt_on_max_hit_mass = false
+	end
+
+end)
 
 
 --[[
@@ -252,6 +275,27 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_activated_ability
 	max_stacks = 1
 })
 mod:add_text("bardin_ranger_activated_ability_stealth_outside_of_smoke_desc", "Disengage's stealth does not break on moving beyond the smoke cloud. Reduces the cooldown of Disengage by 30%")
+
+--[[
+
+	Iron Breaker
+
+]]
+-- reduce Impenetrable from 50% DR to 28.5% Damage reduction
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ability", {
+	{
+		stat_buff = "damage_taken",
+		multiplier = -0.285
+	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_activated_ability_taunt_range_and_duration", {
+	{
+		stat_buff = "damage_taken",
+		multiplier = -0.285
+	},
+})
+mod:add_text("career_active_desc_dr_1", "Bardin taunts all nearby man-sized enemies, takes 28.5% less damage (stacks with Dwarf-Forged) and has 0 block cost for the next 10 seconds")
+
 
 --[[
 	
