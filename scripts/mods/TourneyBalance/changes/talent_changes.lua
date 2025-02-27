@@ -879,7 +879,7 @@ mod:modify_talent("dr_slayer", 5, 2, {
 	description_values = {
 		{
 			value_type = "percent",
-			value = -0.4
+		value = -0.4
 		},
 		{
 			value = 5
@@ -901,6 +901,11 @@ mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, 
 		local buff_name = "bardin_slayer_passive_stacking_damage_buff"
 		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
 		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+
+		if talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
+			buff_name = "gs_bardin_slayer_passive_increased_max_stacks"
+		end
+		buff_system:add_buff(owner_unit, buff_name, owner_unit, false)
 
 		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
 			buff_system:add_buff(owner_unit, "bardin_slayer_passive_movement_speed", owner_unit, false)
@@ -931,6 +936,9 @@ mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, 
 		end
 	end
 end)
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_stacking_damage_buff_on_hit", {
+	buff_func = "gs_add_bardin_slayer_passive_buff"
+})
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_movement_speed_extra", {
 	max_stacks = 4,
 	multiplier = 1.1,
@@ -1078,6 +1086,7 @@ mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nea
 -- level 20
 -- Impatience - added unlisted dodge range modifier
 mod:add_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%% and dodge range by 5.0%%.")
+
 
 --[[
 

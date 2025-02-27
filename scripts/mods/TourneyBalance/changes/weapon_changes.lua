@@ -1502,7 +1502,7 @@ NewDamageProfileTemplates.heavy_1h_axe_tb = {
 			0.75,
 		},
 	},
-	charge_value = "light_attack",
+	charge_value = "heavy_attack",
 	cleave_distribution = "cleave_distribution_smiter_default",
 	critical_strike = "critical_strike_blunt_smiter_2h_hammer_H",
 	default_target = "default_target_slashing_smiter_finesse",
@@ -2705,7 +2705,7 @@ PowerLevelTemplates.armor_modifier_smiter_pick_H.attack[3] = 2.25
 NewDamageProfileTemplates.tb_warpick_lights = {
 	armor_modifier = "armor_modifier_axe_linesman_M",
 	critical_strike = "critical_strike_axe_linesman_M",
-	charge_value = "light_attack",
+	charge_value = "heavy_attack",
 	cleave_distribution = {
 		attack = 0.4,
 		impact = 0.4
