@@ -986,7 +986,7 @@ mod:hook_origin(GenericStatusExtension, "blocked_attack", function (self, fatigu
 			blocking_unit = equipment.right_hand_wielded_unit_3p or equipment.left_hand_wielded_unit_3p
 
 			QuestSettings.handle_bastard_block(unit, attacking_unit, true)
-			self:add_fatigue_points(fatigue_type, attacking_unit, blocking_unit, fatigue_point_costs_multiplier, is_timed_block)
+			--self:add_fatigue_points(fatigue_type, attacking_unit, blocking_unit, fatigue_point_costs_multiplier, is_timed_block)
 			Unit.animation_event(unit, "parry_hit_reaction")
 		end
 

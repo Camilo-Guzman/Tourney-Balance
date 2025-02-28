@@ -95,18 +95,24 @@ end
 -- figure out if Deathwish or any Onslaught Mod is turned on (credits to prismism)
 -- added difficulty system for mods like Linesman and also theoretically Dense
 local function is_mod_mutator_enabled(mod_name, mutator_name, difficulty_level)
+
+    -- failsave in case the players doesnt have a mutator mod installed
+    if not get_mod(mod_name) then
+        return false
+    end
+
     local other_mod = get_mod(mod_name)
     local mod_is_enabled = false
     local mutator_is_enabled = false
     local mod_difficulty_level = false
 
     if other_mod then
-      local mutator = other_mod:persistent_table(mutator_name)
-      mod_is_enabled = other_mod:is_enabled()
-      mutator_is_enabled = mutator.active
-      if other_mod.difficulty_level == difficulty_level then
-        mod_difficulty_level = true
-      end
+        local mutator = other_mod:persistent_table(mutator_name)
+        mod_is_enabled = other_mod:is_enabled()
+        mutator_is_enabled = mutator.active
+        if other_mod.difficulty_level == difficulty_level then
+            mod_difficulty_level = true
+        end
     end
     if other_mod.difficulty_level then
         return mod_is_enabled and mutator_is_enabled and mod_difficulty_level
