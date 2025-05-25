@@ -19,7 +19,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 ]]
 -- Flamethrowers (Flamestorm and Drakegun)
 Weapons.drakegun_template_1.actions.action_one.shoot_charged.damage_interval = 0.30
-Weapons.staff_flamethrower_template .actions.action_one.shoot_charged.damage_interval = 0.30
+Weapons.staff_flamethrower_template.actions.action_one.shoot_charged.damage_interval = 0.30
 
 local POSITION_TWEAK = -1.5
 local SPRAY_RANGE = math.abs(POSITION_TWEAK) + 10

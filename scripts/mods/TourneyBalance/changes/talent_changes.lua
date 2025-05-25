@@ -902,69 +902,27 @@ mod:add_proc_function("gs_add_bardin_slayer_passive_buff", function(owner_unit, 
 		local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
 		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
 
-		if talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_name = "gs_bardin_slayer_passive_increased_max_stacks"
+		if talent_extension:has_talent("bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
+			buff_name = "bardin_slayer_passive_increased_max_stacks"
 		end
 		buff_system:add_buff(owner_unit, buff_name, owner_unit, false)
 
-		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
+		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) then
 			buff_system:add_buff(owner_unit, "bardin_slayer_passive_movement_speed", owner_unit, false)
 			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_range", owner_unit, false)
 			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_speed", owner_unit, false)
 		end
 
-		if talent_extension:has_talent("bardin_slayer_passive_movement_speed", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_movement_speed_extra", owner_unit, false)
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_range_extra", owner_unit, false)
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_dodge_speed_extra", owner_unit, false)
-		end
-
-		if talent_extension:has_talent("gs_bardin_slayer_passive_stacking_crit_buff", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_stacking_crit_buff", owner_unit, false)
-		end
-
-		if talent_extension:has_talent("gs_bardin_slayer_passive_stacking_crit_buff", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_stacking_crit_buff_extra", owner_unit, false)
-		end
-
-		if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) == false then
+		if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) then
 			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_cooldown_reduction", owner_unit, false)
-		end
-
-		if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) and talent_extension:has_talent("gs_bardin_slayer_passive_increased_max_stacks", "dwarf_ranger", true) then
-			buff_system:add_buff(owner_unit, "gs_bardin_slayer_passive_cooldown_reduction_extra", owner_unit, false)
 		end
 	end
 end)
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_stacking_damage_buff_on_hit", {
 	buff_func = "gs_add_bardin_slayer_passive_buff"
 })
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_movement_speed_extra", {
-	max_stacks = 4,
-	multiplier = 1.1,
-	duration = 2,
-	remove_buff_func = "remove_movement_buff",
-	apply_buff_func = "apply_movement_buff",
-	refresh_durations = true,
-	path_to_movement_setting_to_modify = {
-		"move_speed"
-	}
-})
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_range", {
 	max_stacks = 3,
-	multiplier = 1.05,
-	duration = 2,
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	remove_buff_func = "remove_movement_buff",
-	apply_buff_func = "apply_movement_buff",
-	refresh_durations = true,
-	path_to_movement_setting_to_modify = {
-		"dodging",
-		"distance_modifier"
-	}
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_range_extra", {
-	max_stacks = 4,
 	multiplier = 1.05,
 	duration = 2,
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
@@ -988,49 +946,13 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_spe
 		"speed_modifier"
 	}
 })
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_speed_extra", {
-	max_stacks = 4,
-	multiplier = 1.05,
-	duration = 2,
-	remove_buff_func = "remove_movement_buff",
-	apply_buff_func = "apply_movement_buff",
-	refresh_durations = true,
-	path_to_movement_setting_to_modify = {
-		"dodging",
-		"speed_modifier"
-	}
-})
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_crit_chance", {
 	bonus = 0.1
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_stacking_crit_buff", {
-	max_stacks = 3,
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	refresh_durations = true,
-	stat_buff = "power_level",
-	duration = 2,
-	multiplier = 0.05
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_stacking_crit_buff_extra", {
-	max_stacks = 4,
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	refresh_durations = true,
-	stat_buff = "power_level",
-	duration = 2,
-	multiplier = 0.05
 })
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_reduction", {
 	icon = "bardin_slayer_passive_cooldown_reduction_on_max_stacks",
 	stat_buff = "cooldown_regen",
 	max_stacks = 3,
-	refresh_durations = true,
-	duration = 2,
-	multiplier = 0.67
-})
-mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_reduction_extra", {
-	icon = "bardin_slayer_passive_cooldown_reduction_on_max_stacks",
-	stat_buff = "cooldown_regen",
-	max_stacks = 4,
 	refresh_durations = true,
 	duration = 2,
 	multiplier = 0.67

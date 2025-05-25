@@ -885,7 +885,7 @@ mod:hook_origin(GenericStatusExtension, "init", function (self, extension_init_c
 
 	self._base_max_wounds = self.wounds
 	self._num_times_grabbed_by_pack_master = 0
-	self._num_times_hit_by_globadier_poison = 0
+	self._hit_by_globadier_poison_instances = { }
 	self._num_times_knocked_down = 0
 	self.is_server = Managers.player.is_server
 	self.update_funcs = {}
