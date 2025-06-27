@@ -206,6 +206,90 @@ DamageProfileTemplates.dr_deus_01_explosion.default_target.boost_curve_type = "t
 DamageProfileTemplates.dr_deus_01_glance.default_target.boost_curve_type = "tank_curve"
 DamageProfileTemplates.dr_deus_01.default_target.boost_curve_coefficient = 0.5
 
+-- Masterwork Pistol Nerf
+Weapons.heavy_steam_pistol_template_1.actions.action_one.default.impact_data.damage_profile = "masterwork_pistol_shot"
+Weapons.heavy_steam_pistol_template_1.actions.action_one.shoot.impact_data.damage_profile = "masterwork_pistol_shot"
+Weapons.heavy_steam_pistol_template_1.actions.action_one.fast_shot.impact_data.damage_profile = "masterwork_pistol_shot"
+NewDamageProfileTemplates.masterwork_pistol_shot = {
+	charge_value = "instant_projectile",
+	no_stagger_damage_reduction_ranged = true,
+	shield_break = true,
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			1.4,
+			1.17,
+			1,
+			0.75,
+			0.5,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	armor_modifier_near = {
+		attack = {
+			0.91, -- 1
+			1.2,
+			1.17,
+			1,
+			0.75,
+			0,
+		},
+		impact = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			0,
+		},
+	},
+	armor_modifier_far = {
+		attack = {
+			1,
+			1,
+			1,
+			1,
+			0.75,
+			0,
+		},
+		impact = {
+			1,
+			1,
+			1,
+			1,
+			1,
+			0,
+		},
+	},
+	cleave_distribution = {
+		attack = 0.3,
+		impact = 0.3,
+	},
+	default_target = {
+		attack_template = "shot_sniper",
+		boost_curve_coefficient = 1,
+		boost_curve_coefficient_headshot = 1,
+		boost_curve_type = "smiter_curve",
+		headshot_boost_boss = 0.5,
+		power_distribution_near = {
+			attack = 1,
+			impact = 0.5,
+		},
+		power_distribution_far = {
+			attack = 0.5,
+			impact = 0.5,
+		},
+		range_modifier_settings = shotgun_dropoff_ranges,
+	},
+}
+
 
 --[[
 
@@ -2351,6 +2435,125 @@ NewDamageProfileTemplates.bret_sword_heavy_1_2 = {
 	targets = "targets_axe_linesman_H",
 }
 
+-- Tuskgor Spear
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_left.damage_profile = "tusk_spear_light_1"
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_1.damage_profile = "tusk_spear_light_2"
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_right.damage_profile = "tusk_spear_light_3"
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_2.damage_profile = "tusk_spear_light_4"
+NewDamageProfileTemplates.tusk_spear_light_1 = {
+	armor_modifier = "armor_modifier_stab_smiter_M",
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = "critical_strike_stab_smiter_M",
+	default_target = "default_target_spear_stab_smiter_M"
+}
+NewDamageProfileTemplates.tusk_spear_light_2 = {
+	armor_modifier = {
+		attack = {
+			1.335, -- 1
+			0.45, -- 0.25
+			2.25,
+			1,
+			1.05, -- 0.75
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.75,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.335, -- 1
+			0.45, -- 0.4
+			2.5,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = "default_target_spear_stab_smiter_M"
+}
+NewDamageProfileTemplates.tusk_spear_light_3 = {
+	armor_modifier = {
+		attack = {
+			1,
+			0,
+			2,
+			1,
+			1.16, -- 1 
+		},
+		impact = {
+			1,
+			0.3,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_L",
+	critical_strike = "critical_strike_linesman_L",
+	default_target = "default_target_linesman_L",
+	targets = "targets_linesman_spear_M",
+}
+NewDamageProfileTemplates.tusk_spear_light_4 = {
+	armor_modifier = {
+		attack = {
+			2, -- 1
+			0.9, -- 0.25
+			2.25,
+			1,
+			1.65, -- 0.75
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.75,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.8, -- 1
+			0.8, -- 0.4
+			2.5,
+			1,
+			1.5, -- 1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		}
+	},
+	default_target = {
+		attack_template = "stab_smiter",
+		boost_curve_coefficient = 1,
+		boost_curve_coefficient_headshot = 0.7, -- 1.5
+		boost_curve_type = "ninja_curve",
+		power_distribution = {
+			attack = 0.25,
+			impact = 0.25,
+		}
+	}
+}
+
 
 --[[
 
@@ -2705,7 +2908,7 @@ PowerLevelTemplates.armor_modifier_smiter_pick_H.attack[3] = 2.25
 NewDamageProfileTemplates.tb_warpick_lights = {
 	armor_modifier = "armor_modifier_axe_linesman_M",
 	critical_strike = "critical_strike_axe_linesman_M",
-	charge_value = "heavy_attack",
+	charge_value = "light_attack",
 	cleave_distribution = {
 		attack = 0.4,
 		impact = 0.4
@@ -2762,22 +2965,119 @@ NewDamageProfileTemplates.tb_warpick_lights = {
 	KERILLIAN
 
 ]]
---Dual Daggers
+-- Dual Daggers
 Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_left.additional_critical_strike_chance = 0.1
 Weapons.dual_wield_daggers_template_1.actions.action_one.light_attack_right.additional_critical_strike_chance = 0.1
 Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack.allowed_chain_actions[5].start_time = 0.35
 Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack_stab.allowed_chain_actions[5].start_time = 0.35
 Weapons.dual_wield_daggers_template_1.max_fatigue_points = 6
 
---Elf Spear
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.27
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.38
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.17
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.34
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33
+-- Elven Spear
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.347 -- 0.31, 0.27, 0.35
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.39 -- 0.35, 0.38
 
---Glaive
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.223 -- 0.2, 0.17 
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.3 -- 0.3, 0.34 
+
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19 -- 0.15
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33 -- 0.3 
+
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_profile = "elven_spear_light_thrusts"
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_profile = "elven_spear_light_thrusts"
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_profile = "elven_spear_light_thrusts"
+
+Weapons.two_handed_spears_elf_template_1.actions.action_one.heavy_attack_stab.damage_profile = "elven_spear_heavy_stab"
+NewDamageProfileTemplates.elven_spear_light_thrusts = {
+	armor_modifier = {
+		attack = {
+			1.22, -- 1
+			0.35, -- 0.25
+			2.25,
+			1,
+			0.75,
+			0.45, -- 0.25
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.75,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.22, -- 1
+			0.5, -- 0.4
+			2.5,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = "default_target_stab_smiter_M_elf"
+}
+NewDamageProfileTemplates.elven_spear_heavy_stab = {
+	armor_modifier = {
+		attack = {
+			1,
+			0.45,
+			2,
+			1,
+			0.75,
+			0.6, -- 0.45
+		},
+		impact = {
+			1,
+			0.65,
+			1,
+			1,
+			0.75,
+		},
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2.5,
+			1,
+			1,
+			0.6, -- 0.5
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = "default_target_stab_smiter_H",
+	targets = {
+		{
+			attack_template = "heavy_stab_smiter",
+			boost_curve_coefficient = 0.75,
+			boost_curve_coefficient_headshot = 2,
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.45,
+				impact = 0.25,
+			}
+		}
+	}
+}
+
+-- Glaive
 -- Buffs to push attack chain attack speed and linesman on bopp, removes linesman from heavy attack, makes both heavy attacks have the Heavy 2 profile--
 Weapons.two_handed_axes_template_2.actions.action_one.light_attack_bopp.hit_mass_count = LINESMAN_HIT_MASS_COUNT	--no modifier on live--
 Weapons.two_handed_axes_template_2.actions.action_one.light_attack_left_upward.anim_time_scale = 0.95*1.15		-- 1.0--
@@ -4521,7 +4821,8 @@ Weapons.we_deus_01_template_1.actions.action_one.default.total_time = 0.7
 Weapons.we_deus_01_template_1.actions.action_one.default.allowed_chain_actions[1].start_time =  0.4
 Weapons.we_deus_01_template_1.actions.action_one.shoot_charged.total_time = 0.55
 Weapons.we_deus_01_template_1.actions.action_one.shoot_charged.allowed_chain_actions[1].start_time = 0.45
-Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.total_time = 0.5 Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.allowed_chain_actions[1].start_time = 0.4
+Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.total_time = 0.5 
+Weapons.we_deus_01_template_1.actions.action_one.shoot_special_charged.allowed_chain_actions[1].start_time = 0.4
 
 Weapons.bw_deus_01_template_1.actions.action_two.default.allowed_chain_actions[1].start_time = 0
 

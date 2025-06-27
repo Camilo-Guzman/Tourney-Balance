@@ -739,7 +739,6 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_gren
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_ability_cooldown_on_damage_taken", {
     bonus = 0.4
 })
-
 mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	self:_stop_priming()
 
@@ -854,8 +853,53 @@ mod:hook_origin(CareerAbilityDRIronbreaker, "_run_ability", function(self)
 	career_extension:start_activated_ability_cooldown()
 end)
 
+-- Vengeance Buff
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_stacking_buff_gromril", {
+    update_frequency = 3 --7
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_gromril_attack_speed", {
+    multiplier = 0.06, -- 0.08
+    duration = 12 -- 10
+})
+mod:modify_talent("dr_ironbreaker", 4, 1, {
+    description = "bardin_ironbreaker_rising_attack_speed_desc",
+    description_values = {},
+})
+mod:add_text("bardin_ironbreaker_rising_attack_speed_desc", "Periodically generate stacks (up to 5 max) of Rising Anger every 3 seconds while Gromril is active. When Gromril is lost, gain 6.0% attack speed per stack of Rising Anger for 12 seconds.")
+
+-- Under Pressure Buff
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_increased_ranged_power", {
+	{
+		stat_buff = "increased_weapon_damage_ranged"   
+	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_ranged_power", {
+	{
+		stat_buff = "increased_weapon_damage_ranged"   
+	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_changing_ranged_power", {
+	{
+		stat_buff = "increased_weapon_damage_ranged",
+		multiplier = -0.2 -- -0.8
+	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_attack_speed", {
+	{
+		stat_buff = "attack_speed_drakefire",
+		multiplier = -0.05 -- -0.15
+	},
+})
+mod:modify_talent("dr_ironbreaker", 2, 1, {
+    description = "bardin_ironbreaker_overcharge_increase_power_lowers_attack_speed_desc",
+    description_values = {},
+})
+mod:add_text("bardin_ironbreaker_overcharge_increase_power_lowers_attack_speed_desc", "Drake Fire damage increases from -20.0% to 120.0% and ranged attack speed reduces from 100.0% to 50.0% depending on overcharge. Removes overcharge slowdown.")
+
 -- Rune-Etched Shield description correction
 mod:add_text("bardin_ironbreaker_party_power_on_blocked_attacks_desc", "Blocking an attack increases Bardin's melee power (and that of nearby allies) by 2.0%% for 10 seconds. Stacks 5 times.")
+
+
 
 --[[
 
@@ -921,6 +965,7 @@ end)
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_stacking_damage_buff_on_hit", {
 	buff_func = "gs_add_bardin_slayer_passive_buff"
 })
+
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_range", {
 	max_stacks = 3,
 	multiplier = 1.05,
@@ -934,6 +979,7 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_ran
 		"distance_modifier"
 	}
 })
+
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_speed", {
 	max_stacks = 3,
 	multiplier = 1.05,
@@ -946,9 +992,11 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_dodge_spe
 		"speed_modifier"
 	}
 })
+
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_slayer_crit_chance", {
 	bonus = 0.1
 })
+
 mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_reduction", {
 	icon = "bardin_slayer_passive_cooldown_reduction_on_max_stacks",
 	stat_buff = "cooldown_regen",
@@ -957,6 +1005,7 @@ mod:add_talent_buff_template("dwarf_ranger", "gs_bardin_slayer_passive_cooldown_
 	duration = 2,
 	multiplier = 0.67
 })
+
 mod:modify_talent("dr_slayer", 4, 3, {
 	description = "gs_bardin_slayer_passive_cooldown_reduction_desc",
 	description_values = {}
@@ -1871,6 +1920,124 @@ mod:modify_talent("bw_scholar", 2, 2, {
     description_values = {},
 })
 mod:add_text("pyro_martial_study_desc", "Increases attack speed by 10%.")
+
+-- Spirit Casting
+mod:add_talent_buff_template("bright_wizard", "gs_sienna_scholar_crit_chance_above_health_threshold", {
+	buff_to_add = "sienna_scholar_crit_chance_above_health_threshold_buff",
+	update_func = "gs_activate_buff_stacks_based_on_certain_health_percentage",
+	update_frequency = 0.2,
+})
+mod:add_talent_buff_template("bright_wizard", "sienna_scholar_crit_chance_above_health_threshold_buff", {
+	max_stacks = 2, -- 3
+	icon = "sienna_scholar_crit_chance_above_health_threshold",
+	stat_buff = "critical_strike_chance",
+	bonus = 0.05
+})
+
+mod:modify_talent("bw_scholar", 2, 3, {
+    buffs = {
+        "gs_sienna_scholar_crit_chance_above_health_threshold"
+    },
+    description = "rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc",
+    description_values = {},
+})
+mod:add_text("rebaltourn_sienna_scholar_crit_chance_above_health_threshold_desc", "Critical strike chance is increased by 5.0% while above 65.0% health and increased by 10.0% while above 80.0% health.")
+
+mod:add_buff_function("gs_activate_scaling_buff_based_on_health_percentage", function(unit, buff, params)
+	if not Managers.state.network.is_server then
+		return
+	end
+
+	if not Unit.alive(unit) then
+        return
+    end
+
+	local health_extension = ScriptUnit.extension(unit, "health_system")
+	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	local buff_system = Managers.state.entity:system("buff_system")
+	local template = buff.template
+	local max_health = health_extension:get_max_health()
+	local current_health = health_extension:current_health()
+	local health_percentage = current_health / max_health
+	local stacks_to_add = 0
+	local max_buff_value = template.max_buff_value
+
+	stacks_to_add = health_percentage * max_buff_value
+
+	local buff_to_add = template.buff_to_add
+	local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+	if not buff.stack_ids then
+		buff.stack_ids = {}
+	end
+
+	if num_buff_stacks < stacks_to_add then
+		local difference = stacks_to_add - num_buff_stacks
+
+		for i = 1, difference, 1 do
+			local buff_id = buff_system:add_buff(unit, buff_to_add, unit, true)
+			local stack_ids = buff.stack_ids
+			stack_ids[#stack_ids + 1] = buff_id
+		end
+	elseif stacks_to_add < num_buff_stacks then
+		local difference = num_buff_stacks - stacks_to_add
+
+		for i = 1, difference, 1 do
+			local stack_ids = buff.stack_ids
+			local buff_id = table.remove(stack_ids, 1)
+
+			buff_system:remove_server_controlled_buff(unit, buff_id)
+		end
+	end
+end)
+
+mod:add_buff_function("gs_activate_buff_stacks_based_on_certain_health_percentage", function(unit, buff, params)
+	if not Managers.state.network.is_server then
+		return
+	end
+
+	local health_extension = ScriptUnit.extension(unit, "health_system")
+	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	local buff_system = Managers.state.entity:system("buff_system")
+	local template = buff.template
+	local max_health = health_extension:get_max_health()
+	local current_health = health_extension:current_health()
+	local health_percentage = current_health / max_health
+	local stacks_to_add = 0
+	--if health_percentage >= 0.5 and health_percentage < 0.65 then
+		--stacks_to_add = 1
+	if health_percentage >= 0.65 and health_percentage < 0.8 then
+		stacks_to_add = 1 -- 2
+	elseif health_percentage >= 0.8 then
+		stacks_to_add = 2 -- 3
+	end
+	local buff_to_add = template.buff_to_add
+	local num_chunks = stacks_to_add
+	local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+	if not buff.stack_ids then
+		buff.stack_ids = {}
+	end
+
+	if num_buff_stacks < num_chunks then
+		local difference = num_chunks - num_buff_stacks
+
+		for i = 1, difference, 1 do
+			local buff_id = buff_system:add_buff(unit, buff_to_add, unit, true)
+			local stack_ids = buff.stack_ids
+			stack_ids[#stack_ids + 1] = buff_id
+		end
+	elseif num_chunks < num_buff_stacks then
+		local difference = num_buff_stacks - num_chunks
+
+		for i = 1, difference, 1 do
+			local stack_ids = buff.stack_ids
+			local buff_id = table.remove(stack_ids, 1)
+
+			buff_system:remove_server_controlled_buff(unit, buff_id)
+		end
+	end
+end)
 
 
 --[[
