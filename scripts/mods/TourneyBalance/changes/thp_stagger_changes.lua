@@ -852,10 +852,10 @@ mod:add_buff_template("rebaltourn_finesse_unbalance", {
 })
 
 --Text Localization
-mod:add_text("bloodlust_name", "Execute")
-mod:add_text("reaper_name", "Carve")
-mod:add_text("vanguard_name", "Second Wind")
-mod:add_text("regrowth_name", "Sting")
+mod:add_text("bloodlust_name", "Execute") -- Kill Execute
+mod:add_text("reaper_name", "Carve") -- Cleave Carve
+mod:add_text("vanguard_name", "Second Wind") -- Stagger Second Wind
+mod:add_text("regrowth_name", "Sting") -- Crit Sting
 mod:add_text("rebaltourn_regrowth_desc", "Melee Strikes restore 0.5 Temporary Health. Melee Critical Strikes and Headshots instead restore 2. Critical Headshots instead restore 4.")
 --mod:add_text("rebaltourn_regrowth_desc", "Melee critical strikes gives you 1.5 temporary health and melee headshots restore 3 temporary health. Melee critical headshots restore 4.5 temporary health.")
 
@@ -878,20 +878,20 @@ local talent_first_row = {
 		"dr_engineer",
 		"wh_zealot",
 		"wh_priest",
-		"bw_scholar",
+		"bw_adept", -- bw
 		"bw_unchained",
 	},
 	{
 		"we_maidenguard",
-		"wh_captain",
-		"wh_bountyhunter",
 	},
 	{
 		"dr_slayer",
 		"we_shade",
 		"we_waywatcher",
 		"we_thornsister",
-		"bw_adept",
+		"wh_captain",
+		"wh_bountyhunter",
+		"bw_scholar", -- pyro
 		"bw_necromancer"
 	},
 }
@@ -899,14 +899,14 @@ local talent_first_row = {
 for i=1, #talent_first_row[1] do
 	local career = talent_first_row[1][i]
 	mod:modify_talent(career, 1, 1, {
-		name = "vanguard_name",
+		display_name = "vanguard_name",
 		description = "vanguard_desc",
 		buffs = {
 			"rebaltourn_vanguard"
 		}
 	})
 	mod:modify_talent(career, 1, 2, {
-		name = "reaper_name",
+		display_name = "reaper_name",
 		description = "reaper_desc",
 		buffs = {
 			"rebaltourn_reaper"
@@ -918,7 +918,7 @@ for i=1, #talent_first_row[1] do
 		},
 	})
 	mod:modify_talent(career, 1, 3, {
-		name = "bloodlust_name",
+		display_name = "bloodlust_name",
 		description = "bloodlust_desc_3",
 		buffs = {
 			"rebaltourn_bloodlust"
@@ -928,14 +928,14 @@ end
 for i=1, #talent_first_row[2] do
 	local career = talent_first_row[2][i]
 	mod:modify_talent(career, 1, 1, {
-		name = "vanguard_name",
+		display_name = "vanguard_name",
 		description = "vanguard_desc",
 		buffs = {
 			"rebaltourn_vanguard"
 		}
 	})
 	mod:modify_talent(career, 1, 2, {
-		name = "reaper_name",
+		display_name = "reaper_name",
 		description = "reaper_desc",
 		buffs = {
 			"rebaltourn_reaper"
@@ -947,7 +947,7 @@ for i=1, #talent_first_row[2] do
 		},
 	})
 	mod:modify_talent(career, 1, 3, {
-		name = "regrowth_name",
+		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
 			"rebaltourn_regrowth"
@@ -958,7 +958,7 @@ end
 for i=1, #talent_first_row[3] do
 	local career = talent_first_row[3][i]
 	mod:modify_talent(career, 1, 1, {
-		name = "reaper_name",
+		display_name = "reaper_name",
 		description = "reaper_desc",
 		buffs = {
 			"rebaltourn_reaper"
@@ -970,14 +970,14 @@ for i=1, #talent_first_row[3] do
 		},
 	})
 	mod:modify_talent(career, 1, 2, {
-		name = "bloodlust_name",
+		display_name = "bloodlust_name",
 		description = "bloodlust_desc_3",
 		buffs = {
 			"rebaltourn_bloodlust"
 		}
 	})
 	mod:modify_talent(career, 1, 3, {
-		name = "regrowth_name",
+		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
 			"rebaltourn_regrowth"
