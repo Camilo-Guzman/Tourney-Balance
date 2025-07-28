@@ -274,7 +274,7 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_activated_ability
 	multiplier = -0.3,
 	max_stacks = 1
 })
-mod:add_text("bardin_ranger_activated_ability_stealth_outside_of_smoke_desc", "Disengage's stealth does not break on moving beyond the smoke cloud. Reduces the cooldown of Disengage by 30%")
+mod:add_text("bardin_ranger_activated_ability_stealth_outside_of_smoke_desc", "Disengage's stealth does not break on moving beyond the smoke cloud. Reduces the cooldown of Disengage by 30%.")
 
 --[[
 

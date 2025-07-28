@@ -1058,6 +1058,30 @@ mod:add_text("gs_bardin_slayer_push_on_dodge_desc", "Effective dodges pushes nea
 -- Impatience - added unlisted dodge range modifier
 mod:add_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%% and dodge range by 5.0%%.")
 
+-- level 30
+-- Parting Gift
+mod:add_talent_buff_template("dwarf_ranger", "dwarf_ranger_less_burn_on_after_ult_buff", {
+    icon = "bardin_ranger_passive_spawn_healing_draught",
+    stat_buff = "increased_burn_dot_damage",
+    multiplier = -0.52,
+	max_stacks = 1,
+    refresh_durations = true,
+    duration = 15
+})
+mod:add_talent_buff_template("dwarf_ranger", "dwarf_ranger_less_burn_on_after_ult", {
+    buff_func = "add_buff",
+    buff_to_add = "dwarf_ranger_less_burn_on_after_ult_buff",
+    event = "on_ability_cooldown_started"
+})
+mod:modify_talent("dr_ranger", 6, 3, {
+    buffs = {
+        "bardin_ranger_ability_free_grenade_buff",
+        "dwarf_ranger_less_burn_on_after_ult"
+    }
+})
+mod:add_text("bardin_ranger_ability_free_grenade_desc", "During Disengage Bardin's bomb throw will not be consumed. Only applicable to one bomb. DOT damage is reduced.")
+
+
 
 --[[
 

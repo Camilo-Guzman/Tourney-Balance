@@ -37,6 +37,9 @@ local function get_player_names()
     local players = Managers.player:human_players() --human_and_bot_players() if you want bots too
     local player_names = ""
 
+    -- TEMP Test
+    mod:dump(players, "players", 1)
+
     local host_name = LobbyInternal.user_name(host)
 
     for _, player in pairs(players) do
@@ -76,20 +79,28 @@ local function get_localized_map_name()
     return localized_map_name
 end
 
--- get highest percentage value in the table
--- multiply it to be shown in decimal and reduce to three indices after comma
-local function get_completion_percentage(percentages_completed)
-    local percentage_completed = ""
-    local percentage_number = 0
+-- get all individual percentage values of the team members including their player names
+local function team_percentages(percentages_completed)
+	local player_manager = Managers.player
+    local percentage_text = ""
 
-    for _, percentage in pairs(percentages_completed) do
-        if percentage > percentage_number then
-            percentage_number = percentage
-            percentage_completed = string.sub(tostring(percentage * 100), 1, 6)
-        end
-    end
+	for unique_id, percentage_complete in pairs(percentages_completed) do
+		local player = player_manager:player_from_unique_id(unique_id)
 
-    return percentage_completed
+		if not player then
+            return
+		end
+
+        -- get player name
+        local player_name = player:name()
+        -- multiply it to be shown in decimal and reduce to three indices after comma
+        percentage_complete = string.sub(tostring(percentage_complete * 100), 1, 6)
+        -- create string with player or bot names and their dedicated percentages
+        percentage_text = percentage_text .. " | " .. player_name .. " at " .. percentage_complete .. "%%"
+	end
+
+    -- remove first instance of spacer appearing and return the remainder of the string
+	return string.sub(percentage_text, 4)
 end
 
 -- figure out if Deathwish or any Onslaught Mod is turned on (credits to prismism)
@@ -107,12 +118,12 @@ local function is_mod_mutator_enabled(mod_name, mutator_name, difficulty_level)
     local mod_difficulty_level = false
 
     if other_mod then
-        local mutator = other_mod:persistent_table(mutator_name)
-        mod_is_enabled = other_mod:is_enabled()
-        mutator_is_enabled = mutator.active
-        if other_mod.difficulty_level == difficulty_level then
-            mod_difficulty_level = true
-        end
+    local mutator = other_mod:persistent_table(mutator_name)
+    mod_is_enabled = other_mod:is_enabled()
+    mutator_is_enabled = mutator.active
+    if other_mod.difficulty_level == difficulty_level then
+        mod_difficulty_level = true
+    end
     end
     if other_mod.difficulty_level then
         return mod_is_enabled and mutator_is_enabled and mod_difficulty_level
@@ -125,7 +136,7 @@ end
 local get_difficulty = function()
     local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
     local base_difficulty_name = difficulty_settings.display_name
-    local base_difficulty = Localize(base_difficulty_name)
+    local base_difficulty = Localize(base_difficulty_name) or "UnknownDiff"
 
     local onslaught_mod = ""
     local deathwish_mod = ""
@@ -168,7 +179,6 @@ local get_difficulty = function()
     return base_difficulty .. deathwish_mod .. onslaught_mod
 end
 
-
 local init_game = function()
     cache = {
         horde_enemy_ai_last_update = {},
@@ -203,14 +213,24 @@ local get_is_server = function()
 end
 
 mod:hook_safe(PerceptionUtils, "horde_pick_closest_target_with_spillover", function(ai_unit, blackboard, breed, t)
+    if not in_level or not is_server then
+        return
+    end
     cache.horde_enemy_ai_last_update[ai_unit] = t
 end)
 
 mod:hook_safe(PerceptionUtils, "pick_closest_target_with_spillover", function(ai_unit, blackboard, breed, t)
+    if not in_level or not is_server then
+        return
+    end
     cache.non_horde_enemy_ai_last_update[ai_unit] = t
 end)
 
 mod:hook_safe(DeathSystem, "kill_unit", function(self, unit, killing_blow)
+    if not in_level or not is_server then
+        return
+    end
+    
 	local breed = Unit.get_data(unit, "breed")
     if not breed then
         return
@@ -363,7 +383,7 @@ local function print_performance_data_to_log(self, reason, checkpoint_available,
         local map_name = get_localized_map_name()
         local start_time = mod.start_time or "Finished before cutscene end - "
         local time = start_time .. " - " ..  get_time()
-        local percentage_completed = get_completion_percentage(percentages_completed) or "N/A"
+        local percentage_completed = team_percentages(percentages_completed) or "N/A"
         local difficulty = get_difficulty() or "N/A"
         local data = get_recorded_data()
 

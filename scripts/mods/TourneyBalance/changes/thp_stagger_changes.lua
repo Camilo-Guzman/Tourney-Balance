@@ -869,33 +869,45 @@ mod:add_text("rebaltourn_finesse_unbalance_desc", "Deal 20%% more damage to stag
 -- Replacing THP & Stagger Talents
 local talent_first_row = {
 	{
-		"es_mercenary",
 		"es_knight",
+		"dr_ranger",
+		"dr_engineer",
+		"wh_priest",
+		"bw_unchained",
+	},
+	{
+		"es_mercenary",
+		"wh_zealot",
+	},
+	{
 		"es_huntsman",
 		"es_questingknight",
-		"dr_ranger",
 		"dr_ironbreaker",
-		"dr_engineer",
-		"wh_zealot",
-		"wh_priest",
 		"bw_adept", -- bw
-		"bw_unchained",
+	},
+	{
+		"dr_slayer",
+		"bw_scholar", -- pyro
+		"bw_necromancer"
+	},
+	{
+		"we_waywatcher",
+	},
+	{
+		"we_shade",
+		"we_thornsister",
+		"wh_bountyhunter",
 	},
 	{
 		"we_maidenguard",
 	},
 	{
-		"dr_slayer",
-		"we_shade",
-		"we_waywatcher",
-		"we_thornsister",
 		"wh_captain",
-		"wh_bountyhunter",
-		"bw_scholar", -- pyro
-		"bw_necromancer"
 	},
 }
 
+-- Stagger | Cleave | Kill
+-- Second Wind | Carve | Execute
 for i=1, #talent_first_row[1] do
 	local career = talent_first_row[1][i]
 	mod:modify_talent(career, 1, 1, {
@@ -925,16 +937,12 @@ for i=1, #talent_first_row[1] do
 		}
 	})
 end
+
+-- Cleave | Kill | Stagger
+-- Carve | Execute | Second Wind
 for i=1, #talent_first_row[2] do
 	local career = talent_first_row[2][i]
 	mod:modify_talent(career, 1, 1, {
-		display_name = "vanguard_name",
-		description = "vanguard_desc",
-		buffs = {
-			"rebaltourn_vanguard"
-		}
-	})
-	mod:modify_talent(career, 1, 2, {
 		display_name = "reaper_name",
 		description = "reaper_desc",
 		buffs = {
@@ -946,17 +954,58 @@ for i=1, #talent_first_row[2] do
 			}
 		},
 	})
-	mod:modify_talent(career, 1, 3, {
-		display_name = "regrowth_name",
-		description = "rebaltourn_regrowth_desc",
+	mod:modify_talent(career, 1, 2, {
+		display_name = "bloodlust_name",
+		description = "bloodlust_desc_3",
 		buffs = {
-			"rebaltourn_regrowth"
-		},
-		description_values = {},
+			"rebaltourn_bloodlust"
+		}
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "vanguard_name",
+		description = "vanguard_desc",
+		buffs = {
+			"rebaltourn_vanguard"
+		}
 	})
 end
+
+-- Stagger | Kill | Cleave
+-- Second Wind | Execute | Carve
 for i=1, #talent_first_row[3] do
 	local career = talent_first_row[3][i]
+	mod:modify_talent(career, 1, 1, {
+		display_name = "vanguard_name",
+		description = "vanguard_desc",
+		buffs = {
+			"rebaltourn_vanguard"
+		}
+	})
+	mod:modify_talent(career, 1, 2, {
+		display_name = "bloodlust_name",
+		description = "bloodlust_desc_3",
+		buffs = {
+			"rebaltourn_bloodlust"
+		}
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "reaper_name",
+		description = "reaper_desc",
+		buffs = {
+			"rebaltourn_reaper"
+		},
+		description_values = {
+			{
+				value = BuffTemplates.rebaltourn_reaper.buffs[1].max_targets
+			}
+		},
+	})
+end
+
+-- Cleave | Kill | Crit
+-- Carve | Execute | Sting
+for i=1, #talent_first_row[4] do
+	local career = talent_first_row[4][i]
 	mod:modify_talent(career, 1, 1, {
 		display_name = "reaper_name",
 		description = "reaper_desc",
@@ -985,6 +1034,139 @@ for i=1, #talent_first_row[3] do
 		description_values = {},
 	})
 end
+
+-- Crit | Cleave | Kill
+-- Sting | Carve | Execute
+for i=1, #talent_first_row[5] do
+	local career = talent_first_row[5][i]
+	mod:modify_talent(career, 1, 1, {
+		display_name = "regrowth_name",
+		description = "rebaltourn_regrowth_desc",
+		buffs = {
+			"rebaltourn_regrowth"
+		},
+		description_values = {},
+	})
+	mod:modify_talent(career, 1, 2, {
+		display_name = "reaper_name",
+		description = "reaper_desc",
+		buffs = {
+			"rebaltourn_reaper"
+		},
+		description_values = {
+			{
+				value = BuffTemplates.rebaltourn_reaper.buffs[1].max_targets
+			}
+		},
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "bloodlust_name",
+		description = "bloodlust_desc_3",
+		buffs = {
+			"rebaltourn_bloodlust"
+		}
+	})
+end
+
+-- Crit | Kill | Cleave
+-- Sting | Execute | Carve
+for i=1, #talent_first_row[6] do
+	local career = talent_first_row[6][i]
+	mod:modify_talent(career, 1, 1, {
+		display_name = "regrowth_name",
+		description = "rebaltourn_regrowth_desc",
+		buffs = {
+			"rebaltourn_regrowth"
+		},
+		description_values = {},
+	})
+	mod:modify_talent(career, 1, 2, {
+		display_name = "bloodlust_name",
+		description = "bloodlust_desc_3",
+		buffs = {
+			"rebaltourn_bloodlust"
+		}
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "reaper_name",
+		description = "reaper_desc",
+		buffs = {
+			"rebaltourn_reaper"
+		},
+		description_values = {
+			{
+				value = BuffTemplates.rebaltourn_reaper.buffs[1].max_targets
+			}
+		},
+	})
+end
+
+-- Cleave | Crit | Stagger
+-- Carve | Sting | Second Wind
+for i=1, #talent_first_row[7] do
+	local career = talent_first_row[7][i]
+	mod:modify_talent(career, 1, 1, {
+		display_name = "reaper_name",
+		description = "reaper_desc",
+		buffs = {
+			"rebaltourn_reaper"
+		},
+		description_values = {
+			{
+				value = BuffTemplates.rebaltourn_reaper.buffs[1].max_targets
+			}
+		},
+	})
+	mod:modify_talent(career, 1, 2, {
+		display_name = "regrowth_name",
+		description = "rebaltourn_regrowth_desc",
+		buffs = {
+			"rebaltourn_regrowth"
+		},
+		description_values = {},
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "vanguard_name",
+		description = "vanguard_desc",
+		buffs = {
+			"rebaltourn_vanguard"
+		}
+	})
+end
+
+-- Crit | Cleave | Stagger
+-- Sting | Carve | Second Wind
+for i=1, #talent_first_row[8] do
+	local career = talent_first_row[8][i]
+	mod:modify_talent(career, 1, 1, {
+		display_name = "regrowth_name",
+		description = "rebaltourn_regrowth_desc",
+		buffs = {
+			"rebaltourn_regrowth"
+		},
+		description_values = {},
+	})
+	mod:modify_talent(career, 1, 2, {
+		display_name = "reaper_name",
+		description = "reaper_desc",
+		buffs = {
+			"rebaltourn_reaper"
+		},
+		description_values = {
+			{
+				value = BuffTemplates.rebaltourn_reaper.buffs[1].max_targets
+			}
+		},
+	})
+	mod:modify_talent(career, 1, 3, {
+		display_name = "vanguard_name",
+		description = "vanguard_desc",
+		buffs = {
+			"rebaltourn_vanguard"
+		}
+	})
+end
+
 
 local talent_third_row = {
 	{
