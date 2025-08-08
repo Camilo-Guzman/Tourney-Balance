@@ -5,7 +5,8 @@ local mod = get_mod("TourneyBalance")
     Test of Logging Performance Data in the Console Log of the Host of the game
     All Data collection code is written by Prismism
     The Log printing and collection of basic info like time and formatting is done by Janoti!
-    2025-02-20
+
+    Janoti! - 2025-02-20
 
 ]]
 
@@ -36,9 +37,6 @@ mod.start_time = nil
 local function get_player_names()
     local players = Managers.player:human_players() --human_and_bot_players() if you want bots too
     local player_names = ""
-
-    -- TEMP Test
-    mod:dump(players, "players", 1)
 
     local host_name = LobbyInternal.user_name(host)
 
@@ -348,6 +346,7 @@ mod.on_game_state_changed = function(status, state_name)
             previous_game_stats = stats
         end
         init_game()
+        mod.on_game_state_changed_mod_checker()
     elseif state_name == "StateLoading" and status == "enter" then
         in_level = false
     end
@@ -377,7 +376,8 @@ end
 
 -- log varies data to the console log at the end of the game
 local function print_performance_data_to_log(self, reason, checkpoint_available, percentages_completed)
-	if reason == "won" or reason == "lost" then
+    -- check if option enabled or the brute force of a running tournament is iminent
+    if reason == "won" or reason == "lost" then
     
         local players_in_party = get_player_names()
         local map_name = get_localized_map_name()
@@ -387,20 +387,26 @@ local function print_performance_data_to_log(self, reason, checkpoint_available,
         local difficulty = get_difficulty() or "N/A"
         local data = get_recorded_data()
 
-        mod:info(
-            "\n"
-            .. "\n"
-            .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
-            .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
-            .. "\n" .. data
-        )
-
-        mod.start_time = nil
-	end
+        if mod:get("performance_logging") or mod.is_tourney_time_performance_logging then
+            mod:info(
+                "\n"
+                .. "\n"
+                .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
+                .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
+                .. "\n"
+                .. "Local Unapproved Mods,Teammates use unapproved Mods"
+                .. "\n" .. mod.unapproved_mods_data .. "," .. mod.teammates_unapproved_mods_data
+                .. "\n" .. data
+            )
+            mod.start_time = nil
+        end
+    end
 end
 
 -- log varies data to the console log at the end of the game
 local function print_performance_data_to_log_restart()
+
+    -- check if option enabled or the brute force of a running tournament is iminent
     local reason = "restart"
     local players_in_party = get_player_names()
     local map_name = get_localized_map_name()
@@ -410,15 +416,16 @@ local function print_performance_data_to_log_restart()
     local difficulty = get_difficulty() or "N/A"
     local data = get_recorded_data()
 
-    mod:info(
-        "\n"
-        .. "\n"
-        .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
-        .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
-        .. "\n" .. data
-    )
-
-    mod.start_time = nil
+    if mod:get("performance_logging") or mod.is_tourney_time_performance_logging then
+        mod:info(
+            "\n"
+            .. "\n"
+            .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
+            .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
+            .. "\n" .. data
+        )
+        mod.start_time = nil
+    end
 end
 
 -- On mission won/lost
@@ -429,16 +436,9 @@ mod:hook_safe(GameModeManager, "retry_level", function (self)
     print_performance_data_to_log_restart()
 end)
 
--- command to copy the pure data to the the players clipboard
-mod:command("perf_csv", "Copy stored performance data to your clipboard in a comma-separated-values format", function()
-    local s = in_keep and previous_game_stats or stats
-    if not s or s.count == 0 then
-        mod:echo("No performance data recorded. Clipboard not modified.")
-        return
-    end
+--[[
 
-    local data = get_recorded_data()
-    Clipboard.put(data)
+    NOTES
+    - Doc: https://docs.google.com/spreadsheets/d/1qjy5bcVOykBvTtZ-O0fcrzBY0Pah1Hb7zmC1HQsuu8s/edit?usp=sharing
 
-    mod:echo("Performance data (csv) copied to clipboard.")
-end)
+]]

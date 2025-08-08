@@ -207,6 +207,10 @@ DamageProfileTemplates.dr_deus_01_glance.default_target.boost_curve_type = "tank
 DamageProfileTemplates.dr_deus_01.default_target.boost_curve_coefficient = 0.5
 
 -- Masterwork Pistol Nerf
+local shotgun_dropoff_ranges = {
+	dropoff_end = 15,
+	dropoff_start = 8,
+}
 Weapons.heavy_steam_pistol_template_1.actions.action_one.default.impact_data.damage_profile = "masterwork_pistol_shot"
 Weapons.heavy_steam_pistol_template_1.actions.action_one.shoot.impact_data.damage_profile = "masterwork_pistol_shot"
 Weapons.heavy_steam_pistol_template_1.actions.action_one.fast_shot.impact_data.damage_profile = "masterwork_pistol_shot"
@@ -286,7 +290,7 @@ NewDamageProfileTemplates.masterwork_pistol_shot = {
 			attack = 0.5,
 			impact = 0.5,
 		},
-		range_modifier_settings = shotgun_dropoff_ranges,
+		range_modifier_settings = shotgun_dropoff_ranges
 	},
 }
 

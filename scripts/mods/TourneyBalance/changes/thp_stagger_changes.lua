@@ -665,7 +665,7 @@ mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner
 	end
 
 	local heal_amount_crit = 2 -- 6.2 2THP (Previously 1.5THP in TB)
-	local heal_amount_hs = 4 -- 6.2 4THP (Previously 3THP in TB)
+	local heal_amount_crit_hs = 4 -- 6.2 4THP (Previously 3THP in TB)
 	local heal_amount_default = 0.5 -- 6.2 0.5THP newly added to gain THP even when not criting nor hsing
 	local has_procced = buff.has_procced
 	local hit_unit = params[1]
@@ -681,19 +681,16 @@ mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner
 	end
 
 	if ALIVE[owner_unit] and breed and (attack_type == "light_attack" or attack_type == "heavy_attack") and not has_procced then
-		if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
+		if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" and critical_hit then
+			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_crit_hs, "heal_from_proc")
 			buff.has_procced = true
 
-			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_hs, "heal_from_proc")
-
-		elseif critical_hit then
+		elseif critical_hit or hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
 			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_crit, "heal_from_proc")
-
 			buff.has_procced = true
 
 		else
 			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_default, "heal_from_proc")
-
 			buff.has_procced = true
 		end
 	end
