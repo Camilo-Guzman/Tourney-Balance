@@ -731,10 +731,10 @@ mod:modify_talent("dr_ranger", 5, 2, {
 
 -- level 30
 -- Parting Gift
--- mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_grenade_buff", {
--- 	duration = 10,
---     refresh_durations = true
--- })
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_grenade_buff", {
+	duration = 10,
+    refresh_durations = true
+})
 mod:add_talent_buff_template("dwarf_ranger", "dwarf_ranger_less_burn_on_after_ult_buff", {
     icon = "bardin_ranger_passive_spawn_healing_draught",
     stat_buff = "increased_burn_dot_damage",
