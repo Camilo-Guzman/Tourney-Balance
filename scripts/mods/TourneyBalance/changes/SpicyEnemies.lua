@@ -554,3 +554,52 @@ NewDamageProfileTemplates.dot_degenerating = {
 		}
 	}
 }
+
+mod:add_buff_template("troll_reward_cog", {
+    stat_buff = "healing_received",
+	multiplier = 0.2,
+	max_stacks = 1,
+    icon = "twitch_icon_bad_indigestion"
+})
+
+mod:add_buff_template("troll_reward_waterflow", {
+    stat_buff = "damage_taken",
+	multiplier = -0.15,
+	max_stacks = 1,
+    icon = "twitch_icon_bad_indigestion"
+})
+
+mod:add_buff_template("troll_reward_waterwheel", {
+    stat_buff = "attack_speed",
+	multiplier = 0.15,
+	max_stacks = 1,
+    icon = "twitch_icon_bad_indigestion"
+})
+
+NewExplosionTemplates = NewExplosionTemplates or {}
+
+NewExplosionTemplates.timed_warp_explosion = {}
+NewExplosionTemplates.timed_warp_explosion.time_to_explode = 3
+NewExplosionTemplates.timed_warp_explosion.explosion = {
+	alert_enemies = true,
+	alert_enemies_radius = 15,
+	allow_friendly_fire_override = true,
+	damage_profile = "warpfire_thrower_explosion",
+	effect_name = "fx/chr_warp_fire_explosion_01",
+	max_damage_radius = 4,
+	radius = 4,
+	sound_event_name = "Play_enemy_combat_warpfire_backpack_explode",
+	power_level = 1000,
+}
+
+for name, templates in pairs(NewExplosionTemplates) do
+	templates.name = name
+end
+
+for key, _ in pairs(NewExplosionTemplates) do
+    i = #NetworkLookup.explosion_templates + 1
+    NetworkLookup.explosion_templates[i] = key
+    NetworkLookup.explosion_templates[key] = i
+end
+--Merge the tables together
+table.merge_recursive(ExplosionTemplates, NewExplosionTemplates)
