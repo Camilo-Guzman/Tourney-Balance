@@ -29,7 +29,54 @@ local linesman_mod_name = "Daredevil"
 local dutch_mod_name = "DutchSpice"
 local deathwish_mod_name = "catas"
 local onslaught_squared_mutator_name = "OnslaughtSquared"
+local linesman_daredevil_mod_name = "Daredevil"
 local linesman_mutator_name = "Daredevil+"
+local dense_mod_name = "Dense Men"
+local level_names = {
+    {"military", "Righteous Stand"},
+    {"catacombs", "Convocation of Decay"},
+    {"mines", "Hunger in the Dark"},
+    {"ground_zero", "Halescourge"},
+    {"elven_ruins", "Athel Yenlui"},
+    {"bell", "Screaming Bell"},
+    {"fort", "Fort Brachsenbrücke"},
+    {"skaven_stronghold", "Into the Nest"},
+    {"farmlands", "Against the Grain"},
+    {"ussingen", "Empire in Flames"},
+    {"nurgle", "Festering Ground"},
+    {"warcamp", "War Camp"},
+    {"skittergate", "Skittergate"},
+    {"dlc_portals", "Old Haunts"},
+    {"dlc_bastion", "Blood in Darkness"},
+    {"dlc_castle", "Enchanter’s Lair"},
+    {"dlc_bogenhafen_slum", "The Pit"},
+    {"dlc_bogenhafen_city", "Blightreaper"},
+    {"magnus", "Horn of Magnus"},
+    {"cemetery", "Garden of Morr"},
+    {"forest_ambush", "Engines of War"},
+    {"crater", "Dark Omens"},
+    {"dlc_celebrate_crawl", "A Quiet Drink"},
+    {"dlc_wizards_trail", "Trail of Treachery"},
+    {"dlc_wizards_tower", "Tower of Treachery"},
+    {"dlc_dwarf_interior", "Mission of Mercy"},
+    {"dlc_dwarf_exterior", "A Grudge Served Cold"},
+    {"dlc_dwarf_beacons", "Khazukan Kazakit-Ha"},
+    {"dlc_dwarf_whaling", "A Parting of the Waves"},
+    {"dlc_termite_1", "The Forsaken Temple"},
+    {"dlc_termite_2", "Devious Delvings"},
+    {"dlc_termite_3", "The Well of Dreams"},
+    {"level_name_dlc_dwarf_fest", "The Feast Of Grimnir"},
+}
+local difficulty_names = {
+    {"normal", "Recruit"},
+    {"hard", "Veteran"},
+    {"harder", "Champion"},
+    {"hardest", "Legend"},
+    {"cataclysm", "Cataclysm"},
+    {"cataclysm_2", "Cataclysm 2"},
+    {"cataclysm_3", "Cataclysm 3"},
+    {"versus_base", "Versus Base"},
+}
 
 mod.start_time = nil
 
@@ -68,12 +115,24 @@ mod:hook_safe(CutsceneSystem, "flow_cb_deactivate_cutscene_cameras", save_start_
 
 -- localize the current level_key and return it
 local function get_localized_map_name()
-    local game_localize = Managers.localizer
+    --local game_localize = Managers.localizer
     local level_key = Managers.state.game_mode._level_key
 
     local display_name_reference = LevelSettings[level_key].display_name
-    local localized_map_name = game_localize:_base_lookup(display_name_reference)
-    
+    local localized_map_name = "Unknown"
+
+    for _, v in pairs(level_names) do
+        if display_name_reference == v[1] then
+            localized_map_name = v[2]
+            break
+        else
+            -- if it cant find the localized map name use the reference name
+            localized_map_name = display_name_reference
+        end
+    end
+
+    --local localized_map_name = game_localize:_base_lookup(display_name_reference)
+
     return localized_map_name
 end
 
@@ -116,13 +175,14 @@ local function is_mod_mutator_enabled(mod_name, mutator_name, difficulty_level)
     local mod_difficulty_level = false
 
     if other_mod then
-    local mutator = other_mod:persistent_table(mutator_name)
-    mod_is_enabled = other_mod:is_enabled()
-    mutator_is_enabled = mutator.active
-    if other_mod.difficulty_level == difficulty_level then
-        mod_difficulty_level = true
+        local mutator = other_mod:persistent_table(mutator_name)
+        mod_is_enabled = other_mod:is_enabled()
+        mutator_is_enabled = mutator.active
+        if other_mod.difficulty_level == difficulty_level then
+            mod_difficulty_level = true
+        end
     end
-    end
+
     if other_mod.difficulty_level then
         return mod_is_enabled and mutator_is_enabled and mod_difficulty_level
     else
@@ -133,8 +193,21 @@ end
 -- figure out the current difficulty that is being played
 local get_difficulty = function()
     local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
-    local base_difficulty_name = difficulty_settings.display_name
-    local base_difficulty = Localize(base_difficulty_name) or "UnknownDiff"
+    local difficulty = difficulty_settings.difficulty
+    local base_difficulty = "UnknownDiff"
+    --local base_difficulty_name = difficulty_settings.display_name
+    --local base_difficulty = Localize(base_difficulty_name) or "UnknownDiff"
+
+    -- Get English Difficulty Name
+    for _, v in pairs(difficulty_names) do
+        if tostring(difficulty) == v[1] then
+            base_difficulty = v[2]
+            break
+        else
+            -- if it cant find the localized map name use the reference name
+            base_difficulty = tostring(difficulty)
+        end
+    end
 
     local onslaught_mod = ""
     local deathwish_mod = ""
@@ -149,17 +222,32 @@ local get_difficulty = function()
     if is_mod_mutator_enabled(onslaughtplus_mod_name, onslaughtplus_mod_name, 0) then
         onslaught_mod = " OnslaughtPlus"
     end
-    if is_mod_mutator_enabled(linesman_mod_name, linesman_mod_name, 0) then
+    if is_mod_mutator_enabled(linesman_daredevil_mod_name, linesman_daredevil_mod_name) then
         onslaught_mod = " Daredevil"
     end
-    if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 1) then
+    if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 0) then
         onslaught_mod = " Linesbaby"
     end
-    if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 2) then
+    if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 1) then
         onslaught_mod = " Linesboy"
     end
     if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 3) then
         onslaught_mod = " Linesman"
+    end
+    if is_mod_mutator_enabled(linesman_mod_name, linesman_mutator_name, 4) then
+        onslaught_mod = " Linesboomer"
+    end
+    if is_mod_mutator_enabled(dense_mod_name, dense_mod_name, 0) then
+        onslaught_mod = " DenseCustom"
+    end
+    if is_mod_mutator_enabled(dense_mod_name, dense_mod_name, 1) then
+        onslaught_mod = " Dense 1"
+    end
+    if is_mod_mutator_enabled(dense_mod_name, dense_mod_name, 2) then
+        onslaught_mod = " Dense 2"
+    end
+    if is_mod_mutator_enabled(dense_mod_name, dense_mod_name, 3) then
+        onslaught_mod = " Dense 3"
     end
     if is_mod_mutator_enabled(onslaughtplus_mod_name, onslaught_squared_mutator_name, 0) then
         onslaught_mod = " OnslaughtSquared"
@@ -362,13 +450,13 @@ local get_recorded_data = function()
     local four_dp = 10000
     local round = math.round
 
-    local output = "Time (seconds),Update Time (seconds),Number of Horde Enemies,Number of Non-Horde Enemies,Time Since Horde Enemy AI Update,Time Since Non-Horde Enemy AI Update\n"
+    local output = "Time (seconds),Update Time (seconds),Number of Total Enemies,Number of Horde Enemies,Number of Non-Horde Enemies\n"
     for i=1,s.count do
         local t = round(s.t[i]*one_dp)/one_dp
         local dt = round(s.dt[i]*four_dp)/four_dp
         local horde_enemy_ai_last_update = type(s.horde_enemy_ai_last_update[i]) == "number" and round(s.horde_enemy_ai_last_update[i]*four_dp)/four_dp or s.horde_enemy_ai_last_update[i]
         local non_horde_enemy_ai_last_update = type(s.non_horde_enemy_ai_last_update[i]) == "number" and round(s.non_horde_enemy_ai_last_update[i]*four_dp)/four_dp or s.non_horde_enemy_ai_last_update[i]
-        output = output..t..","..dt..","..s.horde_enemies[i]..","..s.non_horde_enemies[i]..","..horde_enemy_ai_last_update..","..non_horde_enemy_ai_last_update.."\n"
+        output = output .. t .. "," .. dt .. "," .. ((s.horde_enemies[i] or 0) + (s.non_horde_enemies[i] or 0)) .. "," .. (s.horde_enemies[i] or nil) .. "," .. (s.non_horde_enemies[i] or nil) .. "\n"
     end
 
     return output
@@ -391,11 +479,11 @@ local function print_performance_data_to_log(self, reason, checkpoint_available,
             mod:info(
                 "\n"
                 .. "\n"
-                .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
-                .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
+                .. "Players,Map,Result,Time (UTC0),Difficulty"
+                .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty
                 .. "\n"
-                .. "Local Unapproved Mods,Teammates use unapproved Mods"
-                .. "\n" .. mod.unapproved_mods_data .. "," .. mod.teammates_unapproved_mods_data
+                .. "Completion,Local Unapproved Mods,Teammates Use Unapproved Mods"
+                .. "\n" .. percentage_completed .. "," .. mod.unapproved_mods_data .. "," .. mod.teammates_unapproved_mods_data
                 .. "\n" .. data
             )
             mod.start_time = nil
@@ -420,8 +508,11 @@ local function print_performance_data_to_log_restart()
         mod:info(
             "\n"
             .. "\n"
-            .. "Players,Map,Result,Time (UTC0),Difficulty,Completion"
-            .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty .. "," .. percentage_completed
+            .. "Players,Map,Result,Time (UTC0),Difficulty"
+            .. "\n" .. players_in_party .. "," .. map_name .. "," .. reason .. "," .. time .. "," .. difficulty
+            .. "\n"
+            .. "Completion,Local Unapproved Mods,Teammates Use Unapproved Mods"
+            .. "\n" .. percentage_completed .. "," .. mod.unapproved_mods_data .. "," .. mod.teammates_unapproved_mods_data
             .. "\n" .. data
         )
         mod.start_time = nil

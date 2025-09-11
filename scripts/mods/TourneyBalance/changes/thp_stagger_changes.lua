@@ -659,15 +659,13 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 ]]
 
 -- THP on Crit
---[[ 
 mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
 		return
 	end
 
-	local heal_amount_crit = 2 -- 6.2 2THP (Previously 1.5THP in TB)
-	local heal_amount_crit_hs = 4 -- 6.2 4THP (Previously 3THP in TB)
-	local heal_amount_default = 0.5 -- 6.2 0.5THP newly added to gain THP even when not criting nor hsing
+	local heal_amount_crit = 1.5
+	local heal_amount_hs = 3
 	local has_procced = buff.has_procced
 	local hit_unit = params[1]
 	local hit_zone_name = params[3]
@@ -675,35 +673,32 @@ mod:add_proc_function("rebaltourn_heal_finesse_damage_on_melee", function (owner
 	local attack_type = params[2]
 	local critical_hit = params[6]
 	local breed = AiUtils.unit_breed(hit_unit)
-
 	if target_number == 1 then
 		buff.has_procced = false
 		has_procced = false
 	end
-
 	if ALIVE[owner_unit] and breed and (attack_type == "light_attack" or attack_type == "heavy_attack") and not has_procced then
-		if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" and critical_hit then
-			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_crit_hs, "heal_from_proc")
+		if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
 			buff.has_procced = true
 
-		elseif critical_hit or hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
+			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_hs, "heal_from_proc")
+		end
+
+		if critical_hit then
 			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_crit, "heal_from_proc")
-			buff.has_procced = true
 
-		else
-			DamageUtils.heal_network(owner_unit, owner_unit, heal_amount_default, "heal_from_proc")
 			buff.has_procced = true
 		end
 	end
 end)
+
 mod:add_buff_template("rebaltourn_regrowth", {
 	name = "regrowth",
 	event_buff = true,
 	buff_func = "rebaltourn_heal_finesse_damage_on_melee",
 	event = "on_hit",
 	perks = { buff_perks.ninja_healing },
-}) 
-]]
+})
 
 -- THP on Stagger
 mod:add_proc_function("rebaltourn_heal_stagger_targets_on_melee", function (owner_unit, buff, params)
@@ -850,13 +845,17 @@ mod:add_buff_template("rebaltourn_finesse_unbalance", {
 	perks = { buff_perks.finesse_stagger_damage }
 })
 
---Text Localization
+--[[
+
+	Text Localization
+
+]]
 mod:add_text("bloodlust_name", "Execute") -- Kill Execute
 mod:add_text("reaper_name", "Carve") -- Cleave Carve
 mod:add_text("vanguard_name", "Second Wind") -- Stagger Second Wind
 mod:add_text("regrowth_name", "Sting") -- Crit Sting
-mod:add_text("rebaltourn_regrowth_desc", "Melee Strikes restore 0.5 Temporary Health. Melee Critical Strikes and Headshots instead restore 2. Critical Headshots instead restore 4.")
---mod:add_text("rebaltourn_regrowth_desc", "Melee critical strikes gives you 1.5 temporary health and melee headshots restore 3 temporary health. Melee critical headshots restore 4.5 temporary health.")
+--mod:add_text("rebaltourn_regrowth_desc", "Melee Strikes restore 0.5 Temporary Health. Melee Critical Strikes and Headshots instead restore 2. Critical Headshots instead restore 4.")
+mod:add_text("rebaltourn_regrowth_desc", "Melee critical strikes gives you 1.5 temporary health and melee headshots restore 3 temporary health. Melee critical headshots restore 4.5 temporary health.")
 
 mod:add_text("smiter_name", "Smiter")
 mod:add_text("enhanced_power_name", "Enhanced Power")
@@ -1028,7 +1027,7 @@ for i=1, #talent_first_row[4] do
 		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
-			"kerillian_shade_regrowth"
+			"rebaltourn_regrowth"
 		},
 		description_values = {},
 	})
@@ -1042,7 +1041,7 @@ for i=1, #talent_first_row[5] do
 		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
-			"kerillian_shade_regrowth"
+			"rebaltourn_regrowth"
 		},
 		description_values = {},
 	})
@@ -1075,7 +1074,7 @@ for i=1, #talent_first_row[6] do
 		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
-			"kerillian_shade_regrowth"
+			"rebaltourn_regrowth"
 		},
 		description_values = {},
 	})
@@ -1120,7 +1119,7 @@ for i=1, #talent_first_row[7] do
 		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
-			"kerillian_shade_regrowth"
+			"rebaltourn_regrowth"
 		},
 		description_values = {},
 	})
@@ -1141,7 +1140,7 @@ for i=1, #talent_first_row[8] do
 		display_name = "regrowth_name",
 		description = "rebaltourn_regrowth_desc",
 		buffs = {
-			"kerillian_shade_regrowth"
+			"rebaltourn_regrowth"
 		},
 		description_values = {},
 	})

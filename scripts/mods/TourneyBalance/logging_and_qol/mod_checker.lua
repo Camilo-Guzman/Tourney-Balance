@@ -169,9 +169,16 @@ local teammates_have_prohibited_mods = {
     "TEAMMATES USE UNAPPROVED MODS!",
     "TEAMMATES USE UNAPPROVED MODS!",
 }
+local teammates_and_local_have_prohibited_mods = {
+    "EVERYONE USES UNAPPROVED MODS!",
+    "EVERYONE USES UNAPPROVED MODS!",
+    "EVERYONE USES UNAPPROVED MODS!",
+    "EVERYONE USES UNAPPROVED MODS!",
+}
 
 -- Networking
-local send_prohibited_mods = false
+local local_send_prohibited_mods = false
+local global_send_prohibited_mods = false
 
 -- Data Logging
 mod.unapproved_mods_data = " "
@@ -223,7 +230,11 @@ local show_text = function ()
             end
             display_position[2] = display_position[2] - (font_size + 1)
             local display_text = v[2]
-            UIRenderer.draw_text(renderer, display_text, font_material, font_size, font_name, display_position, white_color) -- also has retained_id and color_override 
+            UIRenderer.draw_text(renderer, display_text, font_material, font_size, font_name, display_position, white_color) -- also has retained_id and color_override
+            -- stop after first line if mod list is not supposed to show up
+            if mod:get("tourney_display_mods") == false then
+                break
+            end
         end
     end
 end
@@ -319,29 +330,65 @@ local write_logging_mods_data = function ()
 end
 -- write if prohibited mods are used by teammates in variable to be saved in performance data in the console log
 local write_logging_mods_data_teammates = function ()
-    mod.teammates_unapproved_mods_data = tostring(send_prohibited_mods)
+    mod.teammates_unapproved_mods_data = tostring(global_send_prohibited_mods)
 end
 
 -- Add the title to display that the local player uses or not uses prohibited mods
-local add_title_display_text = function ()
-    if #prohibited_mods == 0 then
-        table.remove(prohibited_mods, 1)
-        table.insert(prohibited_mods, 1, approved_mods)
-    elseif #prohibited_mods > 0 then
-        if prohibited_mods[1][1] == prohibited_mods_detect[1] then
-            return
+local add_remove_title_display_text = function ()
+    -- check if text is already there
+    local text_already_exists_check = false
+    if #prohibited_mods > 0 then -- if player has only approved mods
+        if  prohibited_mods[1][1] == prohibited_mods_detect[1] or
+            prohibited_mods[1][1] == approved_mods[1] or
+            prohibited_mods[1][1] == teammates_have_prohibited_mods[1] or
+            prohibited_mods[1][1] == teammates_and_local_have_prohibited_mods[1] then
+           
+            text_already_exists_check = true
         end
+    end
+
+    -- mods of local player are fine
+    if #prohibited_mods == 0 then
+        if text_already_exists_check then
+            prohibited_mods[1] = approved_mods
+        else
+            table.insert(prohibited_mods, 1, approved_mods)
+        end
+    elseif #prohibited_mods > 1 then
+        -- this should never happen
         if prohibited_mods[1][1] == approved_mods[1] then
             return
         end
-        table.insert(prohibited_mods, 1, prohibited_mods_detect)
+        -- teammates and local player use unapproved mods
+        if global_send_prohibited_mods then
+            if text_already_exists_check then
+                prohibited_mods[1] = teammates_and_local_have_prohibited_mods
+            else
+                table.insert(prohibited_mods, 1, teammates_and_local_have_prohibited_mods)
+            end
+        -- local player uses unapproved mods
+        else
+            if text_already_exists_check then
+                prohibited_mods[1] = prohibited_mods_detect
+            else
+                table.insert(prohibited_mods, 1, prohibited_mods_detect)
+            end
+        end
+    
+    -- teammates have mods
+    elseif global_send_prohibited_mods then
+        if text_already_exists_check then
+            prohibited_mods[1] = teammates_have_prohibited_mods
+        else
+            table.insert(prohibited_mods, 1, teammates_have_prohibited_mods)
+        end
     end
 end
 -- Remove the Title about teammates using prohibited mods
 local remove_teammates_warning = function()
-    if send_prohibited_mods == true then
+    if global_send_prohibited_mods == true then
         if prohibited_mods[2] == teammates_have_prohibited_mods then
-            table.remove(prohibited_mods, 2)
+            table.remove(prohibited_mods, 1)
             write_logging_mods_data_teammates()
         end
     end
@@ -366,21 +413,18 @@ local settings_sync_package_id = "tourney_check"
 local function compare_mod_list(received_mod_list)
     -- compare the incoming table and the one already here
     -- combine the two different tables
-
     if not received_mod_list then
         return
     end
 
-    send_prohibited_mods = received_mod_list
+    global_send_prohibited_mods = received_mod_list
+    add_remove_title_display_text()
     write_logging_mods_data_teammates()
 
     -- comparing the lists
     --for k, v in pairs(received_mod_list) do
     --    mod.send[k] = v
     --end
-
-    -- incoperate list into UI
-    table.insert(prohibited_mods, 2, teammates_have_prohibited_mods)
 end
 
 -- Send Mods
@@ -388,7 +432,7 @@ local function sync_mods()
 	mod:network_send(
 		settings_sync_package_id,
 		"others",
-        send_prohibited_mods
+        local_send_prohibited_mods
 	)
 end
 
@@ -400,11 +444,12 @@ end)
 -- New Player
 mod.on_user_joined = function(player)
 	sync_mods()
+    add_remove_title_display_text()
 end
 -- Player Left
 mod.on_user_left = function(player)
 	sync_mods()
-    remove_teammates_warning()
+    add_remove_title_display_text()
 end
 
 
@@ -452,8 +497,9 @@ local initiate_mod_checker = function ()
         get_active_mods()
         check_mods()
         write_logging_mods_data()
-        add_title_display_text()
+        add_remove_title_display_text()
     end
+    
 end
 mod.on_all_mods_loaded = function()
     initiate_mod_checker()
@@ -465,10 +511,17 @@ end
 -- Join or Leave Game
 mod.on_game_state_changed_mod_checker = function()
     initiate_mod_checker()
+
+    -- initial check on mods of the local player to be shared in network
     if #prohibited_mods > 1 then
-        send_prohibited_mods = true
+        local_send_prohibited_mods = true
     else
-        send_prohibited_mods = false
+        local_send_prohibited_mods = false
     end
-    remove_teammates_warning()
+
+    -- After leaving a game as client and becoming the server the status has to change
+    if Managers.state.network.is_server then
+        global_send_prohibited_mods = false
+	end
+    add_remove_title_display_text()
 end

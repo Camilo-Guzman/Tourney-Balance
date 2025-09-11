@@ -562,6 +562,16 @@ mod:add_talent_buff_template("empire_soldier", "tb_cd_grail", {
 })
 mod:add_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade increases movement speed by 35%% for 25 seconds. Reduces cooldown by 30%%.")
 
+-- Virtue of Stoicism
+-- 25% as thp instead of 50%
+mod:modify_talent_buff_template("empire_soldier", "markus_questing_knight_health_refund_over_time", {
+	heal_amount_fraction = 0.25 -- 0.5
+})
+mod:modify_talent("es_questingknight", 5, 1, {
+    description = "markus_questing_knight_health_refund_over_time_desc",
+    description_values = {},
+})
+mod:add_text("markus_questing_knight_health_refund_over_time_desc", "25% of damage taken is regenerated as temporary health after 5 seconds.")
 
 --[[
 
@@ -882,28 +892,34 @@ end)
 
 -- Vengeance Buff
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_stacking_buff_gromril", {
-    update_frequency = 3 --7
+    update_frequency = 2 --7, 3
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_gromril_attack_speed", {
-    multiplier = 0.06, -- 0.08
-    duration = 12 -- 10
+    multiplier = 0.048, -- 0.08, 0.06
+    duration = 15 -- 10, 12
 })
 mod:modify_talent("dr_ironbreaker", 4, 1, {
     description = "bardin_ironbreaker_rising_attack_speed_desc",
     description_values = {},
 })
-mod:add_text("bardin_ironbreaker_rising_attack_speed_desc", "Periodically generate stacks (up to 5 max) of Rising Anger every 3 seconds while Gromril is active. When Gromril is lost, gain 6.0% attack speed per stack of Rising Anger for 12 seconds.")
+mod:add_text("bardin_ironbreaker_rising_attack_speed_desc", "Periodically generate stacks (up to 5 max) of Rising Anger every 2 seconds while Gromril is active. When Gromril is lost, gain 4.8% attack speed per stack of Rising Anger for 15 seconds.")
 
 -- Under Pressure Buff
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_increased_ranged_power", {
 	{
-		stat_buff = "increased_weapon_damage_ranged"   
+		stat_buff = "increased_weapon_damage_ranged",
 	},
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_ranged_power", {
 	{
-		stat_buff = "increased_weapon_damage_ranged"   
+		stat_buff = "increased_weapon_damage_ranged",
+		multiplier = 0.05, -- 0.2 -- Damage value increase per stack. There are 10 stacks.
 	},
+})
+mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_changing_attack_speed", {
+	{
+		multiplier = 1.0, -- 1 -- Starting drakefire attack speed value
+	}
 })
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_changing_ranged_power", {
 	{
@@ -914,14 +930,14 @@ mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_ch
 mod:modify_talent_buff_template("dwarf_ranger", "bardin_ironbreaker_drakefire_attack_speed", {
 	{
 		stat_buff = "attack_speed_drakefire",
-		multiplier = -0.05 -- -0.15
+		multiplier = -0.1 -- -0.15, 0.05 -- Drakefire attack speed value per stack. There are 10 stacks.
 	},
 })
 mod:modify_talent("dr_ironbreaker", 2, 1, {
     description = "bardin_ironbreaker_overcharge_increase_power_lowers_attack_speed_desc",
     description_values = {},
 })
-mod:add_text("bardin_ironbreaker_overcharge_increase_power_lowers_attack_speed_desc", "Drake Fire damage increases from -20.0% to 120.0% and ranged attack speed reduces from 100.0% to 50.0% depending on overcharge. Removes overcharge slowdown.")
+mod:add_text("bardin_ironbreaker_overcharge_increase_power_lowers_attack_speed_desc", "Drake Fire damage increases from 80% of base to 130% and bonus ranged attack speed reduces from 100% to 0% depending on overcharge. Removes overcharge slowdown.")
 
 -- Rune-Etched Shield description correction
 mod:add_text("bardin_ironbreaker_party_power_on_blocked_attacks_desc", "Blocking an attack increases Bardin's melee power (and that of nearby allies) by 2.0%% for 10 seconds. Stacks 5 times.")
@@ -1155,18 +1171,17 @@ mod:add_text("bardin_engineer_melee_power_ranged_power_desc", "Melee Power is in
 	Waystalker Talents
 
 ]]
+-- Amaranthe / Isha's Embrace
 mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_passive", {
     update_func = "gs_update_kerillian_waywatcher_regen"
 })
-
-mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds. This does not replace temp health.")
-mod:add_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 100%%.")
-
+mod:add_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health every 10 seconds when below 66.6% health. This does not replace temp health.")
+mod:add_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 100%%. And increases the maximum amount to 100%%")
 mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, buff, params)
     local t = params.t
     local buff_template = buff.template
     local next_heal_tick = buff.next_heal_tick or 0
-    local regen_cap = 1
+    local regen_cap = 0.666 --1
     local network_manager = Managers.state.network
     local network_transmit = network_manager.network_transmit
     local heal_type_id = NetworkLookup.heal_types.career_skill
@@ -1688,21 +1703,56 @@ mod:add_proc_function("add_buff_on_out_of_ammo", function (owner_unit, buff, par
     end
 end) ]]
 
-
+-- Blessed Combat
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activate_passive_on_melee_kill", {
 	activation_buff = "victor_bountyhunter_blessed_melee_damage_buff",
 	buff_to_add = "victor_bountyhunter_blessed_melee_attack_speed_buff",
 	update_func = "activate_buff_on_other_buff",
 })
-
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_blessed_melee_attack_speed_buff", {
 	stat_buff = "attack_speed",
 	multiplier = 0.15,
 	max_stacks = 1,
 })
-
 mod:add_text("victor_bountyhunter_weapon_swap_buff_desc", "Melee strikes make up to the next 6 ranged shots deal 15%% more damage. Ranged hits make up to the next 6 melee strikes deal 15%% more damage and grants 15%% attack speed for the next 6 strikes.")
 
+-- Salvaged Ammunition also procs on Specials
+ProcFunctions.victor_bounty_hunter_ammo_fraction_gain_out_of_ammo = function (owner_unit, buff, params)
+		if not is_local(owner_unit) then
+			return
+		end
+
+		if ALIVE[owner_unit] then
+			local killed_unit_breed_data = params[2]
+
+			if killed_unit_breed_data.special or killed_unit_breed_data.elite then
+				local buff_template = buff.template
+				local weapon_slot = "slot_ranged"
+				local inventory_extension = ScriptUnit.extension(owner_unit, "inventory_system")
+				local slot_data = inventory_extension:get_slot_data(weapon_slot)
+				local right_unit_1p = slot_data.right_unit_1p
+				local left_unit_1p = slot_data.left_unit_1p
+				local right_hand_ammo_extension = ScriptUnit.has_extension(right_unit_1p, "ammo_system")
+				local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
+				local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
+				local current_ammo = ammo_extension:remaining_ammo()
+				local clip_ammo = ammo_extension:ammo_count()
+
+				if current_ammo < 1 and clip_ammo < 1 then
+					local ammo_bonus_fraction = buff_template.ammo_bonus_fraction
+					local ammo_amount = math.max(math.round(ammo_extension:max_ammo() * ammo_bonus_fraction), 1)
+
+					if ammo_extension then
+						ammo_extension:add_ammo_to_reserve(ammo_amount)
+					end
+				end
+			end
+		end
+	end
+
+mod:add_text("victor_bountyhunter_reload_on_kill_desc", "Killing an elite or special while out of ammunition restores 20.0%% of max ammo. Melee kills reload 1 ammo into Victor's ranged weapon.")
+
+-- Job well done
 mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_stacking_damage_reduction_on_elite_or_special_kill_buff", {
 	max_stacks = 20
 })

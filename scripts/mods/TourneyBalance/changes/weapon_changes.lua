@@ -566,9 +566,14 @@ Weapons.brace_of_pistols_template_1.ammo_data.reload_time = 0.8
 
 ]]
 
---Bolt
+-- Bolt
 DamageProfileTemplates.fire_spear_3.armor_modifier_near.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
 DamageProfileTemplates.fire_spear_3.armor_modifier_far.attack = { 1.01, 0.8, 1.5, 1, 1, 0.4 }
+
+-- Increased Right-click projectile life time from 1.5 seconds to 3 seconds for all three charge stages.
+Weapons.staff_spark_spear_template_1.actions.action_one.shoot_charged.timed_data.life_time = 3 -- 1.5
+Weapons.staff_spark_spear_template_1.actions.action_one.shoot_charged_2.timed_data.life_time = 3 -- 1.5
+Weapons.staff_spark_spear_template_1.actions.action_one.shoot_charged_3.timed_data.life_time = 3 -- 1.5
 
 --Beam
 DamageProfileTemplates.beam_shot.default_target.power_distribution_near.attack = 0.85
@@ -834,22 +839,22 @@ ExplosionTemplates.magma.aoe.damage_interval = 1
 PlayerUnitStatusSettings.overcharge_values.magma_charged_2 = 10
 PlayerUnitStatusSettings.overcharge_values.magma_charged = 14
 mod:add_buff_template("burning_magma_dot", {
-        duration = 3,
-        name = "burning_magma_dot",
-        end_flow_event = "smoke",
-        start_flow_event = "burn",
-		update_start_delay = 0.75,
-        reapply_start_flow_event = true,
-        apply_buff_func = "start_dot_damage",
-        death_flow_event = "burn_death",
-        time_between_dot_damages = 1.5,
-        refresh_durations = true,
-        damage_type = "burninating",
-        damage_profile = "burning_dot",
-        update_func = "apply_dot_damage",
-        reapply_buff_func = "reapply_dot_damage",
-        max_stacks = 15,
-        perks = { buff_perks.burning }
+	duration = 3,
+	name = "burning_magma_dot",
+	end_flow_event = "smoke",
+	start_flow_event = "burn",
+	update_start_delay = 0.75,
+	reapply_start_flow_event = true,
+	apply_buff_func = "start_dot_damage",
+	death_flow_event = "burn_death",
+	time_between_dot_damages = 1.5,
+	refresh_durations = true,
+	damage_type = "burninating",
+	damage_profile = "burning_dot",
+	update_func = "apply_dot_damage",
+	reapply_buff_func = "reapply_dot_damage",
+	max_stacks = 15,
+	perks = { buff_perks.burning }
 })
 
 -- Fireball
@@ -4391,8 +4396,6 @@ NewDamageProfileTemplates.crowbill_push_attack = { -- 5% crit chance to give thi
 	}
 }
 
-
-
 --Scythe
 Weapons.staff_scythe.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
 Weapons.staff_scythe.actions.action_one.heavy_attack_02.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
@@ -4401,7 +4404,6 @@ Weapons.staff_scythe.actions.action_one.light_attack_03.hit_mass_count = LINESMA
 Weapons.staff_scythe.actions.action_one.light_attack_04.hit_mass_count = LINESMAN_HIT_MASS_COUNT
 
 local STATE_SCYTHE = "scythe"
-
 DamageProfileTemplates.heavy_slashing_linesman_scythe_diagonal.targets[1].power_distribution.attack = 0.55    --original 0.5
 
 Weapons.staff_scythe.actions.action_one.light_attack_01.weapon_mode_overrides[STATE_SCYTHE].damage_profile = "medium_slashing_smiter"    --bret L3
@@ -4470,7 +4472,6 @@ NewDamageProfileTemplates.staff_scythe_L2_PA = {
         }
     }
 }
-
 DamageProfileTemplates.scythe_discharge = {
 	no_stagger_damage_reduction = true,
 	charge_value = "heavy_attack",
@@ -4603,7 +4604,6 @@ NewDamageProfileTemplates.medium_blunt_tank_upper_1h_wiz = {
 		}
 	},
 }
-
 NewDamageProfileTemplates.medium_blunt_smiter_heavy_wiz = {
 	armor_modifier = {
 		attack = {
@@ -4665,7 +4665,6 @@ NewDamageProfileTemplates.medium_blunt_smiter_heavy_wiz = {
 	},
 	shield_break = true
 }
-
 NewDamageProfileTemplates.light_blunt_tank_wiz = {
 	stagger_duration_modifier = 1.25,
 	critical_strike = {
@@ -4734,7 +4733,6 @@ NewDamageProfileTemplates.light_blunt_tank_wiz = {
 		}
 	}
 }
-
 NewDamageProfileTemplates.light_blunt_smiter_wiz = {
 	armor_modifier = {
 		attack = {
@@ -4821,6 +4819,234 @@ DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution
 --DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.attack = 0.06
 DamageProfileTemplates.flaming_flail_explosion.default_target.power_distribution.impact = 0.25
 --DamageProfileTemplates.heavy_blunt_smiter_burn.default_target.power_distribution.attack = 0.25
+
+-- Dagger
+mod:add_buff_template("dagger_push_attack_bleed_to_burn_buff", {
+	apply_buff_func = "start_dot_damage",
+	damage_profile = "dagger_push_attack_burn_dot_profile",
+	damage_type = "burninating",
+	duration = 2,
+	hit_zone = "neck",
+	max_stacks = 1,
+	name = "burning_dot_1tick",
+	refresh_durations = true,
+	time_between_dot_damages = 0.75,
+	update_func = "apply_dot_damage",
+	update_start_delay = 0.75,
+	perks = {
+		buff_perks.burning,
+	},
+})
+DotTypeLookup.dagger_push_attack_bleed_to_burn_buff = "burning_dot"
+
+mod:add_buff_template("dagger_push_attack_bleed_to_burn_buff_balefire", {
+	apply_buff_func = "start_dot_damage",
+	damage_profile = "dagger_push_attack_burn_dot_profile",
+	damage_type = "burninating",
+	duration = 2,
+	hit_zone = "neck",
+	max_stacks = 1,
+	name = "burning_dot_1tick",
+	refresh_durations = true,
+	time_between_dot_damages = 0.75,
+	update_func = "apply_dot_damage",
+	update_start_delay = 0.75,
+	perks = {
+		buff_perks.burning_balefire,
+	},
+})
+DotTypeLookup.dagger_push_attack_bleed_to_burn_buff_balefire = "burning_dot"
+BalefireBurnDotLookup["dagger_push_attack_bleed_to_burn_buff"] = "dagger_push_attack_bleed_to_burn_buff_balefire"
+BalefireDots["dagger_push_attack_bleed_to_burn_buff_balefire"] = true
+
+NewDamageProfileTemplates.sienna_dagger_light_1 = {
+	armor_modifier = {
+		attack = {
+			1.14, -- 1
+			0,
+			1.5,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.1,
+			0.5,
+			1,
+			1,
+		},
+	},		
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_fencer_L",
+	critical_strike = "critical_strike_linesman_fencer_L",
+	default_target = {
+		attack_template = "light_slashing_linesman_hs",
+		boost_curve_type = "ninja_curve",
+		power_distribution = {
+			attack = 0.125, -- 0.075
+			impact = 0.05,
+		},
+	},
+	targets = "targets_linesman_fencer_L"
+}
+NewDamageProfileTemplates.sienna_dagger_light_2 = {
+	armor_modifier = {
+		attack = {
+			1.21, -- 1
+			0,
+			1.5,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.1,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_fencer_L",
+	critical_strike = "critical_strike_linesman_fencer_L",
+	default_target = {
+		attack_template = "light_slashing_linesman_hs",
+		boost_curve_type = "ninja_curve",
+		power_distribution = {
+			attack = 0.125, -- 0.075
+			impact = 0.05,
+		},
+	},
+	targets = "targets_linesman_fencer_L"
+}
+NewDamageProfileTemplates.sienna_dagger_light_3 = {
+	armor_modifier = {
+		attack = {
+			1.25, -- 1
+			0,
+			1.5,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.1,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_fencer_L",
+	critical_strike = "critical_strike_linesman_fencer_L",
+	default_target = "default_target_linesman_fencer_L",
+	targets = {
+		{
+			attack_template = "light_slashing_linesman_hs",
+			boost_curve_coefficient_headshot = 3, -- 2.5
+			boost_curve_type = "ninja_curve",
+			power_distribution = {
+				attack = 0.125,
+				impact = 0.05,
+			},
+		}
+	}
+}
+NewDamageProfileTemplates.sienna_dagger_light_4 = {
+	armor_modifier = {
+		attack = {
+			1.5, -- 1
+			0,
+			1.5,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.1,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_linesman_fencer_L",
+	critical_strike = "critical_strike_linesman_fencer_L",
+	default_target = {
+		attack_template = "light_slashing_linesman_hs",
+		boost_curve_type = "ninja_curve",
+		power_distribution = {
+			attack = 0.125, -- 0.075
+			impact = 0.05,
+		},
+	},
+	targets = "targets_linesman_fencer_L"
+}
+NewDamageProfileTemplates.dagger_push_attack_burn_dot_profile = {
+	charge_value = "n/a",
+	is_dot = true,
+	no_stagger = true,
+	no_stagger_damage_reduction_ranged = true,
+	cleave_distribution = {
+		attack = 0.25,
+		impact = 0.25,
+	},
+	armor_modifier = {
+		attack = {
+			1,
+			0.5,
+			1,
+			0.25,
+			0.5,
+			0,
+		},
+		impact = {
+			1,
+			0.5,
+			1,
+			0.25,
+			0.5,
+			0,
+		},
+	},
+	default_target = {
+		attack_template = "light_blunt_tank",
+		boost_curve_coefficient = 0.2,
+		boost_curve_type = "tank_curve",
+		damage_type = "burninating",
+		power_distribution = {
+			attack = 0.075,
+			impact = 0,
+		},
+	},
+}
+NewDamageProfileTemplates.dagger_push_attack_bleed_to_burn = {
+	armor_modifier = "armor_modifier_fencer_stab_L_AP",
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = "critical_strike_fencer_stab_L",
+	default_target = "default_target_fencer_stab_L",
+	require_damage_for_dot = true,
+	targets = {
+		{
+			attack_template = "light_stab_smiter",
+			boost_curve_coefficient_headshot = 3,
+			boost_curve_type = "ninja_curve",
+			dot_balefire_variant = true,
+			dot_template_name = "dagger_push_attack_bleed_to_burn_buff",
+			power_distribution = {
+				attack = 0.12,
+				impact = 0.08,
+			},
+		},
+	},
+}
+Weapons.one_handed_daggers_template_1.actions.action_one.light_attack_left.damage_profile = "sienna_dagger_light_1"
+Weapons.one_handed_daggers_template_1.actions.action_one.light_attack_right.damage_profile = "sienna_dagger_light_2"
+Weapons.one_handed_daggers_template_1.actions.action_one.light_attack_stab.damage_profile = "sienna_dagger_light_3"
+Weapons.one_handed_daggers_template_1.actions.action_one.light_attack_last.damage_profile = "sienna_dagger_light_4"
+Weapons.one_handed_daggers_template_1.actions.action_one.push_stab.damage_profile = "dagger_push_attack_bleed_to_burn"
+
 
 
 --[[
