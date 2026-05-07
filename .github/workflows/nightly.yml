@@ -8,6 +8,7 @@ on:
       - 'scripts/**'
       - 'core/**'
       - 'resource_packages/**'
+      - 'itemV2.cfg'
       - 'TourneyBalance.mod'
   workflow_dispatch:
 
