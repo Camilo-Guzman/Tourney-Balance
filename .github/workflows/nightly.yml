@@ -3,45 +3,40 @@ name: Build and Push Mod
 on:
   push:
     branches:
-      - main
+      - main  # Make sure this matches your branch name (main or master)
     paths:
       - 'scripts/**'
       - 'core/**'
       - 'resource_packages/**'
       - 'TourneyBalance.mod'
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to trigger it manually
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2022 # Pinning to 2022 to avoid the 2025 redirect warnings
 
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      # --- OPTIMIZATION: SDK CACHE ---
-      - name: Cache Vermintide 2 SDK
-        id: cache-sdk
-        uses: actions/cache@v4
-        with:
-          path: D:\v2_sdk
-          # If you ever need to force a fresh SDK download, change 'v1' to 'v2' below
-          key: ${{ runner.os }}-v2-sdk-866060-v1
-
+      # FIXED: Updated the SteamCMD setup action name
       - name: Setup SteamCMD
         uses: andriivitiv/setup-steamcmd@v1
 
       - name: Install Legacy Runtimes (DirectX & VC++)
         shell: pwsh
         run: |
+          # 1. Install VC++ 2010, 2012, 2013, and 2015-2022 (Both x86 and x64)
+          # Stingray tools are notorious for needing the 2010/2012 versions.
           Write-Host "Installing Visual C++ Redistributables..."
           choco install vcredist2010 vcredist2012 vcredist2013 vcredist140 -y
+
+          # 2. Install DirectX End-User Runtimes (June 2010)
+          # Many Stingray compilers require d3dcompiler_43.dll or X3DAudio1_7.dll
           Write-Host "Installing DirectX Runtimes..."
           choco install directx -y
 
       - name: Install Vermintide 2 Mod SDK
-        # This step only runs if the cache was NOT found
-        if: steps.cache-sdk.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           steamcmd +force_install_dir "D:\v2_sdk" +login ${{ secrets.STEAM_USERNAME }} ${{ secrets.STEAM_PASSWORD }} +app_update 866060 validate +quit
@@ -56,6 +51,7 @@ jobs:
           Get-ChildItem -Exclude "mods", "tools", ".github", ".git", ".vmbrc", "bundleV2" | Copy-Item -Destination $stagingDir -Recurse -Force
 
           # 2. Patch .vmbrc 
+          # We check two possible paths for the SDK content
           $sdkPath = "D:/v2_sdk/"
           if (Test-Path "D:/v2_sdk/Vermintide 2 SDK/") { $sdkPath = "D:/v2_sdk/Vermintide 2 SDK/" }
           
@@ -66,7 +62,7 @@ jobs:
           $config.fallback_steamapps_dir2 = "D:/v2_sdk/"
           $config | ConvertTo-Json | Set-Content .vmbrc
 
-          # 3. Build
+          # 3. Build with Error Checking
           Write-Host "Building using SDK at: $sdkPath"
           .\tools\vmb.exe build "TourneyBalance" -g 2
 
