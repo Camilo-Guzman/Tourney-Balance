@@ -98,6 +98,7 @@ jobs:
           STEAM_USER: ${{ secrets.STEAM_USERNAME }}
           STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
         run: |
+          # Normalize path to use forward slashes (SteamCMD preference)
           $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
           
           $vdf = @"
@@ -111,12 +112,13 @@ jobs:
           "@
           $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8
           
-          # We capture the output and check for the word "Success" case-insensitively
+          # Capture output to catch "silent" SteamCMD failures
           $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
           Write-Host $output
 
-          if ($output -notlike "*Success*") {
-              Write-Error "SteamCMD failed to update. Check the log above for 'Logon Denied' or 'Access Denied'."
+          # SCAN OUTPUT FOR SUCCESS
+          if ($output -notmatch "Success" -and $output -notmatch "SUCCESS") {
+              Write-Error "SteamCMD failed to update the mod. Check the logs above for 'Logon Denied' or 'Access Denied'."
               exit 1
           }
 
