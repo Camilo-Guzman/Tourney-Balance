@@ -31,14 +31,25 @@ jobs:
       - name: Configure and Build Mod
         shell: pwsh
         run: |
-          # Patch .vmbrc to point to the temporary SDK location
+          # 1. Create the 'mods/TourneyBalance' structure vmb expects
+          # We use -Force so it doesn't fail if the folder somehow exists
+          New-Item -ItemType Directory -Force -Path "mods/TourneyBalance"
+          
+          # 2. Copy everything from the root into that folder
+          # We exclude 'mods' and 'tools' to avoid a circular copy loop
+          Get-ChildItem -Exclude "mods", "tools", ".github", ".git", ".vmbrc", "bundleV2" | Copy-Item -Destination "mods/TourneyBalance" -Recurse -Force
+
+          # 3. Patch the .vmbrc to find the SDK and the new mods folder
+          # We ensure 'mods_dir' is set to the folder we just created
           $config = Get-Content .vmbrc | ConvertFrom-Json
+          $config.mods_dir = "mods"
           $config.use_fallback = $true
-          $config.fallback_tools_dir2 = "D:/v2_sdk/Vermintide 2 SDK/"
+          $config.fallback_tools_dir2 = "D:/v2_sdk/"
           $config.fallback_steamapps_dir2 = "D:/v2_sdk/"
           $config | ConvertTo-Json | Set-Content .vmbrc
           
-          # Run the build using your committed vmb.exe
+          # 4. Execute the build
+          # We run it from the root, so it sees the 'mods' folder we created
           .\tools\vmb.exe build "TourneyBalance" -g 2
 
       - name: Prepare SteamCMD Upload Script
