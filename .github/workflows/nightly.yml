@@ -23,43 +23,47 @@ jobs:
       - name: Setup SteamCMD
         uses: andriivitiv/setup-steamcmd@v1
 
-      - name: Install C++ Redistributables
+      - name: Install Legacy Runtimes (DirectX & VC++)
         shell: pwsh
         run: |
-          # Stingray often needs these older runtimes to execute the compiler binaries
-          choco install vcredist2012 vcredist140 -y
+          # 1. Install VC++ 2010, 2012, 2013, and 2015-2022 (Both x86 and x64)
+          # Stingray tools are notorious for needing the 2010/2012 versions.
+          Write-Host "Installing Visual C++ Redistributables..."
+          choco install vcredist2010 vcredist2012 vcredist2013 vcredist140 -y
+
+          # 2. Install DirectX End-User Runtimes (June 2010)
+          # Many Stingray compilers require d3dcompiler_43.dll or X3DAudio1_7.dll
+          Write-Host "Installing DirectX Runtimes..."
+          choco install directx -y
 
       - name: Install Vermintide 2 Mod SDK
         shell: cmd
         run: |
-          # We'll install directly to D:\v2_sdk
           steamcmd +force_install_dir "D:\v2_sdk" +login ${{ secrets.STEAM_USERNAME }} ${{ secrets.STEAM_PASSWORD }} +app_update 866060 validate +quit
-
-      - name: Verify SDK Path (Debug)
-        shell: pwsh
-        run: |
-          Write-Host "Checking for Stingray compiler..."
-          Get-ChildItem -Path "D:\v2_sdk" -Recurse -Filter "stingray_win64_release.exe"
 
       - name: Configure and Build Mod
         shell: pwsh
         run: |
-          # 1. Create Staging
+          # 1. Setup Staging
           $stagingDir = "mods/TourneyBalance"
+          if (Test-Path $stagingDir) { Remove-Item $stagingDir -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $stagingDir
           Get-ChildItem -Exclude "mods", "tools", ".github", ".git", ".vmbrc", "bundleV2" | Copy-Item -Destination $stagingDir -Recurse -Force
 
-          # 2. Patch .vmbrc
+          # 2. Patch .vmbrc 
+          # We check two possible paths for the SDK content
+          $sdkPath = "D:/v2_sdk/"
+          if (Test-Path "D:/v2_sdk/Vermintide 2 SDK/") { $sdkPath = "D:/v2_sdk/Vermintide 2 SDK/" }
+          
           $config = Get-Content .vmbrc | ConvertFrom-Json
           $config.mods_dir = "mods"
           $config.use_fallback = $true
-          # We point to the folder that CONTAINS stingray_win64_release.exe
-          $config.fallback_tools_dir2 = "D:/v2_sdk/"
+          $config.fallback_tools_dir2 = $sdkPath
           $config.fallback_steamapps_dir2 = "D:/v2_sdk/"
           $config | ConvertTo-Json | Set-Content .vmbrc
 
-          # 3. Build
-          # We use --verbose if vmb supports it, but standard build for now
+          # 3. Build with Error Checking
+          Write-Host "Building using SDK at: $sdkPath"
           .\tools\vmb.exe build "TourneyBalance" -g 2
 
       - name: Prepare SteamCMD Upload Script
