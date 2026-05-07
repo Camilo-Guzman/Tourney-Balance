@@ -70,24 +70,47 @@ jobs:
           Write-Host "Building using SDK at: $sdkPath"
           .\tools\vmb.exe build "TourneyBalance" -g 2
 
-      - name: Prepare SteamCMD Upload Script
+      - name: Verify Build Artifacts
         shell: pwsh
         run: |
+          $bundlePath = "$env:GITHUB_WORKSPACE/bundleV2"
+          Write-Host "Checking for files in: $bundlePath"
+          # List files for debugging logs
+          Get-ChildItem -Path $bundlePath -Recurse
+          
+          if (!(Test-Path "$bundlePath/*.mod_bundle")) {
+              Write-Error "CRITICAL: No .mod_bundle files found in $bundlePath! The build likely failed silently."
+              exit 1
+          }
+          Write-Host "Success: Build artifacts verified."
+
+      - name: Prepare and Upload to Steam
+        shell: pwsh
+        env:
+          STEAM_USER: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
+        run: |
+          # 1. Normalize path to use forward slashes for SteamCMD preference
+          $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
+          
+          # 2. Build the VDF script
           $vdf = @"
           "workshopitem"
           {
             "appid"            "552500"
             "publishedfileid"  "${{ secrets.WORKSHOP_ID }}"
-            "contentfolder"    "$env:GITHUB_WORKSPACE\bundleV2"
+            "contentfolder"    "$cleanPath/bundleV2"
             "changenote"       "Automated build from GitHub: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
           }
           "@
           $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8
+          
+          # 3. Execute Upload and capture output to catch "silent" SteamCMD failures
+          $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
+          Write-Host $output
 
-      - name: Upload to Steam Workshop
-        shell: cmd
-        env:
-          STEAM_USER: ${{ secrets.STEAM_USERNAME }}
-          STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
-        run: |
-          steamcmd +login %STEAM_USER% %STEAM_PASS% +workshop_build_item "%GITHUB_WORKSPACE%\upload.vdf" +quit
+          # 4. Force GitHub to turn RED if Steam doesn't report success
+          if ($output -notmatch "SUCCESS! App 552500") {
+              Write-Error "SteamCMD failed to update the mod. Check the logs above for 'ERROR!' or 'Access Denied'."
+              exit 1
+          }
