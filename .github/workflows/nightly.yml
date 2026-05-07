@@ -1,39 +1,44 @@
-name: Nightly Build and Upload
+name: Build and Push Mod
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # Midnight UTC
-  workflow_dispatch:   # Allows manual trigger for testing
+  push:
+    branches:
+      - main  # Make sure this matches your branch name (main or master)
+    paths:
+      - 'scripts/**'
+      - 'core/**'
+      - 'resource_packages/**'
+      - 'TourneyBalance.mod'
+  workflow_dispatch: # Allows you to trigger it manually
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022 # Pinning to 2022 to avoid the 2025 redirect warnings
 
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
 
+      # FIXED: Updated the SteamCMD setup action name
       - name: Setup SteamCMD
-        uses: CyberAndi/setup-steamcmd@v1
+        uses: andriivitiv/setup-steamcmd@v1
 
       - name: Install Vermintide 2 Mod SDK
         shell: cmd
         run: |
-          :: Download the SDK to a temp folder D:\v2_sdk
           steamcmd +force_install_dir "D:\v2_sdk" +login ${{ secrets.STEAM_USERNAME }} ${{ secrets.STEAM_PASSWORD }} +app_update 866060 validate +quit
 
       - name: Configure and Build Mod
         shell: pwsh
         run: |
-          # 1. Update .vmbrc to point to our temporary SDK location
+          # Patch .vmbrc to point to the temporary SDK location
           $config = Get-Content .vmbrc | ConvertFrom-Json
           $config.use_fallback = $true
           $config.fallback_tools_dir2 = "D:/v2_sdk/Vermintide 2 SDK/"
           $config.fallback_steamapps_dir2 = "D:/v2_sdk/"
           $config | ConvertTo-Json | Set-Content .vmbrc
           
-          # 2. Run the build using your committed vmb.exe
-          # This creates the 'bundleV2' folder
+          # Run the build using your committed vmb.exe
           .\tools\vmb.exe build "TourneyBalance" -g 2
 
       - name: Prepare SteamCMD Upload Script
