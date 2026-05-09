@@ -1,0 +1,69 @@
+name: Upload Pre-built Mod
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bundleV2/**' # Only trigger when the build output changes
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup SteamCMD
+        uses: andriivitiv/setup-steamcmd@v1
+
+      - name: Parse itemV2.cfg and Upload
+        shell: pwsh
+        env:
+          STEAM_USER: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
+        run: |
+          # 1. Read the raw config file
+          $cfg = Get-Content "itemV2.cfg" -Raw
+
+          # 2. Extract Metadata using Regex
+          # Captures the text inside the first pair of quotes after the keyword
+          $title = [regex]::Match($cfg, 'title\s*=\s*"([^"]+)"').Groups[1].Value
+          
+          # This captures the multi-line description including the Steam formatting tags
+          $description = [regex]::Match($cfg, 'description\s*=\s*"([\s\S]*?)"\s*;').Groups[1].Value
+          
+          # Extract tags and format them for Steam (removes [ ] and quotes)
+          $tagsRaw = [regex]::Match($cfg, 'tags\s*=\s*\[([^\]]+)\]').Groups[1].Value
+          $tags = $tagsRaw -replace '"', ''
+
+          # 3. Path Normalization
+          $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
+          
+          # 4. Generate the VDF for SteamCMD
+          $vdf = @"
+          "workshopitem"
+          {
+            "appid"            "552500"
+            "publishedfileid"  "${{ secrets.WORKSHOP_ID }}"
+            "contentfolder"    "$cleanPath/bundleV2"
+            "previewfile"      "$cleanPath/item_preview.png"
+            "visibility"       "0"
+            "title"            "$title"
+            "description"      "$description"
+            "tags"             "$tags"
+            "changenote"       "Automated upload from GitHub: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+          }
+          "@
+          $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8
+
+          # 5. Execute Upload and Verify
+          $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
+          Write-Host $output
+
+          if ($output -notmatch "Success" -and $output -notmatch "SUCCESS") {
+              Write-Error "SteamCMD failed to update the mod. Check if Steam Guard is blocking the login."
+              exit 1
+          }
