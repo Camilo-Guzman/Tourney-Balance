@@ -5,7 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'bundleV2/**' # Only trigger when the build output changes
+      - 'bundleV2/**' # Trigger when the build output changes
+      - 'item_preview.png'
+      - 'itemV2.cfg'
   workflow_dispatch:
 
 jobs:
