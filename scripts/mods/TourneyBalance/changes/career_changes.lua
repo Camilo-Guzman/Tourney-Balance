@@ -17,7 +17,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 ]]
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive", {
-    range = 20
+    range = 10 --20
 })
 mod:modify_talent_buff_template("empire_soldier", "markus_knight_passive_defence_aura", {
     multiplier = -0.1
