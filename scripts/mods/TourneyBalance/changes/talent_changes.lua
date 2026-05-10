@@ -215,7 +215,7 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_hit_
 
 mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit_hit_buff", {
 	{
-		event = "on_critical_hit",
+		event = "on_hit",
 		icon = "markus_mercenary_crit_count",
 		buff_func = "dummy_function",
 		remove_on_proc = true,
