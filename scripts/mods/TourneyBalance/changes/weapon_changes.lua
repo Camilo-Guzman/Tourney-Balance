@@ -1807,7 +1807,7 @@ NewDamageProfileTemplates.mace_sword_bopp = {
 	charge_value = "light_attack",
 	critical_strike = {
 		attack_armor_power_modifer = {
-			10, -- 1
+			1,
 			0.5,
 			2,
 			1,
