@@ -220,7 +220,7 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit
 		buff_func = "dummy_function",
 		remove_on_proc = true,
 		max_stacks = 1,
-		stat_buff = "critical_strike_chance_melee",
+		stat_buff = "critical_strike_chance",
 		bonus = 1
 	}
 })
