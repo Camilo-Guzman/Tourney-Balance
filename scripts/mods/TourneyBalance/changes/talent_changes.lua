@@ -227,8 +227,6 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit
 
 mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5th melee hit grants a guaranteed melee critical strike. Random Crits can still occur.")
 
-mod:add_text("markus_mercenary_helborg_desc", "Every 5 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
-
 -- Enhanced Training (removed downside of the talent to compete against others in the row)
 mod:add_text("markus_mercenary_passive_improved_desc", "Paced Strikes now increases attack speed by 20.0%%")
 mod:modify_talent_buff_template("empire_soldier", "markus_mercenary_passive_improved", {
