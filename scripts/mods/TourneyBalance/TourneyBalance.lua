@@ -21,6 +21,10 @@ function mod.add_text(self, text_id, text)
         }
     end
 end
+function mod.add_talent_text(self, talent_name, name, description)
+    mod:add_text(talent_name, name)
+    mod:add_text(talent_name .. "_desc", description)
+end
 mod:hook("Localize", function(func, text_id)
     local str = mod:_quick_localize(text_id)
     if str then return str end
