@@ -172,11 +172,61 @@ end
 
 -- Helborg's Tutelage
 -- Added in random crits.
-Talents.empire_soldier[43].perks = nil
-mod:modify_talent("es_mercenary", 2, 3, {
-    description = "markus_mercenary_helborg_desc",
-    description_values = {},
+
+mod:add_talent("es_mercenary", 2, 3, "mercenary_helborgs_tutelage", { 
+	num_ranks = 1,
+	buffer = "both",
+	icon = "markus_mercenary_crit_count",
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.01
+		}	
+	},
+	buffs = {
+		"mercenary_helborgs_tutelage_buff"
+	},
 })
+
+
+mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_buff", {
+	{
+		event = "on_hit",
+		buff_to_add = "mercenary_helborgs_tutelage_hit_counting_buff",
+		buff_on_stacks = 5,
+		buff_func = "add_buff_on_first_target_hit"
+	}
+})
+
+mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_hit_counting_buff", {
+	{
+		reset_on_max_stacks = true,
+		max_stacks = 5,
+		on_max_stacks_func = "add_remove_buffs",
+		icon = "markus_mercenary_crit_count",
+        is_cooldown = true,
+		max_stack_data = {
+			buffs_to_add = {
+				"mercenary_helborgs_tutelage_crit_hit_buff"
+			}
+		}
+	}
+})
+
+mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit_hit_buff", {
+	{
+		event = "on_critical_hit",
+		icon = "markus_mercenary_crit_count",
+		buff_func = "dummy_function",
+		remove_on_proc = true,
+		max_stacks = 1,
+		stat_buff = "critical_strike_chance_melee",
+		bonus = 1
+	}
+})
+
+mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5th melee hit grants a guaranteed melee critical strike. Random Crits can still occur.")
+
 mod:add_text("markus_mercenary_helborg_desc", "Every 5 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
 
 -- Enhanced Training (removed downside of the talent to compete against others in the row)
