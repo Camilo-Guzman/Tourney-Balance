@@ -179,6 +179,8 @@ DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient = 0.
 DamageProfileTemplates.arrow_carbine.default_target.boost_curve_coefficient_headshot = 0.8 -- 1
 DamageProfileTemplates.arrow_sniper_kruber.critical_strike.attack_armor_power_modifer = { 1, 1, 1, 1, 0.75, 0.5 }
 
+-- Blunderbuss Bash Nerf
+Weapons.blunderbuss_template_1.actions.action_two.default.push_radius = 0.9 -- 2.5
 
 --[[
 
@@ -293,6 +295,10 @@ NewDamageProfileTemplates.masterwork_pistol_shot = {
 		range_modifier_settings = shotgun_dropoff_ranges
 	},
 }
+
+-- Grudgeraker Bash Nerf
+Weapons.grudge_raker_template_1.actions.action_two.default.push_radius = 0.9 -- 2.5
+
 
 
 --[[
@@ -555,6 +561,8 @@ local balanced_barrels =  { {	yaw = -1, pitch = 0, shot_count = 2 }, { yaw = -0.
 Weapons.wh_deus_01_template_1.actions.action_one.default.barrels = balanced_barrels
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.attack = 0.05
 DamageProfileTemplates.shot_duckfoot.cleave_distribution.impact = 0.05
+-- Bash nerf
+Weapons.wh_deus_01_template_1.actions.action_two.default.push_radius = 0.9 -- 2.5
 
 -- Brace of Pistols buff
 Weapons.brace_of_pistols_template_1.ammo_data.max_ammo = 50
