@@ -674,6 +674,59 @@ NewDamageProfileTemplates.hammer_and_tome_heavy_2_charged = {
 	targets = "targets_smiter_M",
 }
 
+---- Holy Hammer
+
+Weapons.two_handed_hammer_priest_template.actions.action_one.light_attack_02.damage_profile						 = "holy_hammer_light_2"
+NewDamageProfileTemplates.holy_hammer_light_2 = {
+	armor_modifier = {
+		attack = {
+			1.5, -- 1
+			1.05, -- 0.8
+			2,
+			1,
+			1.01, -- 0.75
+			1, 
+		},
+		impact = {
+			1,
+			0.8,
+			1,
+			1,
+			0.75,
+		},
+	},
+	charge_value = "light_attack",
+	cleave_distribution = "cleave_distribution_smiter_default",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1.36, -- 1
+			0.95, -- 0.8
+			2.5,
+			1,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
+	default_target = {
+		attack_template = "slashing_smiter",
+		boost_curve_coefficient = 2,
+		boost_curve_type = "smiter_curve",
+		power_distribution = {
+			attack = 0.4,
+			impact = 0.25,
+		},
+	},
+	shield_break = true,
+	targets = "targets_smiter_M",
+}
+
 --[[
 
 	SIENNA
