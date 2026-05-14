@@ -2912,10 +2912,40 @@ Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_1.
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_right.damage_profile = "tusk_spear_light_3"
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_2.damage_profile = "tusk_spear_light_4"
 NewDamageProfileTemplates.tusk_spear_light_1 = {
-	armor_modifier = "armor_modifier_stab_smiter_M",
+	armor_modifier = {
+		attack = {
+			1,
+			0.35, -- 0.25
+			2.25,
+			1,
+			0.75,
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.75,
+		},
+	},
 	charge_value = "light_attack",
 	cleave_distribution = "cleave_distribution_smiter_default",
-	critical_strike = "critical_strike_stab_smiter_M",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.47, -- 0.4
+			2.5,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1,
+		},
+	},
 	default_target = "default_target_spear_stab_smiter_M"
 }
 NewDamageProfileTemplates.tusk_spear_light_2 = {
