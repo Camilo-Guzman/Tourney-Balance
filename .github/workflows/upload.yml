@@ -13,6 +13,9 @@ on:
 jobs:
   deploy:
     runs-on: windows-latest
+    env:
+      # This clears the deprecation warning and prepares you for the June deadline
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Source
