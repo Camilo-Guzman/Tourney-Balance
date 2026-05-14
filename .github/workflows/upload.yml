@@ -48,6 +48,7 @@ jobs:
           $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
           
           # 4. Generate the VDF for SteamCMD
+          # We use ASCII here because Steam's legacy VDF parser is most stable with it
           $vdf = @"
           "workshopitem"
           {
@@ -55,15 +56,17 @@ jobs:
             "publishedfileid" "${{ secrets.WORKSHOP_ID }}"
             "contentfolder" "$cleanPath/bundleV2"
             "previewfile" "$cleanPath/item_preview.png"
-            "visibility" "0"
+            "visibility" 0
             "title" "$title"
             "description" "$description"
-            "tags" "$tags"
-            "changenote" "Automated upload from GitHub: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            "tags"
+            {
+              "0" "mod"
+            }
+            "changenote" "Automated upload"
           }
           "@
-          # Use utf8NoBOM to ensure SteamCMD reads the visibility key correctly
-          $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8NoBOM
+          [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/upload.vdf", $vdf, [System.Text.Encoding]::ASCII)
 
           # 5. Execute Upload and Verify
           $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
