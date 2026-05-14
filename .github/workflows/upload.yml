@@ -12,14 +12,14 @@ on:
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    # Pin to 2022 for stability, or use windows-latest and monitor in June
+    runs-on: windows-2022 
     env:
-      # This clears the deprecation warning and prepares you for the June deadline
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5 # Updated to v5 for Node 24 support
 
       - name: Setup SteamCMD
         uses: andriivitiv/setup-steamcmd@v1
