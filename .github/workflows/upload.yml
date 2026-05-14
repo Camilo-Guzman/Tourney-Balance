@@ -48,18 +48,19 @@ jobs:
           $vdf = @"
           "workshopitem"
           {
-            "appid"            "552500"
-            "publishedfileid"  "${{ secrets.WORKSHOP_ID }}"
-            "contentfolder"    "$cleanPath/bundleV2"
-            "previewfile"      "$cleanPath/item_preview.png"
-            "visibility"       "0"
-            "title"            "$title"
-            "description"      "$description"
-            "tags"             "$tags"
-            "changenote"       "Automated upload from GitHub: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            "appid" "552500"
+            "publishedfileid" "${{ secrets.WORKSHOP_ID }}"
+            "contentfolder" "$cleanPath/bundleV2"
+            "previewfile" "$cleanPath/item_preview.png"
+            "visibility" "0"
+            "title" "$title"
+            "description" "$description"
+            "tags" "$tags"
+            "changenote" "Automated upload from GitHub: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
           }
           "@
-          $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8
+          # Use utf8NoBOM to ensure SteamCMD reads the visibility key correctly
+          $vdf | Out-File -FilePath "upload.vdf" -Encoding utf8NoBOM
 
           # 5. Execute Upload and Verify
           $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
