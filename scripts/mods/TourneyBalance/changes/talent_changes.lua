@@ -1836,6 +1836,17 @@ mod:modify_talent("wh_bountyhunter", 5, 3, {
 	},
 })
 
+mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
+    cooldown = 4.5, -- 10
+    multiplier = 0.2,
+})
+
+mod:modify_talent("wh_bountyhunter", 6, 1, {
+    description = "victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_2_desc",
+    description_values = {},
+})
+mod:add_text("victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_2_desc", "Ranged critical hits reduces the cooldown of Locked and Loaded by 20%. Can only trigger once every 4.5 seconds.")
+
 -- Indisctiminate blast cdr upped to 60%
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
     multiplier = -0.6, -- -0.25
