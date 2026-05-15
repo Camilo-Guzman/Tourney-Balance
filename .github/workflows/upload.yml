@@ -1,0 +1,84 @@
+name: Upload Pre-built Mod
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bundleV2/**'
+      - 'item_preview.png'
+      - 'itemV2.cfg'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-2022 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v5
+
+      - name: Setup SteamCMD
+        uses: andriivitiv/setup-steamcmd@v1
+
+      - name: Generate Steam TOTP
+        id: steam_totp
+        uses: CyberAndrii/steam-totp@v1
+        with:
+          shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+
+      - name: Parse itemV2.cfg and Upload
+        shell: pwsh
+        env:
+          STEAM_USER: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
+          STEAM_TOTP: ${{ steps.steam_totp.outputs.code }} 
+        run: |
+          # 1. Read the raw config file
+          $cfg = Get-Content "itemV2.cfg" -Raw
+
+          # 2. Extract Metadata using Regex
+          $title = [regex]::Match($cfg, 'title\s*=\s*"([^"]+)"').Groups[1].Value
+          $description = [regex]::Match($cfg, 'description\s*=\s*"([\s\S]*?)"\s*;').Groups[1].Value
+          
+          # Extract Workshop ID (Handles digits, the optional 'L', and the semicolon)
+          $workshopId = [regex]::Match($cfg, 'published_id\s*=\s*(\d+)L?;').Groups[1].Value
+          
+          if (-not $workshopId) {
+              Write-Error "Could not find a valid published_id in itemV2.cfg!"
+              exit 1
+          }
+
+          # 3. Path Normalization
+          $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
+          
+          # 4. Generate the VDF for SteamCMD
+          $vdf = @"
+          "workshopitem"
+          {
+            "appid" "552500"
+            "publishedfileid" "$workshopId"
+            "contentfolder" "$cleanPath/bundleV2"
+            "previewfile" "$cleanPath/item_preview.png"
+            "visibility" 0
+            "title" "$title"
+            "description" "$description"
+            "tags"
+            {
+              "0" "mod"
+            }
+            "changenote" "Automated upload via GitHub Actions"
+          }
+          "@
+          [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/upload.vdf", $vdf, [System.Text.Encoding]::ASCII)
+
+          # 5. Execute Upload and Verify
+          $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS $env:STEAM_TOTP +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
+          Write-Host $output
+
+          if ($output -notmatch "Success" -and $output -notmatch "SUCCESS") {
+              Write-Error "SteamCMD failed. Check credentials or Shared Secret."
+              exit 1
+          }
