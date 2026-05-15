@@ -294,7 +294,7 @@ mod:add_text("markus_mercenary_passive_improved_desc", "Paced Strikes now increa
 -- Strike Together as Passive
 mod:add_text("career_passive_desc_es_3a", "Hitting 3 enemies in one swing grants 10% increased attack speed for 6 seconds to the Krubersreik 5, or 4.")
 
-mod:add_text("markus_mercenary_passive_group_proc_desc", "Strike By Yourself, Mayfly", "Paced Strikes now requires hitting 1 target with a single attack to trigger.")
+mod:add_text("markus_mercenary_passive_group_proc_desc", "To activate Paced Strikes, Kruber only needs to hit 1 enemy.")
 
 
 
