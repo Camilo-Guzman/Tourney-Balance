@@ -1,6 +1,6 @@
 # Tourney-Balance
 
-This [repository]((https://github.com/Camilo-Guzman/Tourney-Balance)) contains the source code of the Tourney Balance mod for Warhammer: Vermintide 2. ([Steam workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=2545022878))
+This [repository](https://github.com/Camilo-Guzman/Tourney-Balance) contains the source code of the Tourney Balance mod for Warhammer: Vermintide 2. ([Steam workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=2545022878))
 
 If you would also like to join the modded scene - be it for tourneys, regular games, or just discussions about the mods in question - feel free to join [Onslaught Series](https://discord.gg/MS4vWSQrEh) and the [VT Modded Community](https://discord.gg/hyeADkwp) Discord servers!
 
