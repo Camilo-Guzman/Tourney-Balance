@@ -10,16 +10,7 @@ ren "mods\Tourney-Balance-Open-Beta" "TourneyBalance"
 set "MOD_PATH=mods\TourneyBalance"
 
 echo [System] Cleaning up old build folders...
-if exist "%MOD_PATH%\bundleV2" rmdir /s /q "%MOD_PATH%\bundleV2"
-if exist "%MOD_PATH%\bundleV2-Official" rmdir /s /q "%MOD_PATH%\bundleV2-Official"
 if exist "%MOD_PATH%\bundleV2-Open-Beta" rmdir /s /q "%MOD_PATH%\bundleV2-Open-Beta"
-echo.
-
-echo ==================================================
-echo STEP 1: Building "Tourney Balance Official"
-echo ==================================================
-echo. 
-vmb build "TourneyBalance" -g 2
 echo.
 
 echo [System] Isolating Official build outputs...
@@ -31,7 +22,7 @@ ren "%MOD_PATH%\itemV2-Open-Beta.cfg" "itemV2.cfg"
 echo.
 
 echo ==================================================
-echo STEP 2: Building "Tourney Balance Open Beta"
+echo Building "Tourney Balance Open Beta"
 echo ==================================================
 echo. 
 vmb build "TourneyBalance" -g 2
@@ -42,7 +33,7 @@ ren "%MOD_PATH%\bundleV2" "bundleV2-Open-Beta"
 echo.
 
 echo ==================================================
-echo STEP 3: Restoring files and folder names...
+echo Restoring files and folder names...
 echo ==================================================
 ren "%MOD_PATH%\itemV2.cfg" "itemV2-Open-Beta.cfg"
 ren "%MOD_PATH%\itemV2-Official.cfg" "itemV2.cfg"
