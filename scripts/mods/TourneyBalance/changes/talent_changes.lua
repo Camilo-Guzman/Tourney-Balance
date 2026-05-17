@@ -253,6 +253,7 @@ mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit
 				buff_system:add_buff(unit, buff_to_add, owner_unit, false) ---- This is Strike Together being added on as a passive.
 			end
 		end
+		
 		if talent_extension:has_talent("markus_mercenary_passive_improved", "empire_soldier", true) then  -- Enchanced Training
 			buff_system:add_buff(owner_unit, "markus_mercenary_passive_improved", owner_unit, false)
 		elseif talent_extension:has_talent("markus_mercenary_passive_power_level_on_proc", "empire_soldier", true) then  -- Reikland Reaper
@@ -277,6 +278,10 @@ mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit
 				if HEALTH_ALIVE[unit] then
 					buff_system:add_buff(unit, buff_to_add, owner_unit, false)
 				end
+			end
+			
+			if talent_extension:has_talent("markus_mercenary_passive_defence_on_proc", "empire_soldier", true) and buff_applied then
+				buff_system:add_buff(owner_unit, "markus_mercenary_passive_defence", owner_unit, false)
 			end
 		end
 	end
