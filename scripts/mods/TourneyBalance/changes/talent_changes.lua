@@ -1841,10 +1841,10 @@ mod:modify_talent("wh_bountyhunter", 5, 3, {
 	},
 })
 
-mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
-    cooldown = 4.5, -- 10
-    multiplier = 0.2,
-})
+--mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
+--    cooldown = 4.5, -- 10
+--    multiplier = 0.2,
+--})
 
 mod:modify_talent("wh_bountyhunter", 6, 1, {
     description = "victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_2_desc",
