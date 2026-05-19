@@ -253,6 +253,7 @@ mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit
 				buff_system:add_buff(unit, buff_to_add, owner_unit, false) ---- This is Strike Together being added on as a passive.
 			end
 		end
+		
 		if talent_extension:has_talent("markus_mercenary_passive_improved", "empire_soldier", true) then  -- Enchanced Training
 			buff_system:add_buff(owner_unit, "markus_mercenary_passive_improved", owner_unit, false)
 		elseif talent_extension:has_talent("markus_mercenary_passive_power_level_on_proc", "empire_soldier", true) then  -- Reikland Reaper
@@ -277,6 +278,10 @@ mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit
 				if HEALTH_ALIVE[unit] then
 					buff_system:add_buff(unit, buff_to_add, owner_unit, false)
 				end
+			end
+			
+			if talent_extension:has_talent("markus_mercenary_passive_defence_on_proc", "empire_soldier", true) and buff_applied then
+				buff_system:add_buff(owner_unit, "markus_mercenary_passive_defence", owner_unit, false)
 			end
 		end
 	end
@@ -1835,6 +1840,17 @@ mod:modify_talent("wh_bountyhunter", 5, 3, {
 		}
 	},
 })
+
+--mod:modify_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_passive_cooldown_reduction", {
+--    cooldown = 4.5, -- 10
+--    multiplier = 0.2,
+--})
+
+mod:modify_talent("wh_bountyhunter", 6, 1, {
+    description = "victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_2_desc",
+    description_values = {},
+})
+mod:add_text("victor_bountyhunter_activated_ability_reset_cooldown_on_stacks_2_desc", "Ranged critical hits reduces the cooldown of Locked and Loaded by 20%. Can only trigger once every 4.5 seconds.")
 
 -- Indisctiminate blast cdr upped to 60%
 mod:add_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun_cdr", {
