@@ -2214,7 +2214,7 @@ NewDamageProfileTemplates.tb_1h_sword_light_1_2 = {
 }
 
 --light 3
-DamageProfileTemplates.light_slashing_smiter_finesse.shield_break = true
+DamageProfileTemplates.sword_1h_light_smiter_vertical.shield_break = true
 Weapons.one_handed_swords_template_1.actions.action_one.light_attack_last.range_mod = 1.4 --1.2
 
 --Heavies
