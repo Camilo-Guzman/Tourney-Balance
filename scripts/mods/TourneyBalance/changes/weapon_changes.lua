@@ -3253,6 +3253,10 @@ Weapons.two_handed_picks_template_1.dodge_count = 3
 --Heavies
 --DamageProfileTemplates.heavy_blunt_smiter_charged.armor_modifier.attack[3] = 2.25
 PowerLevelTemplates.armor_modifier_smiter_pick_H_charged.attack[3] = 2.25
+Weapons.two_handed_picks_template_1.actions.action_one.heavy_attack_left.damage_profile 						= "pickaxe_uncharged_heavies"
+Weapons.two_handed_picks_template_1.actions.action_one.heavy_attack_left_charged.damage_profile 				= "pickaxe_charged_heavies"
+Weapons.two_handed_picks_template_1.actions.action_one.heavy_attack_right.damage_profile 						= "pickaxe_uncharged_heavies"
+Weapons.two_handed_picks_template_1.actions.action_one.heavy_attack_right_charged.damage_profile 				= "pickaxe_charged_heavies"
 
 --Lights
 NewDamageProfileTemplates.tb_warpick_lights = {
@@ -3307,6 +3311,56 @@ NewDamageProfileTemplates.tb_warpick_lights = {
 			}
 		}
 	}
+}
+
+NewDamageProfileTemplates.pickaxe_uncharged_heavies = {
+	armor_modifier = "pickaxe_heavy_smiter_vertical_armor_modifier",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.9, -- 0.5
+			1.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "pickaxe_heavy_smiter_vertical_cleave_distribution",
+	default_target = "pickaxe_heavy_smiter_vertical_default_target",
+	targets = "pickaxe_heavy_smiter_vertical_targets",
+	shield_break = true
+}
+
+NewDamageProfileTemplates.pickaxe_charged_heavies = {
+	armor_modifier = "pickaxe_heavy_smiter_vertical_charged_armor_modifier",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.785, -- 0.5
+			1.5,
+			1,
+			1
+		},
+		impact_armor_power_modifer = {
+			1,
+			1,
+			1,
+			1,
+			1
+		}
+	},
+	charge_value = "heavy_attack",
+	cleave_distribution = "pickaxe_heavy_smiter_vertical_charged_cleave_distribution",
+	default_target = "pickaxe_heavy_smiter_vertical_charged_default_target",
+	targets = "pickaxe_heavy_smiter_vertical_charged_targets_smiter",
+	shield_break = true
 }
 
 
