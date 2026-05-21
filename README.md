@@ -25,6 +25,7 @@ If you would like to contribute to this mod, you can create a pull request on th
 git clone https://github.com/exquilibrium/Tourney-Balance-Open-Beta.git
 ```
 - **DO NOT use "_Build Mod.bat" to build this mod** unless you know what it's doing.
+- **MAKE SURE the "Tourney-Balance-Open-Beta" folder is NOT opened in any application, when trying to run the build scripts.**
 - Copy the `.bat` scripts from this repository to `Vermintide-Mod-Setup-master\vermintide-mod-builder`.
 - Run any script to build the mod. This will replace the local copy of your mod, allowing you to test without uploading to Steam.
     - `_Build TB All.bat` builds both the Official and Open Beta mod.
