@@ -3252,7 +3252,7 @@ Weapons.two_handed_picks_template_1.dodge_count = 3
 
 --Heavies
 --DamageProfileTemplates.heavy_blunt_smiter_charged.armor_modifier.attack[3] = 2.25
-PowerLevelTemplates.armor_modifier_smiter_pick_H.attack[3] = 2.25
+PowerLevelTemplates.armor_modifier_smiter_pick_H_charged.attack[3] = 2.25
 
 --Lights
 NewDamageProfileTemplates.tb_warpick_lights = {
