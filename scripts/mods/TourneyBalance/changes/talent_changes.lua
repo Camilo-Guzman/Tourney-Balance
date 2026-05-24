@@ -2020,7 +2020,7 @@ mod:add_text("sienna_adept_increased_burn_damage_reduced_non_burn_damage_desc", 
 -- Lingering Flames
 mod:add_talent_buff_template("bright_wizard", "battle_wizard_lingering_reduced_dot_damage", {
     stat_buff = "increased_burn_dot_damage",
-    multiplier = -0.5,
+    multiplier = -0.67, -- 0.5
 })
 
 mod:modify_talent("bw_adept", 2, 3, {
