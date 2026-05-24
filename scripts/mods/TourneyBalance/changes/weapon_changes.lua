@@ -3401,15 +3401,15 @@ Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack.allowed_ch
 Weapons.dual_wield_daggers_template_1.actions.action_one.heavy_attack_stab.allowed_chain_actions[5].start_time = 0.35
 Weapons.dual_wield_daggers_template_1.max_fatigue_points = 6
 
--- Elven Spear
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.347 -- 0.31, 0.27, 0.35
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.39 -- 0.35, 0.38
+-- Elven Spear																								-- values at v6.11.0 / v6.4.0
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_start = 0.347	-- official: 0.35 / 0.31
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_window_end = 0.39 		-- official: 0.37 / 0.35
 
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.223 -- 0.2, 0.17 
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.3 -- 0.3, 0.34 
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_start = 0.223 -- official: 0.2 / 0.25
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_window_end = 0.3  	-- official: 0.3 / 0.3
 
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19 -- 0.15
-Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33 -- 0.3 
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_start = 0.19	-- official: 0.15 / 0.2
+Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_2.damage_window_end = 0.33  	-- official: 0.3 / 0.3
 
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_left.damage_profile = "elven_spear_light_thrusts"
 Weapons.two_handed_spears_elf_template_1.actions.action_one.light_attack_stab_1.damage_profile = "elven_spear_light_thrusts"
