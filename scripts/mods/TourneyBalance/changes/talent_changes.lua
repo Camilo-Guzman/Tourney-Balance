@@ -225,7 +225,7 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit
 	}
 })
 
-mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5th melee hit grants a guaranteed melee critical strike. Random Crits can still occur.")
+mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5 hits grant a guaranteed critical strike. Random Crits can still occur.")
 
 -- Enhanced Training
 mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit, buff, params)
