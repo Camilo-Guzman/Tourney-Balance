@@ -1385,6 +1385,20 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
 }) ]]
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
 
+-- Piercing Shot Refund Fix on Headshot Through Teammate
+ProcFunctions.kerillian_waywatcher_reduce_activated_ability_cooldown = function (owner_unit, buff, params)
+    if ALIVE[owner_unit] then
+        local hit_zone = params[3]
+        local buff_type = params[5]
+
+        if buff_type == "RANGED_ABILITY" and (hit_zone == "head" or hit_zone == "neck" or hit_zone == "weakspot") then
+            local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+
+            career_extension:reduce_activated_ability_cooldown_percent(buff.multiplier)
+        end
+    end
+end
+
 --[[
 
 	Handmaiden Talents
