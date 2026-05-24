@@ -2030,7 +2030,7 @@ mod:modify_talent("bw_adept", 2, 3, {
     description = "tb_sienna_adept_infinite_burn_desc",
     description_values = {},
 })
-mod:add_text("tb_sienna_adept_infinite_burn_desc", "Sienna's burning effects now last until the affected enemy dies. Burning effects do not stack and deal 50% reduced damage.")
+mod:add_text("tb_sienna_adept_infinite_burn_desc", "Sienna's burning effects now last until the affected enemy dies. Burning effects do not stack and deal 67% reduced damage.")
 --[[
 InfiniteBurnDotLookup = InfiniteBurnDotLookup or {}
 local buff_perk_names = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
