@@ -2098,6 +2098,24 @@ mod:modify_talent("bw_adept", 5, 2, {
 })
 mod:add_text("rebaltourn_sienna_adept_cooldown_reduction_on_burning_enemy_killed_desc", "Killing a burning enemy reduces the cooldown of Fire Walk by 2%%. 0.5 second cooldown.")
 
+-- Immersive Immolation
+-- Official: Hitting 4 or more enemies with one attack grants 15.0% increased attack speed for 5 seconds.
+-- TB: Hitting 1 or more enemies with one attack grants 15.0% increased melee attack speed for 5 seconds.
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_attack_speed_on_enemies_hit_buff", {
+    stat_buff = "attack_speed_melee", -- "attack_speed"
+})
+
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_attack_speed_on_enemies_hit", {
+    required_targets = 1 -- 4
+})
+
+mod:modify_talent("bw_adept", 5, 3, {
+    description = "sienna_adept_attack_speed_on_enemies_hit_desc",
+    description_values = {},
+})
+mod:add_text("sienna_adept_attack_speed_on_enemies_hit_desc", "Hitting 1 or more enemies with one attack grants 15.0% increased melee attack speed for 5 seconds.")
+
+
 -- Level 30
 
 -- Kaboom!
