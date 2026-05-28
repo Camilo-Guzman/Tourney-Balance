@@ -2331,6 +2331,28 @@ end
 	Necromancer Talents
 
 ]]
+
+--mod:add_text("career_passive_desc_bw_necromancer_c", "Killing an enemy grants 2%% crit chance for 5 seconds. Max stacks 5.")
+--- We had a description change to one of Necro's passives that wasn't actually true? Why was this here?
+
+-- Death Ascendant
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_2_buff", {
+    stat_buff = "increased_weapon_damage_ranged" -- "power_level_ranged"
+})
+
+mod:modify_talent("bw_necromancer", 2, 2, {
+    description = "sienna_necromancer_2_2_desc",
+    description_values = {},
+})
+mod:add_text("sienna_necromancer_2_2_desc", "Casting spells grants 5% ranged damage for 6 seconds. Max stacks 5.")
+
+-- Unlimited POWAAAAHHHH!!!!...I mean, Reaping.
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
+	multiplier = 0
+})
+mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
+
+-- Cursed Blood
 mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)
 	local is_crit = params [param_order.is_critical_strike]
 	if not is_crit then
@@ -2417,18 +2439,13 @@ mod:add_talent_buff_template("bright_wizard", "no_proc_necro", {
 mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_4_1_cursed_blood", {
 	propagation_multiplier = 0.10
 })
+
+-- Lost Souls
 DamageProfileTemplates.sienna_necromancer_blood_explosion.default_target.power_distribution.impact = 0
 DamageProfileTemplates.sienna_necromancer_ability_stagger.default_target.power_distribution.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_near.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_far.impact = 0
 DamageProfileTemplates.necromancer_crit_burst_stagger.default_target.power_distribution.impact = 0
-
-
-mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
-	multiplier = 0
-})
-mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
-mod:add_text("career_passive_desc_bw_necromancer_c", "Killing an enemy grants 2%% crit chance for 5 seconds. Max stacks 5.")
 
 --[[
 
