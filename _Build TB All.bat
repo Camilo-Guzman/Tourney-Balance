@@ -4,7 +4,14 @@ echo #############################################
 echo. 
 
 echo [System] Renaming folder to TourneyBalance...
-ren "mods\Tourney-Balance-Open-Beta" "TourneyBalance"
+ren "mods\Tourney-Balance-Open-Beta" "TourneyBalance" || (
+    echo.
+    echo [ERROR] Access Denied or folder not found.
+    echo [ERROR] Please ensure all folders and files are closed for this build process to finish.
+    echo [ERROR] Canceling script...
+    pause
+    exit /b 1
+)
 
 :: Set a base path variable to keep the code clean
 set "MOD_PATH=mods\TourneyBalance"
