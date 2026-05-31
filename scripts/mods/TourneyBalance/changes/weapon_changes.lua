@@ -1271,8 +1271,7 @@ Weapons.sienna_scholar_career_skill_weapon.actions.action_career_hold.prioritize
 DamageProfileTemplates.fire_spear_trueflight.friendly_fire_multiplier = 0 -- remove FF on Crit
 
 -- Soulstealer
--- Soulstealer Staff
--- Added Bulwark
+-- Added Bulwark to the list as well
 Weapons.staff_death.actions.action_two.default.prioritized_breeds = {
 	beastmen_standard_bearer = 1,  
 	beastmen_bestigor = 0.75,
