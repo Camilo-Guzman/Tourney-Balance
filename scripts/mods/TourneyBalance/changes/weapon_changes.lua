@@ -1270,6 +1270,30 @@ Weapons.sienna_scholar_career_skill_weapon.actions.action_career_hold.prioritize
 }
 DamageProfileTemplates.fire_spear_trueflight.friendly_fire_multiplier = 0 -- remove FF on Crit
 
+-- Soulstealer
+-- Soulstealer Staff
+-- Added Bulwark
+Weapons.staff_death.actions.action_two.default.prioritized_breeds = {
+	beastmen_standard_bearer = 1,  
+	beastmen_bestigor = 0.75,
+	chaos_vortex_sorcerer = 1,
+	chaos_corruptor_sorcerer = 1, 
+	chaos_raider = 0.75,
+	chaos_warrior = 0.75,
+	chaos_bulwark = 0.75,
+	chaos_berzerker = 0.75,
+	skaven_warpfire_thrower = 1,	 
+	skaven_gutter_runner = 1,
+	skaven_pack_master = 1, 
+	skaven_poison_wind_globadier = 1, 
+	skaven_ratling_gunner = 1,
+	skaven_loot_rat = 1, 
+	skaven_plague_monk = 0.75,
+	skaven_storm_vermin_commander = 0.75, 
+	skaven_storm_vermin = 0.75, 
+	skaven_storm_vermin_with_shield = 0.75,
+	skaven_storm_vermin_champion = 0.75,
+}
 Weapons.staff_death.actions.action_one.default.impact_data.damage_profile = "soulstealer_left_click"
 Weapons.staff_death.actions.action_one.default.chain_hit_settings.damage_profile = "soulstealer_left_click"
 Weapons.staff_death.actions.action_one.default_02.impact_data.damage_profile = "soulstealer_left_click"
@@ -1436,7 +1460,7 @@ NewDamageProfileTemplates.soulstealer_soul_rip_aka_da_suck = {
 			0.72, -- 1
 			1.5, -- 2.5
 			1,
-			0.36, -- 0.4
+			0.36, -- 0.75
 			0.63, -- 0.7
 		},
 		impact = {
