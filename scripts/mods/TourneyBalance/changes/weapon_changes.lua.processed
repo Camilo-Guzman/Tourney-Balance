@@ -316,7 +316,7 @@ mod:add_explosion_template("hagbane_charge_poison_dot_explosion_template", {
 explosion = {
 			damage_profile = "hagbane_charge_poison_dot_explosion_damage_template", -- "poison_aoe"
 			effect_name = "fx/wpnfx_poison_arrow_impact_carbine",
-			no_prop_damage = true,
+			no_prop_damage = true,``
 			radius = 2,
 			sound_event_name = "arrow_hit_poison_cloud",
 			use_attacker_power_level = true,

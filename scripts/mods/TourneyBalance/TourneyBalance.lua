@@ -42,7 +42,12 @@ function mod:add_buff(buff_name, buff_data)
     NetworkLookup.buff_templates[index] = buff_name
     NetworkLookup.buff_templates[buff_name] = index
 end
-
+function mod.add_explosion_template(self, explosion_name, data)
+    ExplosionTemplates[explosion_name] = merge({ name = explosion_name}, data)
+    local index = #NetworkLookup.explosion_templates + 1
+    NetworkLookup.explosion_templates[index] = explosion_name
+    NetworkLookup.explosion_templates[explosion_name] = index
+end
 mod:hook(InteractionDefinitions.pickup_object.client, "can_interact", function(func,interactor_unit, interactable_unit, data, config, world)
     if Unit.has_data(interactable_unit, "unit_name") then
         if Unit.get_data(interactable_unit, "unit_name") == "units/mutator/skulls_2023/pup_skull_of_fury" then
