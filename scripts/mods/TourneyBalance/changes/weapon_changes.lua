@@ -344,56 +344,7 @@ Weapons.grudge_raker_template_1.actions.action_two.default.push_radius = 0.9 -- 
 ]]
 
 --Hagbane
-Weapons.shortbow_hagbane_template_1.actions.action_one.shoot_charged.impact_data.aoe = ExplosionTemplates.hagbane_charge_poison_dot_explosion_template
-
-mod:add_explosion_template("hagbane_charge_poison_dot_explosion_template", {
-explosion = {
-			damage_profile = "hagbane_charge_poison_dot_explosion_damage_template", -- "poison_aoe"
-			effect_name = "fx/wpnfx_poison_arrow_impact_carbine",
-			no_prop_damage = true,
-			radius = 2,
-			sound_event_name = "arrow_hit_poison_cloud",
-			use_attacker_power_level = true,
-		}
-})
-
-NewDamageProfileTemplates.hagbane_charge_poison_dot_explosion_damage_template = {
-	charge_value = "aoe",
-	is_dot = true,
-	no_friendly_fire = true,
-	no_stagger = false,
-	no_stagger_damage_reduction_ranged = true,
-	require_damage_for_dot = true,
-	armor_modifier = {
-		attack = {
-			0.25,
-			0, -- 0.1
-			1.5,
-			1,
-			1,
-			0,
-		},
-		impact = {
-			1,
-			0.75,
-			1,
-			1,
-			0.5,
-			0,
-		},
-	},
-	default_target = {
-		attack_template = "arrow_poison_aoe",
-		damage_type = "poison",
-		dot_template_name = "hagbane_charge_poison_dot_buff_template", -- "aoe_poison_dot"
-		power_distribution = {
-			attack = 0.05,
-			impact = 0.5,
-		},
-	},
-}
-
-NewDamageProfileTemplates.hagbane_charge_poison_dot_damage_template = {
+DamageProfileTemplates.poison = {
 	charge_value = "n/a",
 	is_dot = true,
 	no_stagger = true,
@@ -430,21 +381,41 @@ NewDamageProfileTemplates.hagbane_charge_poison_dot_damage_template = {
 	},
 }
 
-mod:add_buff_template("hagbane_charge_poison_dot_buff_template", {
-{
-	apply_buff_func = "start_dot_damage",
-	damage_profile = "hagbane_charge_poison_dot_damage_template",
-	duration = 3,
-	name = "aoe poison dot",
-	time_between_dot_damages = 0.75,
-	update_func = "apply_dot_damage",
-	update_start_delay = 0.75,
-	perks = {
-		buff_perks.poisoned,
+DamageProfileTemplates.poison_aoe = {
+	charge_value = "aoe",
+	is_dot = true,
+	no_friendly_fire = true,
+	no_stagger = false,
+	no_stagger_damage_reduction_ranged = true,
+	require_damage_for_dot = true,
+	armor_modifier = {
+		attack = {
+			1.25,
+			0, -- 0.1
+			1.5,
+			1,
+			1,
+			0,
+		},
+		impact = {
+			1,
+			0.75,
+			1,
+			1,
+			0.5,
+			0,
+		},
 	},
-},
-})
-DotTypeLookup.hagbane_charge_poison_dot_buff_template = "poison_dot"
+	default_target = {
+		attack_template = "arrow_poison_aoe",
+		damage_type = "poison",
+		dot_template_name = "aoe_poison_dot",
+		power_distribution = {
+			attack = 0.05,
+			impact = 0.5,
+		},
+	},
+}
 
 --Javelin
 DamageProfileTemplates.thrown_javelin.armor_modifier_near.attack = { 1, 0.7, 1.1, 1, 0.75, 0.25 }
