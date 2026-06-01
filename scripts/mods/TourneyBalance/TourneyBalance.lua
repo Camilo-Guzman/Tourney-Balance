@@ -43,6 +43,12 @@ function mod:add_buff(buff_name, buff_data)
     NetworkLookup.buff_templates[buff_name] = index
 end
 function mod.add_explosion_template(self, explosion_name, data)
+	local function merge(dst, src)
+		for k, v in pairs(src) do
+			dst[k] = v
+		end
+		return dst
+	end
     ExplosionTemplates[explosion_name] = merge({ name = explosion_name}, data)
     local index = #NetworkLookup.explosion_templates + 1
     NetworkLookup.explosion_templates[index] = explosion_name
