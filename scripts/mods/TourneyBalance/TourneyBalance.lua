@@ -42,13 +42,34 @@ function mod:add_buff(buff_name, buff_data)
     NetworkLookup.buff_templates[index] = buff_name
     NetworkLookup.buff_templates[buff_name] = index
 end
-function mod.add_explosion_template(self, explosion_name, data)
-	local function merge(dst, src)
+function mod.add_buff_template(self, buff_name, buff_data, extra_data)
+    local new_buff = {
+        buffs = {
+            merge({ name = buff_name }, buff_data),
+        },
+    }
+    if extra_data then
+        new_buff = merge(new_buff, extra_data)
+	elseif type(buff_data[1]) == "table" then
+		new_buff = {
+			buffs = buff_data,
+		}
+		if new_buff.buffs[1].name == nil then
+			new_buff.buffs[1].name = buff_name
+		end	
+    end
+    BuffTemplates[buff_name] = new_buff
+    local index = #NetworkLookup.buff_templates + 1
+    NetworkLookup.buff_templates[index] = buff_name
+    NetworkLookup.buff_templates[buff_name] = index
+end
+local function merge(dst, src)
 		for k, v in pairs(src) do
 			dst[k] = v
 		end
 		return dst
-	end
+end
+function mod.add_explosion_template(self, explosion_name, data)
     ExplosionTemplates[explosion_name] = merge({ name = explosion_name}, data)
     local index = #NetworkLookup.explosion_templates + 1
     NetworkLookup.explosion_templates[index] = explosion_name
