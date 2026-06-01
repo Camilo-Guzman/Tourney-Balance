@@ -225,7 +225,7 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_crit
 	}
 })
 
-mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5th melee hit grants a guaranteed melee critical strike. Random Crits can still occur.")
+mod:add_talent_text("mercenary_helborgs_tutelage", "Hellborg's Tutelage", "Every 5 hits grant a guaranteed critical strike. Random Crits can still occur.")
 
 -- Enhanced Training
 mod:add_proc_function("gain_markus_mercenary_passive_proc", function (owner_unit, buff, params)
@@ -1385,6 +1385,20 @@ mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_attack_speed_o
 }) ]]
 mod:add_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe also restores 5.0%% ammunition every tick.")
 
+-- Piercing Shot Refund Fix on Headshot Through Teammate
+ProcFunctions.kerillian_waywatcher_reduce_activated_ability_cooldown = function (owner_unit, buff, params)
+    if ALIVE[owner_unit] then
+        local hit_zone = params[3]
+        local buff_type = params[5]
+
+        if buff_type == "RANGED_ABILITY" and (hit_zone == "head" or hit_zone == "neck" or hit_zone == "weakspot") then
+            local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+
+            career_extension:reduce_activated_ability_cooldown_percent(buff.multiplier)
+        end
+    end
+end
+
 --[[
 
 	Handmaiden Talents
@@ -2006,7 +2020,7 @@ mod:add_text("sienna_adept_increased_burn_damage_reduced_non_burn_damage_desc", 
 -- Lingering Flames
 mod:add_talent_buff_template("bright_wizard", "battle_wizard_lingering_reduced_dot_damage", {
     stat_buff = "increased_burn_dot_damage",
-    multiplier = -0.5,
+    multiplier = -0.67, -- 0.5
 })
 
 mod:modify_talent("bw_adept", 2, 3, {
@@ -2016,7 +2030,7 @@ mod:modify_talent("bw_adept", 2, 3, {
     description = "tb_sienna_adept_infinite_burn_desc",
     description_values = {},
 })
-mod:add_text("tb_sienna_adept_infinite_burn_desc", "Sienna's burning effects now last until the affected enemy dies. Burning effects do not stack and deal 50% reduced damage.")
+mod:add_text("tb_sienna_adept_infinite_burn_desc", "Sienna's burning effects now last until the affected enemy dies. Burning effects do not stack and deal 67% reduced damage.")
 --[[
 InfiniteBurnDotLookup = InfiniteBurnDotLookup or {}
 local buff_perk_names = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
@@ -2083,6 +2097,24 @@ mod:modify_talent("bw_adept", 5, 2, {
     },
 })
 mod:add_text("rebaltourn_sienna_adept_cooldown_reduction_on_burning_enemy_killed_desc", "Killing a burning enemy reduces the cooldown of Fire Walk by 2%%. 0.5 second cooldown.")
+
+-- Immersive Immolation
+-- Official: Hitting 4 or more enemies with one attack grants 15.0% increased attack speed for 5 seconds.
+-- TB: Hitting 1 or more enemies with one attack grants 15.0% increased melee attack speed for 5 seconds.
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_attack_speed_on_enemies_hit_buff", {
+    stat_buff = "attack_speed_melee", -- "attack_speed"
+})
+
+mod:modify_talent_buff_template("bright_wizard", "sienna_adept_attack_speed_on_enemies_hit", {
+    required_targets = 1 -- 4
+})
+
+mod:modify_talent("bw_adept", 5, 3, {
+    description = "sienna_adept_attack_speed_on_enemies_hit_desc",
+    description_values = {},
+})
+mod:add_text("sienna_adept_attack_speed_on_enemies_hit_desc", "Hitting 1 or more enemies with one attack grants 15.0% increased melee attack speed for 5 seconds.")
+
 
 -- Level 30
 
@@ -2299,6 +2331,28 @@ end
 	Necromancer Talents
 
 ]]
+
+--mod:add_text("career_passive_desc_bw_necromancer_c", "Killing an enemy grants 2%% crit chance for 5 seconds. Max stacks 5.")
+--- We had a description change to one of Necro's passives that wasn't actually true? Why was this here?
+
+-- Death Ascendant
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_2_buff", {
+    stat_buff = "increased_weapon_damage_ranged" -- "power_level_ranged"
+})
+
+mod:modify_talent("bw_necromancer", 2, 2, {
+    description = "sienna_necromancer_2_2_desc",
+    description_values = {},
+})
+mod:add_text("sienna_necromancer_2_2_desc", "Casting spells grants 5% ranged damage for 6 seconds. Max stacks 5.")
+
+-- Unlimited POWAAAAHHHH!!!!...I mean, Reaping.
+mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
+	multiplier = 0
+})
+mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
+
+-- Cursed Blood
 mod:add_proc_function("necromancer_crit_burst", function (owner_unit, buff, params, world, param_order)
 	local is_crit = params [param_order.is_critical_strike]
 	if not is_crit then
@@ -2385,18 +2439,13 @@ mod:add_talent_buff_template("bright_wizard", "no_proc_necro", {
 mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_4_1_cursed_blood", {
 	propagation_multiplier = 0.10
 })
+
+-- Lost Souls
 DamageProfileTemplates.sienna_necromancer_blood_explosion.default_target.power_distribution.impact = 0
 DamageProfileTemplates.sienna_necromancer_ability_stagger.default_target.power_distribution.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_near.impact = 0
 DamageProfileTemplates.trapped_soul.default_target.power_distribution_far.impact = 0
 DamageProfileTemplates.necromancer_crit_burst_stagger.default_target.power_distribution.impact = 0
-
-
-mod:modify_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
-	multiplier = 0
-})
-mod:add_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
-mod:add_text("career_passive_desc_bw_necromancer_c", "Killing an enemy grants 2%% crit chance for 5 seconds. Max stacks 5.")
 
 --[[
 
