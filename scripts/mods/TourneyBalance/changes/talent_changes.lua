@@ -173,6 +173,57 @@ end
 -- Helborg's Tutelage
 -- Added in random crits.
 
+ProcFunctions.add_buff_on_first_target_hit_helborg = function (owner_unit, buff, params)
+	local player = Managers.player:owner(owner_unit)
+
+    if player and player.remote then
+        return
+    end
+
+	if ALIVE[owner_unit] then
+		local target_number = params[4]
+
+		if target_number > 1 then
+			return
+		end
+
+		local buff_template = buff.template
+		local valid_attack_types = buff_template.valid_attack_types
+		local attack_type = params[2]
+
+		if valid_attack_types and not valid_attack_types[attack_type] then
+			return
+		end
+
+		local client_side = buff_template.client_side
+		local buff_name = buff_template.buff_to_add
+		local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+
+		if buff_template.block_buff and buff_extension:has_buff_type(buff_template.block_buff) then
+			return
+		end
+
+		local network_manager = Managers.state.network
+		local network_transmit = network_manager.network_transmit
+		local unit_object_id = network_manager:unit_game_object_id(owner_unit)
+		local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
+
+		if client_side then
+			buff_extension:add_buff(buff_name, {
+				attacker_unit = owner_unit,
+			})
+		elseif is_server() then
+			buff_extension:add_buff(buff_name, {
+				attacker_unit = owner_unit,
+			})
+			network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
+		else
+			network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+		end
+	end
+end
+
+
 mod:add_talent("es_mercenary", 2, 3, "mercenary_helborgs_tutelage", { 
 	num_ranks = 1,
 	buffer = "both",
@@ -194,7 +245,7 @@ mod:add_talent_buff_template("empire_soldier", "mercenary_helborgs_tutelage_buff
 		event = "on_hit",
 		buff_to_add = "mercenary_helborgs_tutelage_hit_counting_buff",
 		buff_on_stacks = 5,
-		buff_func = "add_buff_on_first_target_hit"
+		buff_func = "add_buff_on_first_target_hit_helborg" -- "add_buff_on_first_target_hit"
 	}
 })
 
