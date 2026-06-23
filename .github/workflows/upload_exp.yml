@@ -103,7 +103,7 @@ jobs:
             {
               "0" "mod"
             }
-            "changenote" "Automated upload via GitHub Actions"
+            "changenote" "(EXPERIMENTAL BUILD) Automated upload via GitHub Actions"
           }
           "@
           [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/upload.vdf", $vdf, [System.Text.Encoding]::ASCII)
