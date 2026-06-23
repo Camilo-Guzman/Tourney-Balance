@@ -2053,6 +2053,32 @@ NewDamageProfileTemplates.light_1h_axe_tb = {
 		}
 	},
 }
+-- official cleave values
+Weapons.one_hand_axe_template_1.actions.action_one.light_attack_last.damage_profile.cleave_distribution = {
+		attack = 0.3,
+		impact = 0.3
+	},
+Weapons.one_hand_axe_template_2.actions.action_one.light_attack_last.damage_profile.cleave_distribution = {
+		attack = 0.3,
+		impact = 0.3
+	},
+Weapons.one_hand_axe_template_1.actions.action_one.light_attack_left.damage_profile.cleave_distribution = {
+		attack = 0.15,
+		impact = 0.15
+	},
+Weapons.one_hand_axe_template_2.actions.action_one.light_attack_left.damage_profile.cleave_distribution = {
+		attack = 0.15,
+		impact = 0.15
+	},
+Weapons.one_hand_axe_template_1.actions.action_one.light_attack_right.damage_profile.cleave_distribution = {
+		attack = 0.15,
+		impact = 0.15
+	},
+Weapons.one_hand_axe_template_2.actions.action_one.light_attack_right.damage_profile.cleave_distribution = {
+		attack = 0.15,
+		impact = 0.15
+	},
+
 --Heavy
 Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_left.range_mod = 1.2 --1
 Weapons.one_hand_axe_template_1.actions.action_one.heavy_attack_right.range_mod = 1.2 --1
