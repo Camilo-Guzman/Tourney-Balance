@@ -54,7 +54,7 @@ goto allow_build
 
 :block_build
 echo [BLOCK] Repository "mods\%target_folder%" is on branch "%CURRENT_BRANCH%".
-echo [BLOCK] Building is strictly forbidden on the experimental branch!
+echo [BLOCK] Building the official mod is strictly forbidden on the experimental branch!
 echo.
 pause
 exit /b 1
