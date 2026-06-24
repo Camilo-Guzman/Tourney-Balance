@@ -292,14 +292,30 @@ end
 -- -------------------------------------------------------------------
 local settings_sync_package_id = "tourney_check"
 
+mod.player_mod_status = {}
+global_send_prohibited_mods = false -- The overall lobby status
+
+local function update_global_status()
+    global_send_prohibited_mods = false
+    
+    for peer_id, has_prohibited_mods in pairs(mod.player_mod_status) do
+        if has_prohibited_mods then
+            global_send_prohibited_mods = true
+            break
+        end
+    end
+    
+    write_logging_mods_data()
+end
+
 local function sync_mods()
     mod:network_send(settings_sync_package_id, "others", local_send_prohibited_mods)
 end
 
-mod:network_register(settings_sync_package_id, function(sender, received_bool)
+mod:network_register(settings_sync_package_id, function(sender_peer_id, received_bool)
     if received_bool ~= nil then
-        global_send_prohibited_mods = received_bool
-        write_logging_mods_data()
+        mod.player_mod_status[sender_peer_id] = received_bool
+        update_global_status()
     end
 end)
 
@@ -308,7 +324,10 @@ mod.on_user_joined = function(player)
 end
 
 mod.on_user_left = function(player)
-    sync_mods()
+    if player and player.peer_id then
+        mod.player_mod_status[player.peer_id] = nil
+        update_global_status()
+    end
 end
 
 -- -------------------------------------------------------------------
