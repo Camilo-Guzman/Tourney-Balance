@@ -19,13 +19,13 @@ local allowed_mods_id = {
     "1835393505", --Cata 3 & Deathwish
     "2170475262", --Beastmen Loader
     "2456507597", --No Beastmen
-    "3041453243", --Linesman Onslaught & Daredevil
-    --"1384087820", --True solo qol tweaks (Not needed anymore)
+    "1694820325", --A Quiet Drink
 
-    --"1619024877", --Onslaught
+--Mutators
+    "1619024877", --Onslaught
     --"2179403386", --OnslaughtPlus
     --"2559718905", --DutchSpice
-    --"1694820325", --A Quiet Drink
+    "3041453243", --Linesman Onslaught & Daredevil
 
 --Sanctioned
     "1369573612", --VMF, Vermintide Mod Framework
@@ -82,25 +82,25 @@ local allowed_mods_id = {
     "2490345007", --More Skins
     "1391113873", --More Hats
     "1423536193", --Give all Hats, Skins, and Paintings
-    "1584145468", --No Overcharge Damage Indicator
+    --"1584145468", --No Overcharge Damage Indicator
     "2134585757", --Choose Grail Knight Quests
-    "2827932341", --Life's Hard Everywhere
-    "2493528647", --SlaughterHouse
-    "2990935500", --SnowyEnemyRemoval
-    "2955881987", --Set Garbage
+    --"2827932341", --Life's Hard Everywhere
+    --"2493528647", --SlaughterHouse
+    --"2990935500", --SnowyEnemyRemoval
+    --"2955881987", --Set Garbage
     "2827840248", --Ph. Indicator
-    "2525452894", --Vermintide Analytics
-    "3216778139", --Disable Fog (Replacement for TrueSoloQOL)
-    "1498748049", --Colorful Unique Weapons (Version 2.something)
-    "2760973758", --Headshot Counter
-    "2503071508", --DisplayTeamName
-    "2385964757", --DPS Meter
-    "1545823051", --Duct Tape Mod
-    "2418326943", --Fix Restart Sound Bug
+    --"2525452894", --Vermintide Analytics
+    --"3216778139", --Disable Fog (Replacement for TrueSoloQOL)
+    --"1498748049", --Colorful Unique Weapons (Version 2.something)
+    --"2760973758", --Headshot Counter
+    --"2503071508", --DisplayTeamName
+    --"2385964757", --DPS Meter
+    --"1545823051", --Duct Tape Mod
+    --"2418326943", --Fix Restart Sound Bug
     "2134634186", --Choose Weather
-    "2174425628", --Hat Control
-    "2993715887", --Maps for mission selection
-    "2801810157", --Clock Time (Specifically when players are playing outside of the normal tourney time)
+    --"2174425628", --Hat Control
+    --"2993715887", --Maps for mission selection
+    --"2801810157", --Clock Time (Specifically when players are playing outside of the normal tourney time)
 
 --Balance Mods
     --"2503948895", --ClassBalance
@@ -110,16 +110,27 @@ local allowed_mods_id = {
     --"2874461307", --Live Remasted
 
 --Goober / Linesman Event exclusive
-    --"2688241862", --Sons of Sigmar - Gooby only
-    --"1393694530", --Spawn Tweaks - Gooby only
-    --"1460857124", --Chat Wheel
-    "2803255292", --Specials Sound Cues Fix
-    "2824402636", --Less Corpses
-    "3214214805", --Straight to Keep and Quit Game
-    "2866794030", --Waypoints
-    "3082495950", --NoSmokeBountyHunter&EnsorcelledReaperNoVFX
-    "2649047582", --Remove Ability Bobbing
-    "1642545164", --Disable Friendly Fire Dialogue
+    "3672228443", --Ubersreik 5
+    "3720586440", --Tourney Seeding
+    "1529868962", --Ready Up
+    "2945094506", --Remove Democrocy
+    "3721038774", --Crafting in modded
+    "1384087820", --True solo qol tweaks (Not needed anymore)
+    "2803255292", --Specials Sound Queue Fix
+    "3035806430", --Chaos Spawn Dansen
+    "3674660549", --No Smoke Bounty Hunter
+    "3677447814", --No Flashbang Scythe
+    "3738401555", --EUAUGH!
+    "3687155143", --Smash Bros Home Run SFX As GK's Ultimate
+    "3070697376", --Firewatch's Cursed SFX Pack
+    "3116878398", --Vine Boom Overhead
+    "3069125974", --Backstab SFX
+    "3068430493", --Slaanesh Chaos Warrior
+    "3066129604", --Sekiro Parry SFX
+    "3595332090", --Tab Scoreboard
+    "1679789641", --ChargeUI
+    "2931963897", --Max Level
+    "3173876211", --DifficultiesUnlocked
 
 --Debug
     --"3348952854", --TourneyBalanceBeta
@@ -133,17 +144,17 @@ local prohibited_mods = {}
 local is_tourney_time = false
 local tourney_time = {
     start_time = {
-        year = 2025,
-        month = 8,
-        day = 21,
+        year = 2026,
+        month = 6,
+        day = 25,
         hour = 12,
         min = 0,
         sec = 0
     },
     end_time = {
-        year = 2025,
-        month = 9,
-        day = 1,
+        year = 2026,
+        month = 7,
+        day = 6,
         hour = 12,
         min = 0,
         sec = 0
