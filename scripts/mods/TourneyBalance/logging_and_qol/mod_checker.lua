@@ -4,7 +4,7 @@
     in a UI window on screen. Additionally it shares the checked information with the rest of the team displaying their status on screen as well.
 
     2025-07-31 - Janoti!
-    Updated: 2026-06-24 - Performance & Stability Rewrite - mr.chen
+    Updated: 2026-06-24 - Code Refactor, Performance/Stability Rewrite - mr.chen
 ]]
 
 local mod = get_mod("TourneyBalance")
@@ -154,7 +154,7 @@ local global_send_prohibited_mods = false
 -- Tourney Time
 local is_tourney_time = false
 local tourney_time = {
-    start_time = { year = 2026, month = 6, day = 24, hour = 12, min = 0, sec = 0 },
+    start_time = { year = 2026, month = 6, day = 25, hour = 12, min = 0, sec = 0 },
     end_time   = { year = 2026, month = 7, day = 6,  hour = 12, min = 0, sec = 0 },
 }
 
@@ -177,8 +177,8 @@ local get_user_settings = function ()
     -- local screen_w = RESOLUTION_LOOKUP.res_w
     -- local screen_h = RESOLUTION_LOOKUP.res_h
     mod.position = { -- x,y
-        10, 
-        0,  
+        5, 
+        -10, 
     }
 end
 
@@ -217,7 +217,7 @@ local show_text = function ()
     display_position[2] = display_position[2] + 3 -- Additional padding
 
     -- Draw Local Unapproved Mods
-    if local_has_mods and mod:get("tourney_display_mods") == false then
+    if local_has_mods and mod:get("tourney_display_mods") then
         for _, mod_data in ipairs(prohibited_mods) do
             display_position[2] = display_position[2] + (font_size + 1)
             UIRenderer.draw_text(renderer, mod_data[2], font_material, font_size, font_name, display_position, white_color)
@@ -325,16 +325,13 @@ end
 
 local initiate_mod_checker = function ()
     check_tourney_time()
+    render_init()
+    get_user_settings()
+    get_active_mods()
+    check_mods()
+    local_send_prohibited_mods = (#prohibited_mods > 0)
+    write_logging_mods_data()
 
-    if is_tourney_time or mod:get("tourney_mode") then
-        render_init()
-        get_user_settings()
-        get_active_mods()
-        check_mods()
-        
-        local_send_prohibited_mods = (#prohibited_mods > 0)
-        write_logging_mods_data()
-    end
 end
 
 mod.on_all_mods_loaded = function()
