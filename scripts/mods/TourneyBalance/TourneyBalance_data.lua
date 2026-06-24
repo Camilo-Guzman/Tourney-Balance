@@ -24,31 +24,6 @@ return {
 						tootlip = "tourney_display_mods_description",
 						default_value = false,
 					},
-					{
-						setting_id = "font_size",
-						type = "numeric",
-						title = "font_size_title",
-						tootlip = "font_size_description",
-						range = {10, 15},
-						default_value = 12,
-					},
-					{
-						setting_id = "position_x",
-						type = "numeric",
-						title = "position_x_title",
-						tootlip = "position_x_description",
-						range = {0, 1505}, -- less than 1920 so it cant be moved out of view
-						default_value = 200,
-					},
-					{
-						setting_id = "position_y",
-						type = "numeric",
-						title = "position_y_title",
-						tootlip = "position_y_description",
-						range = {25, 1080}, -- more than 0 so it cant be moved out of view
-						default_value = 1070,
-					},
-
 				},
 			},
 			{

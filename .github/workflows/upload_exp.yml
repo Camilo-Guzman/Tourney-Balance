@@ -1,0 +1,118 @@
+name: Upload Pre-built Experimental Mod
+
+on:
+  push:
+    branches:
+      - exp
+    paths:
+      - 'bundleV2/**'
+      - 'bundleV2-Open-Beta/**'
+      - 'item_preview.png'
+      - 'itemV2.cfg'
+      - 'itemV2-Open-Beta.cfg'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-2022 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v5
+
+      # --- START OF CHANGE DETECTION: Prevent upload if official bundle was changed ---
+      - name: Check for bundleV2 changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            bundleV2:
+              - 'bundleV2/**'
+
+      - name: Prevent upload and fail
+        if: steps.filter.outputs.bundleV2 == 'true'
+        shell: pwsh
+        run: |
+          Write-Error "Upload blocked because changes were detected in the bundleV2 directory."
+          exit 1
+      # --- END OF CHANGE DETECTION ---
+
+      - name: Setup SteamCMD
+        uses: andriivitiv/setup-steamcmd@v1
+
+      - name: Generate Steam TOTP
+        id: steam_totp
+        uses: CyberAndrii/steam-totp@v1
+        with:
+          shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+
+      - name: Parse Config and Upload to Steam
+        shell: pwsh
+        env:
+          STEAM_USER: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASS: ${{ secrets.STEAM_PASSWORD }}
+          STEAM_TOTP: ${{ steps.steam_totp.outputs.code }} 
+        run: |
+          # 1. Dynamically set file and folder names based on the current repository
+          if ($env:GITHUB_REPOSITORY -eq "exquilibrium/Tourney-Balance-Open-Beta") {
+              $cfgFile      = "itemV2-Open-Beta.cfg"
+              $bundleFolder = "bundleV2-Open-Beta"
+              Write-Host "Running in Open-Beta environment..."
+          } else {
+              $cfgFile      = "itemV2.cfg"
+              $bundleFolder = "bundleV2"
+              Write-Host "Running in Production environment..."
+          }
+
+          # 2. Read the raw config file using the dynamic variable
+          if (-not (Test-Path $cfgFile)) {
+              Write-Error "Config file '$cfgFile' not found in workspace!"
+              exit 1
+          }
+          $cfg = Get-Content $cfgFile -Raw
+
+          # 3. Extract Metadata using Regex
+          $title = [regex]::Match($cfg, 'title\s*=\s*"([^"]+)"').Groups[1].Value
+          $description = [regex]::Match($cfg, 'description\s*=\s*"([\s\S]*?)"\s*;').Groups[1].Value
+          
+          # Extract Workshop ID (Handles digits, the optional 'L', and the semicolon)
+          $workshopId = [regex]::Match($cfg, 'published_id\s*=\s*(\d+)L?;').Groups[1].Value
+          
+          if (-not $workshopId) {
+              Write-Error "Could not find a valid published_id in $cfgFile!"
+              exit 1
+          }
+
+          # 4. Path Normalization
+          $cleanPath = $env:GITHUB_WORKSPACE.Replace('\', '/')
+          
+          # 5. Generate the VDF for SteamCMD using the dynamic bundle folder
+          $vdf = @"
+          "workshopitem"
+          {
+            "appid" "552500"
+            "publishedfileid" "$workshopId"
+            "contentfolder" "$cleanPath/$bundleFolder"
+            "previewfile" "$cleanPath/item_preview.png"
+            "visibility" 0
+            "title" "$title"
+            "description" "$description"
+            "tags"
+            {
+              "0" "mod"
+            }
+            "changenote" "(EXPERIMENTAL BUILD) Automated upload via GitHub Actions"
+          }
+          "@
+          [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/upload.vdf", $vdf, [System.Text.Encoding]::ASCII)
+
+          # 6. Execute Upload and Verify
+          $output = steamcmd +login $env:STEAM_USER $env:STEAM_PASS $env:STEAM_TOTP +workshop_build_item "$cleanPath/upload.vdf" +quit | Out-String
+          Write-Host $output
+
+          if ($output -notmatch "Success" -and $output -notmatch "SUCCESS") {
+              Write-Error "SteamCMD failed. Check credentials or Shared Secret."
+              exit 1
+          }
