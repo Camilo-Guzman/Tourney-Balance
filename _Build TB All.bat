@@ -43,6 +43,24 @@ pause
 exit /b 1
 
 :proceed_rename
+:: --- START OF LOCAL BRANCH GUARD ---
+:: Query Git targeting the specific repository folder path
+for /f "tokens=*" %%i in ('git -C "mods\%target_folder%" rev-parse --abbrev-ref HEAD 2^>nul') do set "CURRENT_BRANCH=%%i"
+
+:: Check if the branch matches "exp"
+if /i "%CURRENT_BRANCH%"=="exp" goto block_build
+
+goto allow_build
+
+:block_build
+echo [BLOCK] Repository "mods\%target_folder%" is on branch "%CURRENT_BRANCH%".
+echo [BLOCK] Building the official mod is strictly forbidden on the experimental branch!
+echo.
+pause
+exit /b 1
+
+:allow_build
+:: --- END OF LOCAL BRANCH GUARD ---
 echo [System] Renaming %target_folder% to TourneyBalance...
 ren "mods\%target_folder%" "TourneyBalance" || (
     echo.
