@@ -144,6 +144,7 @@ for _, id in ipairs(allowed_mods_id) do
 end
 
 -- State Variables
+local is_openbeta = false
 local active_mods = {}
 local prohibited_mods = {}
 
@@ -228,7 +229,7 @@ end
 mod:hook_safe(IngameHud, "update", function(self)
     if not self._currently_visible_components.EquipmentUI then return end
     
-    if is_tourney_time or mod:get("tourney_mode") then
+    if (is_tourney_time and not is_openbeta) or mod:get("tourney_mode") then
         show_text()
     end
 end)
@@ -273,6 +274,7 @@ local check_mods = function ()
             seen_prohibited[mod_id] = true
         end
     end
+    is_openbeta = (seen_prohibited["3722716715"] ~= nil)
 end
 
 local write_logging_mods_data = function ()
