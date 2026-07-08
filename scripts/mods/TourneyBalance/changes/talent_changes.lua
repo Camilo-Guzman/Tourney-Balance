@@ -153,6 +153,47 @@ function mod.add_talent(self, career_name, tier, index, new_talent_name, new_tal
     }
 end
 
+-- Fervent Huntress noclip
+local function get_variable(path_to_movement_setting_to_modify, unit)
+	fassert(#path_to_movement_setting_to_modify > 0, "movement_setting_exists needs at least a movement_setting_to_modify")
+
+	local movement_settings_table = PlayerUnitMovementSettings.get_movement_settings_table(unit)
+	local movement_value = movement_settings_table
+
+	for _, movement_setting in ipairs(path_to_movement_setting_to_modify) do
+		movement_value = movement_value[movement_setting]
+
+		if not movement_value then
+			break
+		end
+	end
+
+	if movement_value then
+		return movement_value
+	else
+		ferror("Variable does not exist in PlayerUnitMovementSettings")
+	end
+end
+local function set_variable(path_to_movement_setting_to_modify, unit, value)
+	local nr_of_settings = #path_to_movement_setting_to_modify
+
+	fassert(nr_of_settings > 0, "movement_setting_exists needs at least a movement_setting_to_modify")
+
+	local unit_movement_settings_table = PlayerUnitMovementSettings.get_movement_settings_table(unit)
+	local movement_value = unit_movement_settings_table
+	local index = 1
+
+	while index <= nr_of_settings do
+		if nr_of_settings < index + 1 then
+			movement_value[path_to_movement_setting_to_modify[index]] = value
+		else
+			movement_value = movement_value[path_to_movement_setting_to_modify[index]]
+		end
+
+		index = index + 1
+	end
+end
+
 --[[
 
 ██╗░░██╗██████╗░██╗░░░██╗██████╗░███████╗██████╗░
@@ -1386,24 +1427,77 @@ mod:add_buff_function("gs_update_kerillian_waywatcher_regen", function (unit, bu
         buff.next_heal_tick = t + time_between_heals
     end
 end)
---[[mod:modify_talent("we_waywatcher", 2, 1, {
-	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
-	name = "kerillian_waywatcher_movement_speed_on_special_kill",
-	num_ranks = 1,
-	icon = "kerillian_waywatcher_movement_speed_on_special_kill",
-	description_values = {
-		{
-			value_type = "baked_percent",
-			value = 1.15
-		},
-		{
-			value = 10
-		}
-	},
-	buffs = {
-		"kerillian_waywatcher_movement_speed_on_special_kill"
-	}
-}) ]]
+
+-- Fervent Huntress noclip
+mod:add_buff_function("ws_apply_movement_buff_and_noclip", function (unit, buff, params)
+	local bonus = params.bonus
+	local multiplier = params.multiplier
+
+	if buff.template.wind_mutator then
+		local wind_strength = Managers.weave:get_wind_strength()
+
+		multiplier = multiplier[wind_strength]
+	end
+
+	local path_to_movement_setting_to_modify = buff.template.path_to_movement_setting_to_modify
+	local movement_setting_value = get_variable(path_to_movement_setting_to_modify, unit)
+
+	if bonus then
+		movement_setting_value = movement_setting_value + bonus
+	end
+
+	if multiplier then
+		movement_setting_value = movement_setting_value * multiplier
+	end
+
+	if ALIVE[unit] then
+		local status_extension = ScriptUnit.extension(unit, "status_system")
+		status_extension:set_noclip(true, "ws_movement_buff_and_noclip")
+	end
+
+	set_variable(path_to_movement_setting_to_modify, unit, movement_setting_value)
+end)
+
+mod:add_buff_function("ws_remove_movement_buff_and_noclip", function (unit, buff, params)
+	local bonus = params.bonus
+	local multiplier = params.multiplier
+
+	if buff.template.wind_mutator then
+		local wind_strength = Managers.weave:get_wind_strength()
+
+		multiplier = multiplier[wind_strength]
+	end
+
+	local path_to_movement_setting_to_modify = buff.template.path_to_movement_setting_to_modify
+	local movement_setting_value = get_variable(path_to_movement_setting_to_modify, unit)
+
+	if multiplier then
+		movement_setting_value = movement_setting_value / multiplier
+	end
+
+	if bonus then
+		movement_setting_value = movement_setting_value - bonus
+	end
+
+	if ALIVE[unit] then
+		local status_extension = ScriptUnit.extension(unit, "status_system")
+		status_extension:set_noclip(false, "ws_movement_buff_and_noclip")
+	end
+
+	set_variable(path_to_movement_setting_to_modify, unit, movement_setting_value)
+end)
+mod:modify_talent_buff_template("wood_elf", "kerillian_waywatcher_movement_speed_on_special_kill_buff", {
+	apply_buff_func = "ws_apply_movement_buff_and_noclip",
+	remove_buff_func = "ws_remove_movement_buff_and_noclip",
+})
+mod:modify_talent("we_waywatcher", 5, 1, {
+    description = "elf_ws_movement_speed_on_special_kill_desc",
+    description_values = {},
+})
+mod:add_text("elf_ws_movement_speed_on_special_kill_desc", "Killing a special or elite enemy increases movement speed by 15.0% and grants noclip for 10 seconds.")
+
+
+
 
 mod:modify_talent("we_waywatcher", 2, 3, {
     description_values = {
