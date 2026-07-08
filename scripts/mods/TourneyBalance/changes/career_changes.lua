@@ -1080,3 +1080,76 @@ mod:add_buff_function("markus_knight_movespeed_on_incapacitated_ally", function 
 
 	buff.disabled_allies = disabled_allies
 end)
+
+--Stam-Tech Removal
+CharacterStateHelper.check_to_start_dodge = function (unit, input_extension, status_extension, t)
+	if status_extension:dodge_locked() or not status_extension:can_dodge(t) then
+		return false
+	end
+
+	local movement_settings_table = PlayerUnitMovementSettings.get_movement_settings_table(unit)
+	local input = CharacterStateHelper.get_movement_input(input_extension)
+	local double_tap_dodge = input_extension.double_tap_dodge
+	local start_dodge = false
+	local dodge_direction = Vector3(0, 0, 0)
+	local dodge_hold = input_extension:get("dodge_hold")
+	local manual_dodge = input_extension:get("dodge")
+	local dodge_input = manual_dodge or input_extension:get("jump") and dodge_hold
+	local input_length = Vector3.length(input)
+	local using_keyboard = not Managers.input:is_device_active("gamepad")
+	local stationary_dodge = Application.user_setting("toggle_stationary_dodge")
+
+	if double_tap_dodge then
+		for input, dir in pairs(DOUBLE_TAP_DODGES) do
+			if input_extension:get(input) then
+				local was_double_tap = input_extension:was_double_tap(input, t, Application.user_setting("double_tap_dodge_threshold"))
+
+				for input, dir in pairs(DOUBLE_TAP_DODGES) do
+					input_extension:clear_double_tap(input)
+				end
+
+				if was_double_tap then
+					start_dodge = true
+					dodge_direction = dir:unbox()
+
+					break
+				end
+
+				input_extension:start_double_tap(input, t)
+
+				break
+			end
+		end
+	end
+
+	if not start_dodge and dodge_input and input_length > input_extension.minimum_dodge_input then
+		local normalized_input = input / input_length
+		local x = normalized_input.x
+		local y = normalized_input.y
+		local abs_x = math.abs(x)
+		local forward_ok = y <= 0 or not using_keyboard and abs_x > 0.9239 or manual_dodge and abs_x > 0.707
+
+		if forward_ok then
+			start_dodge = true
+
+			if y > 0 then
+				dodge_direction = Vector3(math.sign(x), 0, 0)
+			else
+				dodge_direction = normalized_input
+			end
+		end
+	elseif dodge_input and stationary_dodge then
+		start_dodge = true
+		dodge_direction = -Vector3.forward()
+	end
+
+	if start_dodge then
+		Managers.state.entity:system("play_go_tutorial_system"):register_dodge(dodge_direction)
+		status_extension:set_dodge_locked(true)
+		status_extension:add_dodge_cooldown()
+
+		local first_person_extension = ScriptUnit.extension(unit, "first_person_system")
+	end
+
+	return start_dodge, dodge_direction
+end
