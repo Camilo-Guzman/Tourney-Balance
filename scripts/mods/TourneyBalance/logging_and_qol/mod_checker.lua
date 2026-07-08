@@ -144,6 +144,7 @@ for _, id in ipairs(allowed_mods_id) do
 end
 
 -- State Variables
+local is_openbeta = false
 local active_mods = {}
 local prohibited_mods = {}
 
@@ -228,7 +229,7 @@ end
 mod:hook_safe(IngameHud, "update", function(self)
     if not self._currently_visible_components.EquipmentUI then return end
     
-    if is_tourney_time or mod:get("tourney_mode") then
+    if (is_tourney_time and not is_openbeta) or mod:get("tourney_mode") then
         show_text()
     end
 end)
@@ -273,6 +274,7 @@ local check_mods = function ()
             seen_prohibited[mod_id] = true
         end
     end
+    is_openbeta = (seen_prohibited["3722716715"] ~= nil)
 end
 
 local write_logging_mods_data = function ()
@@ -292,14 +294,30 @@ end
 -- -------------------------------------------------------------------
 local settings_sync_package_id = "tourney_check"
 
+mod.player_mod_status = {}
+global_send_prohibited_mods = false -- The overall lobby status
+
+local function update_global_status()
+    global_send_prohibited_mods = false
+    
+    for peer_id, has_prohibited_mods in pairs(mod.player_mod_status) do
+        if has_prohibited_mods then
+            global_send_prohibited_mods = true
+            break
+        end
+    end
+    
+    write_logging_mods_data()
+end
+
 local function sync_mods()
     mod:network_send(settings_sync_package_id, "others", local_send_prohibited_mods)
 end
 
-mod:network_register(settings_sync_package_id, function(sender, received_bool)
+mod:network_register(settings_sync_package_id, function(sender_peer_id, received_bool)
     if received_bool ~= nil then
-        global_send_prohibited_mods = received_bool
-        write_logging_mods_data()
+        mod.player_mod_status[sender_peer_id] = received_bool
+        update_global_status()
     end
 end)
 
@@ -308,7 +326,10 @@ mod.on_user_joined = function(player)
 end
 
 mod.on_user_left = function(player)
-    sync_mods()
+    if player and player.peer_id then
+        mod.player_mod_status[player.peer_id] = nil
+        update_global_status()
+    end
 end
 
 -- -------------------------------------------------------------------
