@@ -140,7 +140,7 @@ mod_api.update_talent("es_knight", 4, 1, {
 	description = "tb_markus_knight_rock_of_reikland_desc",
 	description_values = {},
 })
-mod_api.insert_text("tb_markus_knight_rock_of_reikland_desc", "Protective Presence is always active and grants 30%% block cost reduction and 30%% stamina regeneration.")
+mod_api.insert_text("tb_markus_knight_rock_of_reikland_desc", "Protective Presence is always active and grants 30% block cost reduction and 30% stamina regeneration.")
 
 --[[
 	Comrades in Arms - Adjustment from Passive
@@ -653,7 +653,7 @@ mod_api.update_talent("es_knight", 6, 1, {
 		}
 	},
 })
-mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charge makes Kruber immune to damage for %s seconds. Damage prevented reduces the cooldown of Valiant Charge at 20% effectiveness.")
+mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charge makes Kruber immune to damage for %s seconds. Damage prevented reduces the cooldown of Valiant Charge at 20%% effectiveness.")
 
 -- Numb to Pain is a damage_taken -100% stat buff
 -- Hit trading: damage prevented by Numb to Pain still charges the ult at the normal on-damage-taken rate.

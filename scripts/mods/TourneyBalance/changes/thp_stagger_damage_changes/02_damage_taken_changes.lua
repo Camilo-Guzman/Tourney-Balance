@@ -198,9 +198,15 @@ mod:set_apply_buffs_to_damage(function(current_damage, attacked_unit, attacker_u
 
 		local breed = ALIVE[attacker_unit] and unit_get_data(attacker_unit, "breed")
 
-		if breed and (breed.boss or breed.elite) then
+		-- max_damage_taken_from_boss_or_elite (Slayer's Oblivious to Pain) also applies to specials
+		if breed and (breed.boss or breed.elite or breed.special) then
 			local min_damage_cap = nil
-			min_damage_cap = (not boss_elite_damage_cap or not all_damage_cap or math.min(boss_elite_damage_cap, all_damage_cap)) and ((boss_elite_damage_cap and boss_elite_damage_cap) or all_damage_cap)
+
+			if boss_elite_damage_cap and all_damage_cap then
+				min_damage_cap = math.min(boss_elite_damage_cap, all_damage_cap)
+			else
+				min_damage_cap = boss_elite_damage_cap or all_damage_cap
+			end
 
 			if min_damage_cap and min_damage_cap <= damage then
 				damage = math.max(damage * 0.5, min_damage_cap)

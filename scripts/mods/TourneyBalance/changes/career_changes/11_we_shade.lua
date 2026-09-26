@@ -30,12 +30,12 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Bloodfetcher**
 		- Changed ammo refund to 5% (from 1 ammo).
 
-		**Khaine's Counter** (new, replaces Blood Drinker, which moved to the passive)
-		- Parrying an attack makes all melee attacks count as backstabs for 5s.
-
-		**Blur** (moved from the passive, replaces Spring-Heeled Assassin)
+		**Blur** (moved from the passive, replaces Blood Drinker, which moved to the passive)
 		- Parrying an attack and quickly dodging grants Kerillian stealth for a short period.
 		- Increased parry window to 0.75s (from 0.5s).
+
+		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
+		- Parrying an attack makes all melee attacks count as backstabs for 5s.
 
 		**Ruthless Precision** (new, replaces Gladerunner)
 		- Melee headshots count as backstabs.
@@ -315,7 +315,21 @@ mod_api.update_talent("we_shade", 4, 3, {
 mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Backstabs return 5% of maximum ammunition. 2 second cooldown.")
 
 --[[
-	Khaine's Counter (new, replaces Blood Drinker, whose effect moved to the passive)
+	Blur (moved from the passive into the talent tree, replaces Blood Drinker, whose effect moved to the passive)
+]]
+-- Vanilla Blur: parry, then dodge shortly after, to go invisible (kerillian_shade_dash_stealth ->
+-- kerillian_shade_dash_stealth_active). Only the trigger buff moves; the rest of the chain is untouched
+mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
+	buffer = "client",
+	icon = "kerillian_shade_perk_blur",
+	buffs = {
+		"kerillian_shade_passive_stealth_parry",
+	},
+})
+mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period.")
+
+--[[
+	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
 ]]
 -- Guaranteed backstabs for 5 seconds after a (long) parry, same parry proc as Grim Fortune.
 -- on_timed_block_long and guaranteed_backstab (action_sweep) are both owning-client only
@@ -333,7 +347,7 @@ mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_coun
 		"guaranteed_backstab",
 	},
 })
-mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_khaines_counter", {
+mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_khaines_counter", {
 	buffer = "client",
 	icon = "kerillian_shade_movement_speed_on_critical_hit",
 	buffs = {
@@ -341,20 +355,6 @@ mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_khaines_counter", {
 	},
 })
 mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes all melee attacks count as backstabs for 5 seconds.")
-
---[[
-	Blur (moved from the passive into the talent tree, replaces Spring-Heeled Assassin)
-]]
--- Vanilla Blur: parry, then dodge shortly after, to go invisible (kerillian_shade_dash_stealth ->
--- kerillian_shade_dash_stealth_active). Only the trigger buff moves; the rest of the chain is untouched
-mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_blur", {
-	buffer = "client",
-	icon = "kerillian_shade_perk_blur",
-	buffs = {
-		"kerillian_shade_passive_stealth_parry",
-	},
-})
-mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period.")
 
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)

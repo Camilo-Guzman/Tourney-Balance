@@ -31,14 +31,14 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Changed to 67% cooldown reduction per Trophy Hunter stack (300% only at max stacks).
 
 		**Oblivious to Pain**
-		- No longer reduces damage taken from Bosses and Elites.
-		- Now increases healing received by 10% per Trophy Hunter stack.
-		- Now converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.
+		- Damage reduction now also applies to Specials.
+		- Each Trophy Hunter stack additionally reduces damage taken by 5%.
 
 		**Barge**
 		- Stagger strength on dodge increased to medium_push (from light_push).
 		- Stagger radius on dodge increased to 3 (from 1.5).
-		- Now reduces damage taken by 20%.
+		- Now increases healing received by 50%.
+		- Now converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.
 
 		**Dawi Drop**
 		- Additionally grants max Trophy Hunter stacks (up to 5, with High Tally) when Leap starts.
@@ -121,7 +121,7 @@ local function tb_slayer_trophy_hunter_buff_names(owner_unit)
 	if talent_extension:has_talent("bardin_slayer_damage_taken_capped", "dwarf_ranger", true) then
 		local has_high_tally = buff_names[1] == "bardin_slayer_passive_increased_max_stacks"
 
-		buff_names[#buff_names + 1] = has_high_tally and "tb_bardin_slayer_oblivious_healing_received_high_tally" or "tb_bardin_slayer_oblivious_healing_received"
+		buff_names[#buff_names + 1] = has_high_tally and "tb_bardin_slayer_oblivious_damage_reduction_high_tally" or "tb_bardin_slayer_oblivious_damage_reduction"
 	end
 
 	return buff_names
@@ -179,7 +179,7 @@ mod_api.insert_text("bardin_slayer_attack_speed_on_double_one_handed_weapons_des
 mod_api.update_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_movement_speed", {
 	duration = TB_IMPATIENCE_STACK_DURATION, -- 2
 })
-mod_api.insert_text("bardin_slayer_passive_movement_speed_desc", "Trophy Hunter stacks now last 10 seconds. Each stack of Trophy Hunter increases movement speed by 10.0%%.")
+mod_api.insert_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%%. Trophy Hunter stacks now last 10 seconds.")
 
 --[[
 	High Tally
@@ -206,69 +206,67 @@ mod_api.insert_text("bardin_slayer_passive_cooldown_reduction_on_max_stacks_desc
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.damage_profile = "medium_push" -- light_push
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.radius = 3 -- 1.5
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.max_damage_radius = 3 -- 1.5
--- Also a flat 20% damage reduction
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_barge_damage_reduction", {
-	stat_buff = "damage_taken",
-	multiplier = -0.2,
+-- Also increases healing received and converts damage taken into a bleed (add_damage hook below)
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_barge_healing_received", {
+	stat_buff = "healing_received",
+	multiplier = 0.5,
 })
 mod_api.update_talent("dr_slayer", 5, 3, {
 	description = "bardin_slayer_push_on_dodge_desc",
-	buffer = "both", -- the push procs on the owner, damage is resolved server side
+	buffer = "both", -- the push procs on the owner, heals are resolved server side
 	buffs = {
 		"bardin_slayer_push_on_dodge",
-		"tb_bardin_slayer_barge_damage_reduction",
+		"tb_bardin_slayer_barge_healing_received",
 	},
 })
-mod_api.insert_text("bardin_slayer_push_on_dodge_desc", "Effective dodges push nearby enemies. Reduces damage taken by 20%.")
+mod_api.insert_text("bardin_slayer_push_on_dodge_desc", "Effective dodges push nearby enemies. Increases healing received by 50%. Converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.")
 
 --[[
 	Oblivious to Pain
 ]]
--- Adds 10% healing received per Trophy Hunter stack and converts damage taken into a bleed.
--- The healing buffs come with each stack (tb_slayer_trophy_hunter_buff_names), the bleed is handled by the add_damage hook below
+-- Damage cap now also covers specials (02_damage_taken_changes.lua), the cap is read server side
 mod_api.update_talent("dr_slayer", 5, 1, {
 	description = "bardin_slayer_damage_taken_capped_desc_2",
 	description_values = {},
 	buffer = "server",
 	buffs = {
-		-- DISABLED: vanilla effect, damage taken from Bosses and Elites is halved down to a minimum of 10 damage.
-		-- Uncomment to restore it (and add it back to the description below)
-		-- "bardin_slayer_damage_taken_capped",
+		"bardin_slayer_damage_taken_capped",
 	},
 })
+-- 5% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
 -- Separate High Tally template since max_stacks lives on the sub-buff
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_healing_received", {
-	stat_buff = "healing_received",
-	multiplier = 0.1,
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
+	stat_buff = "damage_taken",
+	multiplier = -0.05,
 	max_stacks = 3,
 	duration = 2,
 	refresh_durations = true,
 	duration_modifier_func = tb_slayer_trophy_hunter_duration,
 })
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_healing_received_high_tally", {
-	stat_buff = "healing_received",
-	multiplier = 0.1,
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction_high_tally", {
+	stat_buff = "damage_taken",
+	multiplier = -0.05,
 	max_stacks = 5,
 	duration = 2,
 	refresh_durations = true,
 })
-mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Each stack of Trophy Hunter increases healing received by 10%. Converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.")
+mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses, Elites and Specials is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 5%.")
 
--- Oblivious to Pain bleed: pooled DoT buff like Warrior Priest Shield-of-Faith, new hits add to it and refresh duration
-local TB_OBLIVIOUS_BLEED_SOURCE = "life_tap"
+-- Barge bleed: pooled DoT buff like Warrior Priest Shield-of-Faith, new hits add to it and refresh duration
+local TB_BARGE_BLEED_SOURCE = "life_tap"
 -- wounded_dot does not interrupt interaction
-local TB_OBLIVIOUS_BLEED_TYPE = "wounded_dot"
-local TB_OBLIVIOUS_BLEED_DURATION = 10
-local TB_OBLIVIOUS_BLEED_RATIO = 0.5 -- share of each hit moved into the bleed
+local TB_BARGE_BLEED_TYPE = "wounded_dot"
+local TB_BARGE_BLEED_DURATION = 10
+local TB_BARGE_BLEED_RATIO = 0.5 -- share of each hit moved into the bleed
 
 -- add_buff params don't reach reapply (the common case here), so smuggle the amount via upvalue instead
-local tb_oblivious_pending_damage_amount = 0
+local tb_barge_pending_damage_amount = 0
 
-mod_api.insert_buff_function("tb_oblivious_bleed_add_value", function (unit, buff, params)
-	buff.value = (buff.value or 0) + tb_oblivious_pending_damage_amount
-	buff.ticks_left = TB_OBLIVIOUS_BLEED_DURATION
+mod_api.insert_buff_function("tb_barge_bleed_add_value", function (unit, buff, params)
+	buff.value = (buff.value or 0) + tb_barge_pending_damage_amount
+	buff.ticks_left = TB_BARGE_BLEED_DURATION
 end)
-mod_api.insert_buff_function("tb_oblivious_bleed_tick", function (unit, buff, params)
+mod_api.insert_buff_function("tb_barge_bleed_tick", function (unit, buff, params)
 	if not Managers.state.network.is_server or not ALIVE[unit] then
 		return
 	end
@@ -294,33 +292,33 @@ mod_api.insert_buff_function("tb_oblivious_bleed_tick", function (unit, buff, pa
 		return
 	end
 
-	DamageUtils.add_damage_network(unit, unit, damage_per_tick, "full", TB_OBLIVIOUS_BLEED_TYPE, nil, Vector3(0, 0, 0), TB_OBLIVIOUS_BLEED_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+	DamageUtils.add_damage_network(unit, unit, damage_per_tick, "full", TB_BARGE_BLEED_TYPE, nil, Vector3(0, 0, 0), TB_BARGE_BLEED_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
 end)
-mod_api.insert_buff_template("tb_bardin_slayer_oblivious_bleed", {
+mod_api.insert_buff_template("tb_bardin_slayer_barge_bleed", {
 	icon = "bardin_slayer_crit_chance", -- twitch bleed icon
 	debuff = true,
 	max_stacks = 1,
-	duration = TB_OBLIVIOUS_BLEED_DURATION,
+	duration = TB_BARGE_BLEED_DURATION,
 	update_frequency = 1,
 	refresh_durations = true,
-	apply_buff_func = "tb_oblivious_bleed_add_value",
-	reapply_buff_func = "tb_oblivious_bleed_add_value",
-	update_func = "tb_oblivious_bleed_tick",
+	apply_buff_func = "tb_barge_bleed_add_value",
+	reapply_buff_func = "tb_barge_bleed_add_value",
+	update_func = "tb_barge_bleed_tick",
 })
-mod_api.insert_text("tb_bardin_slayer_oblivious_bleed", "Bleeding")
+mod_api.insert_text("tb_bardin_slayer_barge_bleed", "Bleeding")
 
 -- Intercepts the instance before it reaches the health pool; banks it into the bleed pool
 mod:hook(PlayerUnitHealthExtension, "add_damage", function (func, self, attacker_unit, damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
 	local unit = self.unit
 
-	if self.is_server and damage_amount and damage_amount > 0 and damage_source_name ~= TB_OBLIVIOUS_BLEED_SOURCE and damage_source_name ~= "temporary_health_degen" and HEALTH_ALIVE[unit] and tb_slayer_has_talent(unit, "bardin_slayer_damage_taken_capped") then
+	if self.is_server and damage_amount and damage_amount > 0 and damage_source_name ~= TB_BARGE_BLEED_SOURCE and damage_source_name ~= "temporary_health_degen" and HEALTH_ALIVE[unit] and tb_slayer_has_talent(unit, "bardin_slayer_push_on_dodge") then
 		local buff_extension = ScriptUnit.extension(unit, "buff_system")
 
-		tb_oblivious_pending_damage_amount = damage_amount * TB_OBLIVIOUS_BLEED_RATIO
-		buff_extension:add_buff("tb_bardin_slayer_oblivious_bleed")
-		tb_oblivious_pending_damage_amount = 0
+		tb_barge_pending_damage_amount = damage_amount * TB_BARGE_BLEED_RATIO
+		buff_extension:add_buff("tb_bardin_slayer_barge_bleed")
+		tb_barge_pending_damage_amount = 0
 
-		return func(self, attacker_unit, damage_amount * (1 - TB_OBLIVIOUS_BLEED_RATIO), hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
+		return func(self, attacker_unit, damage_amount * (1 - TB_BARGE_BLEED_RATIO), hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
 	end
 
 	return func(self, attacker_unit, damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
@@ -401,5 +399,5 @@ for _, buff_name in ipairs(TB_NO_ESCAPE_MOVEMENT_PENALTY_BUFFS) do
 		return mod:is_action_movement_speed_up(params) or not tb_no_escape_removes_movement_penalty(unit)
 	end)
 end
-mod_api.insert_text("bardin_slayer_activated_ability_movement_desc_2", "Leap increases movement speed by %g%% for 10 seconds. During this time melee and ranged attacks no longer slow movement.")
+mod_api.insert_text("bardin_slayer_activated_ability_movement_desc_2", "Leap increases movement speed by %g%% and removes movement slowdown from weapons for 10 seconds.")
 
