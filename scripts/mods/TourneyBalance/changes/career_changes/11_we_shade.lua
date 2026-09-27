@@ -173,7 +173,7 @@ mod_api.insert_career_passives("we_1", {
 	"kerillian_shade_movement_speed",
 	"kerillian_shade_damage_reduction_on_critical_hit",
 })
-mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks.\n\nKerillian moves 10.0% faster. Critical hits reduce damage taken by 20% for 5 seconds.")
+mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Increase movement speed by 10%. Critical hits reduce damage taken by 20% for 5 seconds.")
 
 --[[
 

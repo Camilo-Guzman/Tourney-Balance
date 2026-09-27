@@ -178,6 +178,7 @@ mod_api.insert_text("bardin_slayer_attack_speed_on_double_one_handed_weapons_des
 -- Only granted with Impatience, so it uses the extended Trophy Hunter duration directly
 mod_api.update_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_movement_speed", {
 	duration = TB_IMPATIENCE_STACK_DURATION, -- 2
+	icon = "bardin_slayer_passive_movement_speed", -- Added, Impatience's talent icon
 })
 mod_api.insert_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%%. Trophy Hunter stacks now last 10 seconds.")
 
@@ -219,38 +220,7 @@ mod_api.update_talent("dr_slayer", 5, 3, {
 		"tb_bardin_slayer_barge_healing_received",
 	},
 })
-mod_api.insert_text("bardin_slayer_push_on_dodge_desc", "Effective dodges push nearby enemies. Increases healing received by 50%. Converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.")
-
---[[
-	Oblivious to Pain
-]]
--- Damage cap now also covers specials (02_damage_taken_changes.lua), the cap is read server side
-mod_api.update_talent("dr_slayer", 5, 1, {
-	description = "bardin_slayer_damage_taken_capped_desc_2",
-	description_values = {},
-	buffer = "server",
-	buffs = {
-		"bardin_slayer_damage_taken_capped",
-	},
-})
--- 5% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
--- Separate High Tally template since max_stacks lives on the sub-buff
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
-	stat_buff = "damage_taken",
-	multiplier = -0.05,
-	max_stacks = 3,
-	duration = 2,
-	refresh_durations = true,
-	duration_modifier_func = tb_slayer_trophy_hunter_duration,
-})
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction_high_tally", {
-	stat_buff = "damage_taken",
-	multiplier = -0.05,
-	max_stacks = 5,
-	duration = 2,
-	refresh_durations = true,
-})
-mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses, Elites and Specials is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 5%.")
+mod_api.insert_text("bardin_slayer_push_on_dodge_desc", "Effective dodges push nearby enemies. Half of damage taken converts into a non-lethal bleed lasting 10 seconds. Increases healing received by 50%. ")
 
 -- Barge bleed: pooled DoT buff like Warrior Priest Shield-of-Faith, new hits add to it and refresh duration
 local TB_BARGE_BLEED_SOURCE = "life_tap"
@@ -312,10 +282,12 @@ mod:hook(PlayerUnitHealthExtension, "add_damage", function (func, self, attacker
 	local unit = self.unit
 
 	if self.is_server and damage_amount and damage_amount > 0 and damage_source_name ~= TB_BARGE_BLEED_SOURCE and damage_source_name ~= "temporary_health_degen" and HEALTH_ALIVE[unit] and tb_slayer_has_talent(unit, "bardin_slayer_push_on_dodge") then
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+		-- Added through the buff system so the owner's client also gets the buff and shows its bleed icon.
+		-- It applies on the server right away (so the upvalue still reaches it), client copies only display: the tick is server only
+		local buff_system = Managers.state.entity:system("buff_system")
 
 		tb_barge_pending_damage_amount = damage_amount * TB_BARGE_BLEED_RATIO
-		buff_extension:add_buff("tb_bardin_slayer_barge_bleed")
+		buff_system:add_buff(unit, "tb_bardin_slayer_barge_bleed", unit, false)
 		tb_barge_pending_damage_amount = 0
 
 		return func(self, attacker_unit, damage_amount * (1 - TB_BARGE_BLEED_RATIO), hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
@@ -325,10 +297,43 @@ mod:hook(PlayerUnitHealthExtension, "add_damage", function (func, self, attacker
 end)
 
 --[[
+	Oblivious to Pain
+]]
+-- Damage cap now also covers specials (02_damage_taken_changes.lua), the cap is read server side
+mod_api.update_talent("dr_slayer", 5, 1, {
+	description = "bardin_slayer_damage_taken_capped_desc_2",
+	description_values = {},
+	buffer = "server",
+	buffs = {
+		"bardin_slayer_damage_taken_capped",
+	},
+})
+-- 5% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
+-- Separate High Tally template since max_stacks lives on the sub-buff
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
+	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
+	stat_buff = "damage_taken",
+	multiplier = -0.05,
+	max_stacks = 3,
+	duration = 2,
+	refresh_durations = true,
+	duration_modifier_func = tb_slayer_trophy_hunter_duration,
+})
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction_high_tally", {
+	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
+	stat_buff = "damage_taken",
+	multiplier = -0.05,
+	max_stacks = 5,
+	duration = 2,
+	refresh_durations = true,
+})
+mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses, Elites and Specials is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 5%.")
+
+--[[
 	Dawi Drop
 ]]
 -- Grant max Trophy Hunter stacks
-mod_api.insert_text("bardin_slayer_activated_ability_leap_damage_desc", "Increases power by %g%% while airborne during Leap. Starting a Leap grants maximum Trophy Hunter stacks.")
+mod_api.insert_text("bardin_slayer_activated_ability_leap_damage_desc", "Increases power by %g%% while airborne during Leap. Leaping grants maximum Trophy Hunter stacks.")
 mod:hook_safe(CareerAbilityDRSlayer, "_do_leap", function (self)
 	local do_leap = self._status_extension.do_leap
 
