@@ -27,6 +27,8 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 
 		**Salvaged Ammunition**
 		- Increased ammo restored to 25% of max ammo (from 20%).
+		- Now triggers at or below 10% ammo remaining (from requiring fully empty).
+		- Added effect to also trigger on special kills.
 		- Blessed Kills reload 25% of the ranged weapon's clip size.
 
 		**Rile the Mob**
@@ -163,7 +165,7 @@ mod_api.update_talent("wh_bountyhunter", 5, 2, {
 		"tb_victor_bounty_hunter_reload_on_kill",
 	},
 })
-mod_api.insert_text("victor_bountyhunter_reload_on_kill_desc", "Killing an elite or special while out of ammunition restores 25.0%% of max ammo. Blessed Kills now reloads 25%% of the ranged weapon's clip size from reserve ammo..")
+mod_api.insert_text("victor_bountyhunter_reload_on_kill_desc", "Killing an elite or special while below 10%% ammunition restores 25.0%% of max ammo. Blessed Kills now reloads 25%% of the ranged weapon's clip size from reserve ammo.")
 -- trigger threshold also from specials
 local function get_ranged_ammo_extension(inventory_extension)
 	local slot_data = inventory_extension:get_slot_data("slot_ranged")
@@ -185,7 +187,7 @@ mod_api.insert_proc_function("victor_bounty_hunter_ammo_fraction_gain_out_of_amm
 			local ammo_extension = get_ranged_ammo_extension(inventory_extension)
 			local max_ammo = ammo_extension:max_ammo()
 
-			if ammo_extension:remaining_ammo() + ammo_extension:ammo_count() < 1 then
+			if ammo_extension:remaining_ammo() + ammo_extension:ammo_count() <= max_ammo * 0.1 then
 				local ammo_bonus_fraction = buff.template.ammo_bonus_fraction
 				local ammo_amount = math.max(math.round(max_ammo * ammo_bonus_fraction), 1)
 
