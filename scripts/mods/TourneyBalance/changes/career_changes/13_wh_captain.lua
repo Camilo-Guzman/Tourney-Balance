@@ -25,7 +25,7 @@ local is_local = shared_utils.is_local
 
 		**Fervency**
 		- Increased duration to 12s (from 6s).
-		- Added ult makes first 12 hits guaranteed melee crits.
+		- Added ult makes first 24 hits guaranteed melee crits.
 	$END_TB
 ]]
 
@@ -380,16 +380,16 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activate
 })
 
 -- Additionall 20 stacks of guaranteed melee crit hits on ult use
-mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
+mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 24 stacks of melee crits buff
 	icon = "victor_witchhunter_activated_ability_guaranteed_crit_self_buff",
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
-	max_stacks = 12,
+	max_stacks = 24,
 })
-mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_provider", { -- provides the 20 stacks on ult
+mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_provider", { -- provides the 24 stacks on ult
 	buff_func = "add_buff_reff_buff_stack",
 	buff_to_add = "tb_fervency_crit_stacks",
-	amount_to_add = 12,
+	amount_to_add = 24,
 	event = "on_ability_activated",
 })
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_consumer", { -- consumes 1 stack per enemy hit
@@ -406,7 +406,7 @@ mod_api.update_talent("wh_captain", 6, 2, {
 		"tb_fervency_stack_consumer"
 	},
 })
-mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 10 seconds and the next 10 melee hits. No longer affects teammates and ranged attacks.")
+mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 12 seconds and the next 24 melee hits. No longer affects teammates and ranged attacks.")
 
 --[[
 	Unending Hunt
