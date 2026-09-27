@@ -6,10 +6,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		---
 		## Grail Knight
 		### Passive
-		**Bastion of Bretonnia**
-		- Still allows blocking Warpfire with a shield.
-		- Now also removes knockback from Warpfire Throwers, Ratling Gunners, Ungor Archer arrows, Stormfiends and the Deathrattler.
-
 		**Quests** (Adventure)
 		- The Grimoire and Tome quests can now roll on maps without Grimoires or Tomes.
 		- Health Regeneration quest: find a Grimoire, or the team restores 3000 health (healing, temporary health or regeneration).
@@ -19,7 +15,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		### Talents
 		**Virtue of Knightly Temper**
-		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 2 (from 4).
+		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
 		
 		**Virtue of the Penitent**
 		- Increased required kills as follows
@@ -37,7 +33,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Virtue of the Impetuous Knight**
 		- Increased buff duration to 25s (from 15s).
 		- Added 30% cooldown reduction.
-		- Killing an enemy with Blessed Blade now grants 90% ranged damage reduction for 25s (includes Ratling Gunners, Warpfire Throwers, Stormfiends, Deathrattler and Ungor Archers).
+		- Killing an enemy with Blessed Blade now also grants immunity to knockback from Warpfire Throwers, Ratling Gunners, Ungor Archer arrows, Stormfiends and the Deathrattler for 25s.
 
 		**Virtue of Confidence**
 		- Removed infinite damage cleave, but keep infinite stagger cleave.
@@ -52,20 +48,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 	Passive
 
 ]]
-
---[[
-	Bastion of Bretonnia
-]]
--- Keep power_block (shield-block Warpfire Thrower flames) and add vanilla no_ranged_knockback, which the game
--- already checks for Warpfire Thrower and Stormfiend/Deathrattler warpfire pushes, and for the impact push of
--- lightweight projectiles (Ratling Gunner, Deathrattler's guns, Ungor Archer arrows).
-mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_perk_power_block", {
-	perks = {
-		"power_block",
-		"no_ranged_knockback"
-	}
-})
-mod_api.insert_text("career_passive_desc_es_4d", "Immune to knockback from ranged projectiles and Warpfire. Can block Warpfire damage with shields. ")
 
 --[[
 	Quests (Adventure only - Weave, Versus and Chaos Wastes keep their own vanilla quest pools)
@@ -265,7 +247,7 @@ end)
 	Virtue of Knightly Temper
 ]]
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
-	damage_multiplier = 2 --4
+	damage_multiplier = 3 --4
 })
 mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 2 times the amount of damage of the Critical Strike. Half of 4 effect versus Lords and Monsters.")
 
@@ -311,7 +293,7 @@ mod_api.update_talent("es_questingknight", 6, 2, {
     buffs = {
         "tb_cd_grail",
 		"markus_questing_knight_ability_buff_on_kill",
-		"tb_grail_ranged_dr_on_kill"
+		"tb_grail_no_knockback_on_kill"
     }
 })
 -- Additional 30% cdr
@@ -320,49 +302,34 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_cd_grail", {
 	multiplier = -0.3,
 	max_stacks = 1
 })
--- 90% ranged damage reduction for 25s after killing an enemy with Blessed Blade
--- damage_taken_ranged covers projectile attacks (Ratling Gunner, Ungor Archer arrows)
-mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_ranged_dr", {
-	stat_buff = "damage_taken_ranged",
-	multiplier = -0.9,
+-- Ranged knockback immunity for 25s after killing an enemy with Blessed Blade.
+-- Vanilla no_ranged_knockback perk, which the game already checks for Warpfire Thrower and Stormfiend/Deathrattler
+-- warpfire pushes, and for the impact push of lightweight projectiles (Ratling Gunner, Deathrattler's guns, Ungor Archer arrows).
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback", {
+	perks = {
+		"no_ranged_knockback"
+	},
 	duration = 25,
 	max_stacks = 1,
 	refresh_durations = true,
 	icon = "markus_questing_knight_ability_buff_on_kill"
 })
 -- Applied on Blessed Blade kills, like the vanilla movement speed buff.
--- Goes through the networked add_buff proc, since the damage reduction has to exist on the server.
-mod_api.insert_proc_function("tb_grail_ranged_dr_on_blessed_blade_kill", function (owner_unit, buff, params)
+-- Goes through the networked add_buff proc so the perk exists on the server as well as the owner.
+mod_api.insert_proc_function("tb_grail_no_knockback_on_blessed_blade_kill", function (owner_unit, buff, params)
 	local killing_blow_table = params[1]
 
 	if killing_blow_table and killing_blow_table[DamageDataIndex.DAMAGE_SOURCE_NAME] == "markus_questingknight_career_skill_weapon" then
 		ProcFunctions.add_buff(owner_unit, buff, params)
 	end
 end)
-mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_ranged_dr_on_kill", {
-	buff_func = "tb_grail_ranged_dr_on_blessed_blade_kill",
-	buff_to_add = "tb_grail_ranged_dr",
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback_on_kill", {
+	buff_func = "tb_grail_no_knockback_on_blessed_blade_kill",
+	buff_to_add = "tb_grail_no_knockback",
 	event = "on_kill",
 	max_stacks = 1
 })
--- Warpfire (Warpfire Thrower, Stormfiend, Deathrattler) is dealt through DoT buffs with no attack type,
--- so damage_taken_ranged never sees it; reduce it here by the same amount.
-local GRAIL_RANGED_DR_DAMAGE_TYPES = {
-	warpfire_face = true,
-	warpfire_ground = true
-}
-mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, victim_units, damage_type, ...)
-	if GRAIL_RANGED_DR_DAMAGE_TYPES[damage_type] then
-		local buff_extension = ScriptUnit.has_extension(attacked_unit, "buff_system")
-
-		if buff_extension and buff_extension:has_buff_type("tb_grail_ranged_dr") then
-			current_damage = current_damage * (1 + TalentBuffTemplates.empire_soldier.tb_grail_ranged_dr.buffs[1].multiplier)
-		end
-	end
-
-	return func(current_damage, attacked_unit, attacker_unit, damage_source, victim_units, damage_type, ...)
-end)
-mod_api.insert_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade grants 35%% movement speed and 90%% damage reduction against ranged projectiles and Warpfire for 25 seconds. Reduces cooldown by 30%%.")
+mod_api.insert_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade grants 35%% movement speed and immunity to knockback from ranged projectiles and Warpfire for 25 seconds. Reduces cooldown by 30%%.")
 
 --[[
 	Virtue of Confidence

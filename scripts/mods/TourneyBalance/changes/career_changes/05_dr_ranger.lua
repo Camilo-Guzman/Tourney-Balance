@@ -39,7 +39,6 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		- Reduced damage reduction to 20% (from 30%).
 
 		**Firing Fury**
-		- Reload speed buff duration increased to 3s (from 2s)
 		- Also procs on picking up Survivalist pouches.
 
 		**Exhilarating Vapours**
@@ -291,10 +290,7 @@ mod:hook(SimpleInventoryExtension, "add_ammo_from_pickup", function (func, self,
 		buff_extension:add_buff("bardin_ranger_reload_speed_on_multi_hit_buff")
 	end
 end)
-mod_api.update_talent_buff_template("dwarf_ranger", "bardin_ranger_reload_speed_on_multi_hit_buff", {
-  duration = 3, -- 2
-})
-mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a Survivalist pouch increases Bardin's reload speed by 35.0%% for 3 seconds.")
+mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a Survivalist pouch increases Bardin's reload speed by 35.0%% for 2 seconds.")
 
 --[[
 	Parting Gift
