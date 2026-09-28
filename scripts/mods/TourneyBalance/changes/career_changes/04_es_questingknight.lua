@@ -19,6 +19,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Virtue of Heroism**
 		- Heavy attacks can no longer be interrupted.
+		- Charging a heavy attack past the point where it becomes available now adds up to 30% extra heavy attack damage (full bonus at 0.67s longer), on top of the flat 30%.
 
 		**Virtue of Knightly Temper**
 		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
@@ -307,7 +308,163 @@ mod_api.update_talent("es_questingknight", 2, 3, {
 		"tb_grail_uninterruptible_heavy"
 	}
 })
-mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%%. Heavy attacks can no longer be interrupted.")
+mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%% charging up to 300%%. Heavy attacks can no longer be interrupted.")
+
+-- Charge bonus, on top of the flat 30%: up to +30% heavy attack damage, scaling with how long the charge was held past
+-- the point where the heavy attack became available
+local HEROISM_CHARGE_BONUS_MAX = 2.7
+local HEROISM_EXTRA_CHARGE_TIME = 1.35
+local HEROISM_CHARGE_BUFF = "tb_grail_heroism_charge_damage"
+local HEROISM_FULL_CHARGE_POPUP_BUFF = "tb_grail_heroism_full_charge_ready"
+
+mod_api.insert_talent_buff_template("empire_soldier", HEROISM_CHARGE_BUFF, {
+	stat_buff = "increased_weapon_damage_heavy_attack",
+	variable_multiplier_max = HEROISM_CHARGE_BONUS_MAX
+})
+-- Center-screen popup + icon while the charge is full, like Waywatcher's Ricochet (local only, refreshed every frame)
+mod_api.insert_buff_template(HEROISM_FULL_CHARGE_POPUP_BUFF, {
+	max_stacks = 1,
+	duration = 0.5,
+	refresh_durations = true,
+	priority_buff = true,
+	icon = "markus_questing_knight_charged_attacks_increased_power",
+})
+
+-- owner_unit -> { start_t, action, has_talent, ready_time, show_popup, last_t, release_t, buff_id }, only filled for units whose
+-- melee charge runs on this machine
+local tb_heroism_charges = setmetatable({}, { __mode = "k" })
+
+local function tb_is_heavy_attack(sub_action)
+	local profile_name_left, profile_name_right = ActionUtils.get_damage_profile_name(sub_action)
+	local damage_profile = DamageProfileTemplates[profile_name_right or profile_name_left]
+
+	return damage_profile and damage_profile.charge_value == "heavy_attack"
+end
+
+-- Time into the charge at which releasing gives a heavy attack: the earliest release chain into a heavy (sweep or
+-- shield slam), scaled by attack speed the same way WeaponUnitExtension.is_chain_action_available scales it.
+-- The full bonus always needs HEROISM_EXTRA_CHARGE_TIME past this; weapons that release the heavy by themselves
+-- before that only get a partial bonus, by design (only weapons that can hold the charge indefinitely reach full).
+local function tb_heroism_heavy_ready_time(owner_unit, melee_start_action)
+	local weapon_template = WeaponUtils.get_weapon_template(melee_start_action.lookup_data.item_template_name)
+	local actions = weapon_template and weapon_template.actions
+	local ready_time
+
+	for _, chain_action in ipairs(melee_start_action.allowed_chain_actions or {}) do
+		if chain_action.input == "action_one_release" and chain_action.start_time then
+			local target_action = actions and actions[chain_action.action] and actions[chain_action.action][chain_action.sub_action]
+
+			if target_action and tb_is_heavy_attack(target_action) and (not ready_time or chain_action.start_time < ready_time) then
+				ready_time = chain_action.start_time
+			end
+		end
+	end
+
+	return ready_time and ready_time / ActionUtils.get_action_time_scale(owner_unit, melee_start_action)
+end
+
+local function tb_heroism_remove_charge_buff(owner_unit, charge_data)
+	local buff_id = charge_data.buff_id
+
+	if buff_id and buff_id ~= -1 then
+		Managers.state.entity:system("buff_system"):remove_buff_synced(owner_unit, buff_id)
+	end
+
+	charge_data.buff_id = nil
+end
+
+-- Remember the current charge and show the popup once it's full (runs every frame of a melee charge, through the
+-- dispatcher in TourneyBalance.lua). Talent and heavy-ready time are only looked up once per charge.
+mod:add_melee_start_post_update_function(function (self, dt, t, world)
+	local owner_unit = self.owner_unit
+	local charge_data = tb_heroism_charges[owner_unit]
+
+	if not charge_data then
+		charge_data = {}
+		tb_heroism_charges[owner_unit] = charge_data
+	end
+
+	local start_t = self.action_start_t
+	local current_action = self.current_action
+
+	if charge_data.start_t ~= start_t or charge_data.action ~= current_action then
+		local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
+		local has_talent = not not (talent_extension and talent_extension:has_talent("markus_questing_knight_charged_attacks_increased_power"))
+		local owner_player = Managers.player:owner(owner_unit)
+
+		charge_data.start_t = start_t
+		charge_data.action = current_action
+		charge_data.has_talent = has_talent
+		charge_data.ready_time = has_talent and tb_heroism_heavy_ready_time(owner_unit, current_action) or nil
+		charge_data.show_popup = has_talent and owner_player and owner_player.local_player and not owner_player.bot_player
+	end
+
+	charge_data.last_t = t
+
+	if charge_data.show_popup and charge_data.ready_time and t - start_t >= charge_data.ready_time + HEROISM_EXTRA_CHARGE_TIME then
+		local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+
+		if buff_extension then
+			buff_extension:add_buff(HEROISM_FULL_CHARGE_POPUP_BUFF)
+		end
+	end
+end)
+
+-- Heavy attack start: add the charge buff sized to how long the charge was held. Heavies are sweeps (ActionSweep) or
+-- shield bashes (ActionShieldSlam), so both are hooked.
+local function tb_heroism_heavy_start(self, new_action, t)
+	local owner_unit = self.owner_unit
+	local charge_data = tb_heroism_charges[owner_unit]
+
+	if not charge_data then
+		return
+	end
+
+	-- Dual wield heavies (weapon_action_hand "both", e.g. mace and sword) start a sweep on each hand in the same frame
+	-- (CharacterStateHelper: left, then right). The first hand handles the release, the second must keep its buff.
+	if charge_data.release_t == t then
+		return
+	end
+
+	charge_data.release_t = t
+
+	tb_heroism_remove_charge_buff(owner_unit, charge_data)
+
+	-- only an attack released straight out of a charge (not Blessed Blade, pushes or chained attacks)
+	local charged_last_t = charge_data.last_t
+
+	charge_data.last_t = nil
+
+	-- ready_time is only set when the owner has Heroism
+	local ready_time = charge_data.ready_time
+
+	if not charged_last_t or t - charged_last_t > 0.1 or not ready_time or not tb_is_heavy_attack(new_action) then
+		return
+	end
+
+	local charge_fraction = math.clamp((t - charge_data.start_t - ready_time) / HEROISM_EXTRA_CHARGE_TIME, 0, 1)
+
+	if charge_fraction <= 0 then
+		return
+	end
+
+	charge_data.buff_id = Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, HEROISM_CHARGE_BUFF, BuffSyncType.LocalAndServer, {
+		variable_value = charge_fraction
+	})
+end
+
+local function tb_heroism_heavy_finish(self)
+	local charge_data = tb_heroism_charges[self.owner_unit]
+
+	if charge_data then
+		tb_heroism_remove_charge_buff(self.owner_unit, charge_data)
+	end
+end
+
+mod:hook_safe(ActionSweep, "client_owner_start_action", tb_heroism_heavy_start)
+mod:hook_safe(ActionSweep, "finish", tb_heroism_heavy_finish)
+mod:hook_safe(ActionShieldSlam, "client_owner_start_action", tb_heroism_heavy_start)
+mod:hook_safe(ActionShieldSlam, "finish", tb_heroism_heavy_finish)
 
 --[[
 	Virtue of the Penitent

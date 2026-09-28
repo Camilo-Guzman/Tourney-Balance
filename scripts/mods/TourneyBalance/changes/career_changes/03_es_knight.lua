@@ -516,14 +516,14 @@ mod_api.update_talent("es_knight", 2, 3, { -- update description
 --[[
 	It's Hero Time
 ]]
--- 15s ICD nerf
+-- 10s ICD nerf
 mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
 })
 mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
  	is_cooldown = true,
- 	duration = 15,
+ 	duration = 10,
  	duration_end_func = "add_buff_local",
  	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
 })
@@ -554,7 +554,7 @@ mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, bu
 	
 	buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
 end)
-mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 15 second cooldown.")
+mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 10 second cooldown.")
 
 -- Fix Hero Time not proccing if ally already disabled
 mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
