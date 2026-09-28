@@ -32,7 +32,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Oblivious to Pain**
 		- Damage reduction now also applies to Specials.
-		- Each Trophy Hunter stack additionally reduces damage taken by 5%.
+		- Each Trophy Hunter stack additionally reduces damage taken by 3%.
 
 		**Barge**
 		- Stagger strength on dodge increased to medium_push (from light_push).
@@ -313,7 +313,7 @@ mod_api.update_talent("dr_slayer", 5, 1, {
 mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
 	stat_buff = "damage_taken",
-	multiplier = -0.05,
+	multiplier = -0.03,
 	max_stacks = 3,
 	duration = 2,
 	refresh_durations = true,

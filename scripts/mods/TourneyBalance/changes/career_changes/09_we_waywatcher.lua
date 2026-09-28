@@ -13,7 +13,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Amaranthe**
-		- Additionally regen 3 ammo while below 50% ammo every tick.
+		- Additionally regen 2 ammo while below 50% ammo every tick.
 		- Heath regen no longer replaces temp health.
 
 		### Talents
@@ -198,7 +198,7 @@ end
 	Spirit Arrows
 	Rejuvenating Locus
 ]]
-mod_api.insert_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health/ammo when below 50.0% health/ammo every 10 seconds. This does not replace temp health.")
+mod_api.insert_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health when below 50.0% health and 2 ammo every 10 seconds. This does not replace temp health.")
 mod_api.insert_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 100%%. Health regeneration caps at 100%%.")
 mod_api.insert_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe reduces the cooldown of Trueflight Volley by 10.0%%. No longer restores health.")
 mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit, buff, params)
@@ -234,10 +234,10 @@ mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit
 			local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
 			local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
 
-			if ammo_extension and ammo_extension:total_ammo_fraction() < regen_cap then
-				local ammo_amount = 3
-				ammo_extension:add_ammo_to_reserve(ammo_amount)
-			end
+			-- if ammo_extension and ammo_extension:total_ammo_fraction() < regen_cap then
+			local ammo_amount = 2
+			ammo_extension:add_ammo_to_reserve(ammo_amount)
+			-- end
 		end
 
 
@@ -416,7 +416,7 @@ end)
 --[[
 	Richochet
 ]]
-mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Staying at full charge for 1 second gives trueflight to ricochets. Requires 10.0%% cooldown and disables career ability for 10 seconds.")
+mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Staying at full charge for 0.5 second gives trueflight to ricochets. Requires 10.0%% cooldown and disables career ability for 10 seconds.")
 
 -- while this debuff is up the ultimate can't be activated at all
 mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
@@ -438,7 +438,7 @@ local tb_ricochet_pending_held_1s = false
 -- Center-screen popup + persistent icon while trueflight is imbued
 mod_api.insert_buff_template("tb_ricochet_charged_shot_ready", {
 	max_stacks = 1,
-	duration = 0.5,
+	duration = 0.5, -- refreshed every frame while charged, so it vanishes right after release
 	refresh_durations = true,
 	priority_buff = true,
 	icon = "kerillian_waywatcher_projectile_ricochet",

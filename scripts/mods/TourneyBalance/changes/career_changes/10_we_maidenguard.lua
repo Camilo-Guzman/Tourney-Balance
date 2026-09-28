@@ -14,9 +14,6 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 		- Increased hitbox width/depth ult to 2/3 (from 1.5/0.4).
 
 		### Passives
-		**Dance of Seasons**
-		- Added effect: Hitting enemies taunts them for 1 seconds. Does not apply to Lords and Bosses.
-
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
 		- Healing received beyond max health is given as THP, split between allies in the aura that are not at full health.
@@ -179,7 +176,7 @@ end)
     Renewal
 ]]
 -- Replace the vanilla Renewal perk text (career_passive_name_we_2b) instead of adding a second Renewal entry
-mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received and shares overflowing healing as temporary health to injured teammates.")
+mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received and shares overflowing healing as temporary health divided to injured teammates.")
 mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
 	range = 20 -- 5
 })
@@ -284,51 +281,6 @@ mod:add_player_add_heal_wrapper(function (func, self, healer_unit, heal_amount, 
 
     return result
 end)
-
---[[
-    Dance of Season
-    + 1s taunt on hit
-]]
-mod_api.insert_proc_function("tb_maidenguard_taunt_on_hit", function (owner_unit, buff, params)
-    if not is_server() then
-        return
-    end
-
-    local hit_unit = params[1]
-
-    if not hit_unit or not HEALTH_ALIVE[hit_unit] then
-        return
-    end
-
-    local ai_extension = ScriptUnit.has_extension(hit_unit, "ai_system")
-
-    if not ai_extension then
-        return
-    end
-
-    local breed = ai_extension:breed()
-
-    if breed.ignore_taunts or breed.boss then
-        return
-    end
-
-    local blackboard = ai_extension:blackboard()
-    local t = Managers.time:time("game")
-
-    blackboard.taunt_unit = owner_unit
-    blackboard.taunt_end_time = t + buff.template.taunt_duration
-    blackboard.target_unit = owner_unit
-    blackboard.target_unit_found_time = t
-end)
-mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_maidenguard_taunt_on_hit", {
-    buff_func = "tb_maidenguard_taunt_on_hit",
-    event = "on_hit",
-    taunt_duration = 1,
-})
-mod_api.insert_career_passives("we_2", {
-    "tb_kerillian_maidenguard_taunt_on_hit",
-})
-mod_api.insert_text("career_passive_desc_we_2a_2", "Increased dodge distance by 15%. Hitting enemies taunts them for 1 seconds (excludes Lords and Bosses).")
 
 --[[
 

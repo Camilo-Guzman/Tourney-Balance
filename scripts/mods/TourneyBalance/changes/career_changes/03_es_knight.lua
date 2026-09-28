@@ -11,7 +11,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		### Passives
 		**Protective Presence**
 		- Aura radius increased to 20 (from 5).
-		- Aura damage reduction reduced to 10% (from 15%).
 
 		**CDR on Damage Taken**
 		- Reduced ult cooldown gain on damage taken to 0.35 (from 0.5).
@@ -19,6 +18,9 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		### Talents
 		**Staggering Force**
 		- Stagger power decreased to 20% (from 35%).
+
+		**That's Bloody Teamwork!**
+		- Grants 3.33% damage reduction per nearby ally (up to 3).
 
 		**Have At Thee!**
 		- Also procs when Mainstay marks an elite with a stagger count, even if the hit doesn't actually stagger it.
@@ -93,9 +95,9 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_passive", {
 })
 -- Nerf of aura damage reduction - Repeat for all lvl 20 talents, because game creates snapshot of original values at load time
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_passive_defence_aura", {
-	multiplier = -0.1 -- -0.15
+	multiplier = -0.15
 })
-mod_api.insert_text("career_passive_desc_es_2a_2", "Aura that reduces damage taken by 10%")
+mod_api.insert_text("career_passive_desc_es_2a_2", "Aura that reduces damage taken by 15%")
 
 --[[
 	Rock of Reikland - global passive
@@ -453,6 +455,9 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_take
 	chunk_size = 1,
 	max_stacks = 3,
 	remove_buff_func = "remove_party_buff_stacks"
+})
+mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
+	multiplier = -0.0333
 })
 
 --[[

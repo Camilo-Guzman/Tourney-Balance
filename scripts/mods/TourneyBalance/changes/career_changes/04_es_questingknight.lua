@@ -324,7 +324,7 @@ mod_api.insert_talent_buff_template("empire_soldier", HEROISM_CHARGE_BUFF, {
 -- Center-screen popup + icon while the charge is full, like Waywatcher's Ricochet (local only, refreshed every frame)
 mod_api.insert_buff_template(HEROISM_FULL_CHARGE_POPUP_BUFF, {
 	max_stacks = 1,
-	duration = 0.5,
+	duration = 0.5, -- refreshed every frame while charged, so it vanishes right after release
 	refresh_durations = true,
 	priority_buff = true,
 	icon = "markus_questing_knight_charged_attacks_increased_power",
