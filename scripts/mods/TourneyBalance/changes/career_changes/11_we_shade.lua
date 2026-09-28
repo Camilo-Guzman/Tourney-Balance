@@ -28,15 +28,15 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- All attacks apply bleed (WHC Flense, 3s + 3 stacks). Weapons keep their own poison, bleed or burn alongside it.
 
 		**Chain Killer**
-		- Any headshot also grants the backstab damage bonus.
+		- Melee headshots also grant the backstab damage bonus.
 		- Other attacks no longer remove the bonus.
 
 		**Focused Slaying**
-		- Headshot kills also grant the cooldown regeneration bonus.
+		- Melee headshot kills also grant the cooldown regeneration bonus.
 
 		**Bloodfetcher**
 		- Changed ammo refund to 5% (from 1 ammo).
-		- Headshots (melee or ranged) also refund ammo, sharing the 2s cooldown.
+		- Melee headshots also refund ammo, sharing the 2s cooldown.
 
 		**Blur** (moved from the passive, replaces Blood Drinker, which moved to the passive)
 		- Parrying an attack and quickly dodging grants Kerillian stealth for a short period.
@@ -276,8 +276,8 @@ mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_en
 ]]
 -- Same headshot check as Ruthless Precision (01_damage_calc_changes.lua): the breed's hit zone type, which covers
 -- head and neck
-local function tb_shade_is_headshot(breed, hit_zone_name)
-	return breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
+local function tb_shade_is_melee_headshot(breed, hit_zone_name, attack_type)
+	return (attack_type == "light_attack" or attack_type == "heavy_attack") and breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
 end
 
 --[[
@@ -298,7 +298,7 @@ mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", fu
 	local hit_unit_direction = Quaternion.forward(Unit.local_rotation(hit_unit, 0))
 	local hit_angle = Vector3.dot(hit_unit_direction, owner_to_hit_dir)
 	local behind_target = hit_angle >= 0.55 and hit_angle <= 1
-	local headshot = tb_shade_is_headshot(Unit.get_data(hit_unit, "breed"), params[3])
+	local headshot = tb_shade_is_melee_headshot(Unit.get_data(hit_unit, "breed"), params[3], params[2])
 	local attack_type = params[2]
 	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
 
@@ -314,12 +314,12 @@ mod_api.update_talent("we_shade", 4, 1, {
 	description = "kerillian_shade_charged_backstabs_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs and headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
+mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
 
 --[[
 	Focused Slaying
 ]]
--- Copy of vanilla kerillian_shade_cooldown_regen_on_backstab_kill: also triggers on headshot kills
+-- Copy of vanilla kerillian_shade_cooldown_regen_on_backstab_kill: also triggers on melee headshot kills
 mod_api.insert_proc_function("tb_shade_cooldown_regen_on_backstab_or_headshot_kill", function (owner_unit, buff, params)
 	local player = Managers.player:owner(owner_unit)
 
@@ -331,7 +331,7 @@ mod_api.insert_proc_function("tb_shade_cooldown_regen_on_backstab_or_headshot_ki
 	local breed_killed = params[2]
 	local backstab_multiplier = killing_blow_table[DamageDataIndex.BACKSTAB_MULTIPLIER]
 	local backstab = backstab_multiplier and backstab_multiplier > 1
-	local headshot = tb_shade_is_headshot(breed_killed, killing_blow_table[DamageDataIndex.HIT_ZONE])
+	local headshot = tb_shade_is_melee_headshot(breed_killed, killing_blow_table[DamageDataIndex.HIT_ZONE], killing_blow_table[DamageDataIndex.ATTACK_TYPE])
 
 	if (backstab or headshot) and (player.local_player or Managers.state.network.is_server and player.bot_player) then
 		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(buff.template.buff_to_add)
@@ -344,7 +344,7 @@ mod_api.update_talent("we_shade", 4, 2, {
 	description = "kerillian_shade_backstabs_cooldown_regeneration_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a backstab or a headshot increases cooldown regeneration by 100% for 3 seconds.")
+mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a backstab or a melee headshot increases cooldown regeneration by 100% for 3 seconds.")
 
 --[[
 	Bloodfletcher
@@ -391,11 +391,11 @@ end
 mod_api.insert_proc_function("tb_ammo_fraction_gain_on_backstab", function (owner_unit, buff, params)
 	tb_shade_ammo_fraction_gain(owner_unit, buff)
 end)
--- Headshots (melee or ranged) also refund ammo, sharing the backstab refund's cooldown
+-- Melee headshots also refund ammo, sharing the backstab refund's cooldown
 mod_api.insert_proc_function("tb_ammo_fraction_gain_on_headshot", function (owner_unit, buff, params)
 	local hit_unit = params[1]
 
-	if tb_shade_is_headshot(Unit.get_data(hit_unit, "breed"), params[3]) then
+	if tb_shade_is_melee_headshot(Unit.get_data(hit_unit, "breed"), params[3], params[2]) then
 		tb_shade_ammo_fraction_gain(owner_unit, buff)
 	end
 end)
@@ -412,7 +412,7 @@ mod_api.update_talent("we_shade", 4, 3, {
 		"tb_kerillian_shade_headshots_replenishes_ammunition",
 	},
 })
-mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Backstabs and headshots return 5% of maximum ammunition. 2 second cooldown.")
+mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Backstabs and melee headshots return 5% of maximum ammunition. 2 second cooldown.")
 
 --[[
 	Blur (moved from the passive into the talent tree, replaces Blood Drinker, whose effect moved to the passive)
