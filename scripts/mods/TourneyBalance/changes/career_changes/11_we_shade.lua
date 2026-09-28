@@ -169,7 +169,7 @@ mod_api.insert_career_passives("we_1", {
 	"tb_kerillian_shade_grim_fortune_parry",
 	"tb_kerillian_shade_grim_fortune_crit_consumer",
 })
-mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack graants a guaranteed critical strike lasting 3 seconds.")
+mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
 mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 
 --[[
