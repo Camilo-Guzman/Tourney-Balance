@@ -120,7 +120,11 @@ mod_api.insert_proc_function("bardin_ranger_scavenge_proc", function (owner_unit
 		end
 	end
 end)
-mod_api.insert_text("career_passive_desc_dr_3a_2", "Whenever a special is killed, Bardin will drop an ammo pickup, with a 5% chance also an engineer bomb. This pickup restores 10% of the player's max ammunition, rounded down.")
+-- Engineer bomb pickup prompt reuses the frag bomb's text ("Bomb") in vanilla
+-- AllPickups holds the same table reference, so the interaction prompt picks this up
+Pickups.grenades.engineer_grenade_t1.hud_description = "tb_engineer_grenade_pickup"
+mod_api.insert_text("tb_engineer_grenade_pickup", "Engineer Bomb")
+mod_api.insert_text("career_passive_desc_dr_3a_2","Whenever a special is killed, Bardin will drop an ammo pickup, with a 5% chance also an engineer bomb. This pickup restores 10% of the player's max ammunition, rounded down.")
 mod_api.insert_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 6%% chance to drop a potion instead of a Survivalist cache.")
 
 

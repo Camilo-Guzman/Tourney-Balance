@@ -31,7 +31,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Changed to 67% cooldown reduction per Trophy Hunter stack (300% only at max stacks).
 
 		**Oblivious to Pain**
-		- Damage reduction now also applies to Specials.
 		- Each Trophy Hunter stack additionally reduces damage taken by 3%.
 
 		**Barge**
@@ -299,7 +298,7 @@ end)
 --[[
 	Oblivious to Pain
 ]]
--- Damage cap now also covers specials (02_damage_taken_changes.lua), the cap is read server side
+-- Keeps the vanilla boss/elite damage cap, which is read server side
 mod_api.update_talent("dr_slayer", 5, 1, {
 	description = "bardin_slayer_damage_taken_capped_desc_2",
 	description_values = {},
@@ -308,7 +307,7 @@ mod_api.update_talent("dr_slayer", 5, 1, {
 		"bardin_slayer_damage_taken_capped",
 	},
 })
--- 5% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
+-- 3% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
 -- Separate High Tally template since max_stacks lives on the sub-buff
 mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
@@ -322,12 +321,12 @@ mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_
 mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction_high_tally", {
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
 	stat_buff = "damage_taken",
-	multiplier = -0.05,
+	multiplier = -0.03,
 	max_stacks = 5,
 	duration = 2,
 	refresh_durations = true,
 })
-mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses, Elites and Specials is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 5%.")
+mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses and Elites is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 3%.")
 
 --[[
 	Dawi Drop
