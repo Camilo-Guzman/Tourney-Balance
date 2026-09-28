@@ -432,7 +432,7 @@ mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
 })
 
 -- Ricochet conversion additionally requires the shot to have been held (charged) for >= 1 real second before firing.
-local TB_RICOCHET_HOLD_TIME_REQUIRED = 1
+local TB_RICOCHET_HOLD_TIME_REQUIRED = 0.5
 local tb_ricochet_pending_held_1s = false
 
 -- Center-screen popup + persistent icon while trueflight is imbued

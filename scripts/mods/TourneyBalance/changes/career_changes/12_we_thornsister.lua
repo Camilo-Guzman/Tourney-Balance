@@ -18,7 +18,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		### Talents
 		**Surge of Malice**
 		- Now grants 10% Attack Speed passively.
-		- Lowered required health threshold to 80% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
+		- Lowered required health threshold to 70% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
 
 		**Briar's Malice**
 		- Increased crit stacks granted on ability use to 5 (from 2).
@@ -77,7 +77,7 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_passive_
 	Surge of Malice
 ]]
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_attack_speed_on_full", {
-	health_threshold = 0.8, -- 0.9
+	health_threshold = 0.7, -- 0.9
 })
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_attack_speed_on_full_buff", {
 	multiplier = 0.10, -- 0.15

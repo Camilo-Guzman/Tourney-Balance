@@ -43,7 +43,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Increased parry window to 0.75s (from 0.5s).
 
 		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
-		- Parrying an attack makes all melee attacks count as backstabs for 5s.
+		- Parrying an attack makes all melee attacks count as backstabs for 5s within the normal 0.5s parry window, scaling down to 3s at the end of Shade's extended 0.75s window.
 
 		**Ruthless Precision** (new, replaces Gladerunner)
 		- Melee headshots count as backstabs.
@@ -431,15 +431,54 @@ mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attac
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
 ]]
--- Guaranteed backstabs for 5 seconds after a (long) parry, same parry proc as Grim Fortune.
--- on_timed_block_long and guaranteed_backstab (action_sweep) are both owning-client only
+-- Guaranteed backstabs after a parry: 5 seconds within the normal 0.5s parry window, then scaling down linearly to
+-- 3 seconds at the end of Shade's longer 0.75s window. on_timed_block_long fires for both; the 0.5s window is the
+-- same check the blocked_attack override (02_career_changes.lua) uses for on_timed_block. status.timed_block and
+-- status.timed_block_long hold when each window ends. on_timed_block_long and guaranteed_backstab (action_sweep) are
+-- both owning-client only
+local tb_khaines_counter_params = {}
+mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owner_unit, buff, params)
+	if not ALIVE[owner_unit] then
+		return
+	end
+
+	local template = buff.template
+	local t = Managers.time:time("game")
+	local status_extension = ScriptUnit.extension(owner_unit, "status_system")
+	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+	local short_window_end = status_extension.timed_block
+	local long_window_end = status_extension.timed_block_long
+	local short_window = short_window_end and (t < short_window_end or buff_extension:has_buff_type("power_up_deus_block_procs_parry_exotic"))
+	local duration = template.short_window_duration
+
+	if not short_window and short_window_end and long_window_end and long_window_end > short_window_end then
+		local progress = math.clamp((t - short_window_end) / (long_window_end - short_window_end), 0, 1)
+
+		duration = math.lerp(template.short_window_duration, template.long_window_duration, progress)
+	end
+
+	-- Don't cut a longer remaining buff short (refreshing applies the new duration)
+	local existing_buff = buff_extension:get_buff_type(template.buff_to_add)
+
+	if existing_buff and existing_buff.end_time and existing_buff.end_time - t >= duration then
+		return
+	end
+
+	table.clear(tb_khaines_counter_params)
+
+	tb_khaines_counter_params.external_optional_duration = duration
+
+	buff_extension:add_buff(template.buff_to_add, tb_khaines_counter_params)
+end)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_counter_parry", {
-	buff_func = "add_buff",
+	buff_func = "tb_shade_khaines_counter_on_parry",
 	buff_to_add = "tb_kerillian_shade_khaines_counter_backstab_buff",
 	event = "on_timed_block_long",
+	short_window_duration = 5, -- within the 0.5s window
+	long_window_duration = 3, -- at the end of the 0.75s window
 })
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_counter_backstab_buff", {
-	duration = 5,
+	duration = 5, -- overridden per parry by tb_kerillian_shade_khaines_counter_parry
 	max_stacks = 1,
 	refresh_durations = true,
 	icon = "kerillian_shade_movement_speed_on_critical_hit", -- Spring-Heeled Assassin's icon marks backstabs
@@ -454,7 +493,7 @@ mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_khaines_counter", {
 		"tb_kerillian_shade_khaines_counter_parry",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes all melee attacks count as backstabs for 5 seconds.")
+mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes all melee attacks count as backstabs for 5 seconds, down to 3 seconds the later the parry.")
 
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)

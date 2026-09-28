@@ -13,15 +13,16 @@ local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
 
 		### Passives
 		**Fiery Faith**
-		- Healing and temporary health gained beyond max health is stored as Overhealth for the whole team (up to 100).
-		- Damage taken by Zealot or his allies is absorbed by Overhealth first. The remaining amount is shown as a buff icon for all players.
-		- Damage absorbed by Overhealth still charges the hit player's career ability at full effectiveness, as if the health had been lost.
+		- Each stack now also grants 5% melee damage.
+		- Overhealing converts into max 50 Overhealth.
+		- Damage taken by Zealot or his allies is absorbed by Overhealth first.
+        - Can hit trade with it.
 
 		**Ironheart**
 		- Fixed invincibility not proccing on client.
 
 		**Chasten (new)**
-		- Increases attack speed by 5%.
+		- Increases attack speed by 10%.
 		- Increases healing received by 30%.
 
 		### Talents
@@ -104,7 +105,7 @@ end)
 -- THP Zealot gains beyond his max health (e.g. while at full health) is stored in a team-wide overhealth pool
 -- (max 100). Damage taken by any hero is absorbed by the pool first. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
-local OVERHEALTH_MAX = 100
+local OVERHEALTH_MAX = 50
 local OVERHEALTH_PASSIVE_BUFF = "victor_zealot_passive_increased_damage" -- Fiery Faith parent buff
 local OVERHEALTH_ICON_BUFF = "tb_victor_zealot_overhealth_icon"
 local OVERHEALTH_NETWORK_ID = "tb_zealot_overhealth"
@@ -117,7 +118,23 @@ local overhealth_display = 0 -- every peer, math.ceil of the pool
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre overheals up to 100 Overhealth. Damage taken by the team is absorbed by Overhealth first.")
+-- Each Fiery Faith stack also grants 5% melee damage. The second sub-buff needs its own name so
+-- num_buff_type (counted by the first sub-buff's name) and max_stacks keep working per stack.
+mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_passive_damage", {
+    {
+        icon = "victor_zealot_passive",
+        max_stacks = 6,
+        stat_buff = "power_level",
+        multiplier = 0.05,
+    },
+    {
+        name = "tb_victor_zealot_passive_melee_damage",
+        max_stacks = 6,
+        stat_buff = "increased_weapon_damage_melee",
+        multiplier = 0.05,
+    },
+})
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power and 5% melee damage for every 25 health missing. Max Stacks 6. Saltzpyre overheals up to 100 Overhealth. Damage taken by the team is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
@@ -304,10 +321,10 @@ end)
 --[[
     Chasten - listed
 ]]
--- 5% attack speed (moved from Castigate)
+-- 10% attack speed (moved from Castigate)
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_chasten_attack_speed", {
     stat_buff = "attack_speed",
-    multiplier = 0.05,
+    multiplier = 0.1, -- 0.05
 })
 -- 30% healing received (moved from Holy Fortitude)
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_chasten_healing_received", {

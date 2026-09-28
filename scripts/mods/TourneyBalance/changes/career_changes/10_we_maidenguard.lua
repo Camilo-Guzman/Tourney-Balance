@@ -19,6 +19,7 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
+		- Healing received beyond max health is given as THP, split between allies in the aura that are not at full health.
 
 		**Oak Guard (listed)**
 		- (Added to list) Increases maximum stamina by 1.
@@ -178,10 +179,111 @@ end)
     Renewal
 ]]
 -- Replace the vanilla Renewal perk text (career_passive_name_we_2b) instead of adding a second Renewal entry
-mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Increase Kerillian's healing received by 40%.")
+mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received by 40% and shares overflowing healing as temporary health to injured teammates.")
 mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
 	range = 20 -- 5
 })
+
+-- Any healing (THP or permanent) Handmaiden gains beyond her max health is divided evenly between the alive allies inside the Renewal aura
+-- that are not at full health, and given to them as THP. Registered through the add_heal dispatcher in TourneyBalance.lua.
+local RENEWAL_AURA_BUFF = "kerillian_maidenguard_passive_stamina_regen_aura"
+local RENEWAL_SHARE_HEAL_TYPE = "heal_from_proc"
+local renewal_sharing = false -- guards against the share heals re-entering this wrapper
+local renewal_recipients = {}
+
+local function get_renewal_aura_range()
+    local template = BuffTemplates[RENEWAL_AURA_BUFF]
+    local sub_buff = template and template.buffs and template.buffs[1]
+
+    return (sub_buff and sub_buff.range) or 20
+end
+
+mod:add_player_add_heal_wrapper(function (func, self, healer_unit, heal_amount, heal_source_name, heal_type)
+    local unit = self.unit
+    local game = self.game
+    local game_object_id = self.health_game_object_id
+    local status_extension = self.status_extension
+    local overflow = 0
+
+    if self.is_server and not renewal_sharing and game and game_object_id and heal_amount > 0
+        and not status_extension:is_knocked_down() then
+        local career_extension = ScriptUnit.has_extension(unit, "career_system")
+
+        if career_extension and career_extension:career_name() == "we_maidenguard" then
+            local current_health = GameSession.game_object_field(game, game_object_id, "current_health")
+            local current_temporary_health = GameSession.game_object_field(game, game_object_id, "current_temporary_health")
+            local max_health = GameSession.game_object_field(game, game_object_id, "max_health")
+
+            if status_extension:is_permanent_heal(heal_type) then
+                -- Permanent heals convert THP into permanent health first, so only healing past max permanent health is wasted
+                overflow = math.clamp(current_health + heal_amount - max_health, 0, heal_amount)
+            else
+                overflow = math.clamp(current_health + current_temporary_health + heal_amount - max_health, 0, heal_amount)
+            end
+        end
+    end
+
+    local result = func(self, healer_unit, heal_amount, heal_source_name, heal_type)
+
+    if overflow <= 0 then
+        return result
+    end
+
+    local side = Managers.state.side.side_by_unit[unit]
+    local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+
+    if not player_and_bot_units then
+        return result
+    end
+
+    local range = get_renewal_aura_range()
+    local range_sq = range * range
+    local position = POSITION_LOOKUP[unit]
+    local num_recipients = 0
+
+    table.clear(renewal_recipients)
+
+    -- Recipients: alive, standing allies in the aura that are not at full health (Handmaiden is full, so she never qualifies)
+    for i = 1, #player_and_bot_units do
+        local ally_unit = player_and_bot_units[i]
+
+        if ally_unit ~= unit and HEALTH_ALIVE[ally_unit] then
+            local ally_position = POSITION_LOOKUP[ally_unit]
+            local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
+            local ally_health_extension = ScriptUnit.has_extension(ally_unit, "health_system")
+            local ally_game_object_id = ally_health_extension and ally_health_extension.health_game_object_id
+
+            if ally_position and position and ally_game_object_id and Vector3.distance_squared(position, ally_position) <= range_sq
+                and ally_status_extension and not ally_status_extension:is_knocked_down() then
+                local ally_current_health = GameSession.game_object_field(game, ally_game_object_id, "current_health")
+                local ally_current_temporary_health = GameSession.game_object_field(game, ally_game_object_id, "current_temporary_health")
+                local ally_max_health = GameSession.game_object_field(game, ally_game_object_id, "max_health")
+
+                if ally_current_health + ally_current_temporary_health < ally_max_health then
+                    num_recipients = num_recipients + 1
+                    renewal_recipients[num_recipients] = ally_health_extension
+                end
+            end
+        end
+    end
+
+    if num_recipients == 0 then
+        return result
+    end
+
+    local share = overflow / num_recipients
+
+    renewal_sharing = true
+
+    for i = 1, num_recipients do
+        renewal_recipients[i]:add_heal(unit, share, nil, RENEWAL_SHARE_HEAL_TYPE)
+    end
+
+    renewal_sharing = false
+    table.clear(renewal_recipients)
+
+    return result
+end)
 
 --[[
     Dance of Season

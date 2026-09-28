@@ -247,7 +247,7 @@ end)
 	Virtue of Knightly Temper
 ]]
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
-	damage_multiplier = 3 --4
+	damage_multiplier = 2 --4
 })
 mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 2 times the amount of damage of the Critical Strike. Half of 4 effect versus Lords and Monsters.")
 

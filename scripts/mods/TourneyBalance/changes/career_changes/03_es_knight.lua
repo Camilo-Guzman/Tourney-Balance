@@ -39,8 +39,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Press weapon_inspect while blocking to cycle between modes and team mates.
 
 		**It's Hero Time**
-		- Added a 15 second internal cooldown on the refund.
-		- No longer refunds if the ultimate is already fully charged.
+		- Reduced the refund to 50% of cooldown (from 100%).
 		
 		**Inspiring Blow**
 		- Now only affects the Foot Knight himself (no longer nearby allies).
@@ -521,45 +520,45 @@ mod_api.update_talent("es_knight", 2, 3, { -- update description
 --[[
 	It's Hero Time
 ]]
--- 15s ICD nerf
-mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
-	icon = "markus_knight_movement_speed_on_incapacitated_allies",
-})
-mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
-	icon = "markus_knight_movement_speed_on_incapacitated_allies",
-	is_cooldown = true,
-	duration = 15,
-	duration_end_func = "add_buff_local",
-	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
-})
+-- 15s ICD nerf (disabled in favour of 50% refund)
+-- mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
+-- 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
+-- })
+-- mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
+-- 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
+-- 	is_cooldown = true,
+-- 	duration = 15,
+-- 	duration_end_func = "add_buff_local",
+-- 	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
+-- })
 mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, buff, params)
 	if not Unit.alive(player_unit) then
 		return
 	end
 
-	local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
-
-	if not buff_extension or buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
-		return
-	end
+	-- local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
+	--
+	-- if not buff_extension or buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
+	-- 	return
+	-- end
 
 	local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
 
-	if not career_extension or career_extension:current_ability_cooldown(1) == 0 then
+	if not career_extension then -- or career_extension:current_ability_cooldown(1) == 0 then
 		return
 	end
 
-	career_extension:reduce_activated_ability_cooldown_percent(1) -- 0.7
+	career_extension:reduce_activated_ability_cooldown_percent(0.5) -- 1
 
-	local ready_buff = buff_extension:get_buff_type("tb_markus_knight_hero_time_ready_buff")
-
-	if ready_buff then
-		buff_extension:remove_buff(ready_buff.id)
-	end
-
-	buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
+	-- local ready_buff = buff_extension:get_buff_type("tb_markus_knight_hero_time_ready_buff")
+	--
+	-- if ready_buff then
+	-- 	buff_extension:remove_buff(ready_buff.id)
+	-- end
+	--
+	-- buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
 end)
-mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 100% of cooldown upon allied incapacitation, unless the ultimate is already fully charged. 15 second internal cooldown.")
+mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 50% cooldown on Valiant Charge when an ally is incapacitated.")
 
 -- Fix Hero Time not proccing if ally already disabled
 mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
@@ -606,10 +605,10 @@ mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", fu
 
 	buff.disabled_allies = disabled_allies
 
-	-- It's Hero Time: show the "ready" icon
-	if not buff_extension:has_buff_type("tb_markus_knight_hero_time_ready_buff") and not buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
-		buff_system:add_buff(owner_unit, "tb_markus_knight_hero_time_ready_buff", owner_unit, true)
-	end
+	-- It's Hero Time: show the "ready" icon (disabled along with the ICD)
+	-- if not buff_extension:has_buff_type("tb_markus_knight_hero_time_ready_buff") and not buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
+	-- 	buff_system:add_buff(owner_unit, "tb_markus_knight_hero_time_ready_buff", owner_unit, true)
+	-- end
 end)
 
 --[[
