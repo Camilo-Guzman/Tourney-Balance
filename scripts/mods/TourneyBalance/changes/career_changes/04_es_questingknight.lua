@@ -14,6 +14,12 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Cooldown Regeneration reward increased to 20% (from 10%), and 30% with improved rewards (from 15%).
 
 		### Talents
+		**Virtue of the Ideal**
+		- Increased power per stack to 10% (from 8%).
+
+		**Virtue of Heroism**
+		- Heavy attacks can no longer be interrupted.
+
 		**Virtue of Knightly Temper**
 		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
 		
@@ -30,10 +36,17 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		| **Cataclysm 2** | 400 | 100 |
 		| **Cataclysm 3** | 500 | 100 |
 
+		**Virtue of Stoicism**
+		- Now regenerates 25% of damage taken as temporary health after 5s, and another 25% after 7s (from 50% after 5s).
+
+		**Virtue of the Joust**
+		- Removes the movement penalty from melee weapons (attacking, charging heavy attacks and blocking).
+
 		**Virtue of the Impetuous Knight**
+		- Buff is now granted on using Blessed Blade (from on killing an enemy with Blessed Blade).
 		- Increased buff duration to 25s (from 15s).
 		- Added 30% cooldown reduction.
-		- Killing an enemy with Blessed Blade now also grants immunity to knockback from Warpfire Throwers, Ratling Gunners, Ungor Archer arrows, Stormfiends and the Deathrattler for 25s.
+		- The buff now also grants immunity to knockback from Warpfire Throwers, Ratling Gunners, Ungor Archer arrows, Stormfiends and the Deathrattler.
 
 		**Virtue of Confidence**
 		- Removed infinite damage cleave, but keep infinite stagger cleave.
@@ -244,6 +257,48 @@ end)
 ]]
 
 --[[
+	Virtue of the Ideal
+]]
+-- 10% power per stack (from 8%)
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_kills_buff_power_stacking_buff", {
+	multiplier = 0.1 --0.08
+})
+mod_api.update_talent("es_questingknight", 2, 1, {
+	description_values = { -- update description
+		{
+			value_type = "percent",
+			value = 0.1, -- buff_tweak_data.markus_questing_knight_kills_buff_power_stacking_buff.multiplier
+		},
+		{
+			value = 10, -- duration
+		},
+		{
+			value = 3, -- max_stacks
+		},
+	},
+})
+
+--[[
+	Virtue of Heroism
+]]
+-- Heavy attacks can't be interrupted. The perk is read on the owner's client (CharacterStateHelper), while the
+-- heavy attack power stays server side, hence buffer "both" (vanilla "server").
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_uninterruptible_heavy", {
+	max_stacks = 1,
+	perks = {
+		"uninterruptible_heavy"
+	}
+})
+mod_api.update_talent("es_questingknight", 2, 3, {
+	buffer = "both",
+	buffs = {
+		"markus_questing_knight_charged_attacks_increased_power",
+		"tb_grail_uninterruptible_heavy"
+	}
+})
+mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%%. Heavy attacks can no longer be interrupted.")
+
+--[[
 	Virtue of Knightly Temper
 ]]
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
@@ -280,7 +335,57 @@ end)
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_health_refund_over_time", {
 	heal_amount_fraction = 0.25 -- 0.5
 })
-mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds.")
+-- Another 25% after 7s: a second refund, same vanilla proc and remove func with a longer delay
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late", {
+	buff_func = "add_heal_percent_of_damage_taken_over_time_buff",
+	buff_to_add = "tb_grail_health_refund_over_time_late_delayed_heal",
+	event = "on_damage_taken",
+	heal_amount_fraction = 0.25
+})
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late_delayed_heal", {
+	duration = 7,
+	max_stacks = 1,
+	refresh_durations = true,
+	remove_buff_func = "refund_damage_taken",
+	icon = "markus_questing_knight_health_refund_over_time"
+})
+mod_api.update_talent("es_questingknight", 5, 1, {
+	buffs = {
+		"markus_questing_knight_health_refund_over_time",
+		"tb_grail_health_refund_over_time_late"
+	}
+})
+mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds, and another 25.0%% after 7 seconds.")
+
+--[[
+	Virtue of the Joust
+]]
+-- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
+-- while the melee weapon is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
+local TB_JOUST_MOVEMENT_PENALTY_BUFFS = {
+	"planted_decrease_movement",
+	"planted_fast_decrease_movement",
+	"planted_charging_decrease_movement",
+}
+
+local function tb_joust_removes_movement_penalty(unit)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	if not (talent_extension and talent_extension:has_talent("markus_questing_knight_push_arc_stamina_reg")) then
+		return false
+	end
+
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+
+	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+end
+
+for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
+	mod:add_buff_apply_condition(buff_name, function (unit, template, params)
+		return mod:is_action_movement_speed_up(params) or not tb_joust_removes_movement_penalty(unit)
+	end)
+end
+mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from melee weapons.")
 
 --[[
 	Virtue of the Impetuous Knight
@@ -289,11 +394,12 @@ mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_ability_buff_on_kill_movement_speed", {
     duration = 25, --15
 })
+-- Buffs granted on career skill use instead of on Blessed Blade kills
 mod_api.update_talent("es_questingknight", 6, 2, {
     buffs = {
         "tb_cd_grail",
-		"markus_questing_knight_ability_buff_on_kill",
-		"tb_grail_no_knockback_on_kill"
+		"tb_grail_movement_speed_on_ability",
+		"tb_grail_no_knockback_on_ability"
     }
 })
 -- Additional 30% cdr
@@ -302,7 +408,7 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_cd_grail", {
 	multiplier = -0.3,
 	max_stacks = 1
 })
--- Ranged knockback immunity for 25s after killing an enemy with Blessed Blade.
+-- Ranged knockback immunity for 25s after using Blessed Blade.
 -- Vanilla no_ranged_knockback perk, which the game already checks for Warpfire Thrower and Stormfiend/Deathrattler
 -- warpfire pushes, and for the impact push of lightweight projectiles (Ratling Gunner, Deathrattler's guns, Ungor Archer arrows).
 mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback", {
@@ -314,22 +420,21 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback", {
 	refresh_durations = true,
 	icon = "markus_questing_knight_ability_buff_on_kill"
 })
--- Applied on Blessed Blade kills, like the vanilla movement speed buff.
--- Goes through the networked add_buff proc so the perk exists on the server as well as the owner.
-mod_api.insert_proc_function("tb_grail_no_knockback_on_blessed_blade_kill", function (owner_unit, buff, params)
-	local killing_blow_table = params[1]
-
-	if killing_blow_table and killing_blow_table[DamageDataIndex.DAMAGE_SOURCE_NAME] == "markus_questingknight_career_skill_weapon" then
-		ProcFunctions.add_buff(owner_unit, buff, params)
-	end
-end)
-mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback_on_kill", {
-	buff_func = "tb_grail_no_knockback_on_blessed_blade_kill",
-	buff_to_add = "tb_grail_no_knockback",
-	event = "on_kill",
+-- Both applied on career skill use (the talent lives on the owner's client, where on_ability_activated procs).
+-- The networked add_buff proc puts them on the server as well as the owner.
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_movement_speed_on_ability", {
+	buff_func = "add_buff",
+	buff_to_add = "markus_questing_knight_ability_buff_on_kill_movement_speed",
+	event = "on_ability_activated",
 	max_stacks = 1
 })
-mod_api.insert_text("markus_questing_knight_ability_buff_on_kill_desc", "Killing an enemy with Blessed Blade grants 35%% movement speed and immunity to knockback from ranged projectiles and Warpfire for 25 seconds. Reduces cooldown by 30%%.")
+mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback_on_ability", {
+	buff_func = "add_buff",
+	buff_to_add = "tb_grail_no_knockback",
+	event = "on_ability_activated",
+	max_stacks = 1
+})
+mod_api.insert_text("markus_questing_knight_ability_buff_on_kill_desc", "Using Blessed Blade grants 35%% movement speed and immunity to knockback from ranged projectiles and Warpfire for 25 seconds. Reduces cooldown by 30%%.")
 
 --[[
 	Virtue of Confidence
