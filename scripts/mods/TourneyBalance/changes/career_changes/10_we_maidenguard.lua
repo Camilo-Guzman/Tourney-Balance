@@ -179,7 +179,7 @@ end)
     Renewal
 ]]
 -- Replace the vanilla Renewal perk text (career_passive_name_we_2b) instead of adding a second Renewal entry
-mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received by 40% and shares overflowing healing as temporary health to injured teammates.")
+mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received and shares overflowing healing as temporary health to injured teammates.")
 mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
 	range = 20 -- 5
 })

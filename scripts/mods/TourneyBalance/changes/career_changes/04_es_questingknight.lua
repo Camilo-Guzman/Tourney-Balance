@@ -39,8 +39,11 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Virtue of Stoicism**
 		- Now regenerates 25% of damage taken as temporary health after 5s, and another 25% after 7s (from 50% after 5s).
 
+		**Virtue of Discipline**
+		- Increased duration to 10s (from 6s).
+
 		**Virtue of the Joust**
-		- Removes the movement penalty from melee weapons (attacking, charging heavy attacks and blocking).
+		- Removes the movement penalty from melee weapons and Blessed Blade (attacking, charging heavy attacks and blocking).
 
 		**Virtue of the Impetuous Knight**
 		- Buff is now granted on using Blessed Blade (from on killing an enemy with Blessed Blade).
@@ -284,7 +287,7 @@ mod_api.update_talent("es_questingknight", 2, 1, {
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
 	damage_multiplier = 3 --4
 })
-mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 3 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
+mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 2 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
 
 --[[
 	Virtue of Heroism
@@ -358,14 +361,38 @@ mod_api.update_talent("es_questingknight", 5, 1, {
 mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds, and another 25.0%% after 7 seconds.")
 
 --[[
+	Virtue of Discipline
+]]
+-- 20% power for 10s on parry (from 6s)
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_parry_increased_power_buff", {
+	multiplier = 0.2, --0.2
+	duration = 10, --6
+})
+mod_api.update_talent("es_questingknight", 5, 2, {
+	description_values = { -- update description
+		{
+			value_type = "percent",
+			value = 0.2, -- buff_tweak_data.markus_questing_knight_parry_increased_power_buff.multiplier
+		},
+		{
+			value = 10, -- buff_tweak_data.markus_questing_knight_parry_increased_power_buff.duration
+		},
+	},
+})
+
+--[[
 	Virtue of the Joust
 ]]
 -- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
--- while the melee weapon is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
+-- while the melee weapon or Blessed Blade is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
 local TB_JOUST_MOVEMENT_PENALTY_BUFFS = {
 	"planted_decrease_movement",
 	"planted_fast_decrease_movement",
 	"planted_charging_decrease_movement",
+}
+local TB_JOUST_WEAPON_SLOTS = {
+	slot_melee = true,
+	slot_career_skill_weapon = true,
 }
 
 local function tb_joust_removes_movement_penalty(unit)
@@ -377,7 +404,7 @@ local function tb_joust_removes_movement_penalty(unit)
 
 	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
 
-	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+	return not not (inventory_extension and TB_JOUST_WEAPON_SLOTS[inventory_extension:get_wielded_slot_name()])
 end
 
 for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
@@ -385,7 +412,7 @@ for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
 		return mod:is_action_movement_speed_up(params) or not tb_joust_removes_movement_penalty(unit)
 	end)
 end
-mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from melee weapons.")
+mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from melee weapons and Blessed Blade.")
 
 --[[
 	Virtue of the Impetuous Knight
