@@ -567,7 +567,7 @@ for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
 		return mod:is_action_movement_speed_up(params) or not tb_joust_removes_movement_penalty(unit)
 	end)
 end
-mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from weapons.")
+mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement slowdown from weapons.")
 
 --[[
 	Virtue of the Impetuous Knight

@@ -32,7 +32,7 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 
 		**No Dawdling**
 		- Additionally removes the limit on dodging efficiently.
-		- Additionally removes the movement penalty from melee weapon attacks and holding block.
+		- Additionally removes the movement slowdown from melee weapons, ranged weapons and career skill.
 
 		**Exuberance**
 		- Also procs on picking up Survivalist pouches.
@@ -123,7 +123,7 @@ end)
 -- Engineer bomb pickup prompt reuses the frag bomb's text ("Bomb") in vanilla
 -- AllPickups holds the same table reference, so the interaction prompt picks this up
 Pickups.grenades.engineer_grenade_t1.hud_description = "tb_engineer_grenade_pickup"
-mod_api.insert_text("tb_engineer_grenade_pickup", "Engineer Bomb")
+mod_api.insert_text("tb_engineer_grenade_pickup", "CHUD Bomb")
 mod_api.insert_text("career_passive_desc_dr_3a_2","Whenever a special is killed, Bardin will drop an ammo pickup, with a 5% chance also an engineer bomb. This pickup restores 10% of the player's max ammunition, rounded down.")
 mod_api.insert_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 6%% chance to drop a potion instead of a Survivalist cache.")
 
@@ -213,6 +213,8 @@ Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8 -- 1.9
 --[[
 	No Dawdling
 ]]
+mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently and the movement slowdown from weapons.")
+
 -- Grants 99 dodge count regardless of the wielded weapon's own dodge_count value
 mod:hook(GenericStatusExtension, "get_dodge_item_data", function (func, self, ...)
 	func(self, ...)
@@ -223,34 +225,54 @@ mod:hook(GenericStatusExtension, "get_dodge_item_data", function (func, self, ..
 		self.dodge_count = 99
 	end
 end)
-mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently and the movement penalty from melee weapons.")
 
--- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding
--- block use these) while No Dawdling is active and the melee weapon is wielded. Ranged aiming
--- slow is untouched since it doesn't use this shared apply_condition-gated buff family.
-local function tb_no_dawdling_removes_movement_penalty(unit)
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+-- Removes the move-speed penalty of every weapon
+local TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS = {
+	move_speed = true,
+	crouch_move_speed = true,
+	walk_move_speed = true,
+}
 
-	if not (talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed")) then
+local function tb_is_action_movement_penalty_buff(buff_name, template)
+	if not (template.buffs and string.find(buff_name, "^planted_")) then
 		return false
 	end
 
-	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+	for _, sub_buff in ipairs(template.buffs) do
+		local path = sub_buff.path_to_movement_setting_to_modify
 
-	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+		if path and TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS[path[1]] then
+			return true
+		end
+	end
+
+	return false
 end
 
-local TB_NO_DAWDLING_MOVEMENT_PENALTY_BUFFS = {
-	"planted_decrease_movement",
-	"planted_fast_decrease_movement",
-	"planted_charging_decrease_movement",
-}
+local function tb_no_dawdling_allows_buff(unit, template, params)
+	if mod:is_action_movement_speed_up(params) then
+		return true
+	end
 
-for _, buff_name in ipairs(TB_NO_DAWDLING_MOVEMENT_PENALTY_BUFFS) do
-	mod:add_buff_apply_condition(buff_name, function (unit, template, params)
-		return mod:is_action_movement_speed_up(params) or not tb_no_dawdling_removes_movement_penalty(unit)
-	end)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	return not (talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed"))
 end
+
+-- Done after all mods load so templates added by later files are covered too.
+mod:add_all_mods_loaded_function(function ()
+	local penalty_buff_names = {}
+
+	for buff_name, template in pairs(BuffTemplates) do
+		if tb_is_action_movement_penalty_buff(buff_name, template) then
+			penalty_buff_names[#penalty_buff_names + 1] = buff_name
+		end
+	end
+
+	for _, buff_name in ipairs(penalty_buff_names) do
+		mod:add_buff_apply_condition(buff_name, tb_no_dawdling_allows_buff)
+	end
+end)
 
 --[[
 	Exuberance
