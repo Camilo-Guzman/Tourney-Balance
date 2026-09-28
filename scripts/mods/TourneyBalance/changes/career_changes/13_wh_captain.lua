@@ -433,7 +433,7 @@ do
 	-- Distinct name so num_buff_type/max_stacks don't collide with the vanilla sub-buff
 	local unending_hunt_sub_buff = table.clone(vanilla_sub_buff)
 	unending_hunt_sub_buff.name = "tb_unending_hunt_crit_buff"
-	unending_hunt_sub_buff.bonus = 0.25 -- 0.25
+	unending_hunt_sub_buff.bonus = 0.15 -- 0.25
 	unending_hunt_sub_buff.apply_condition = function (unit, template, params)
 		return is_unending_hunt_ally(unit, params)
 	end
@@ -445,5 +445,5 @@ mod_api.update_talent("wh_captain", 6, 3, {
 	description = "victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc",
 	description_values = {},
 })
-mod_api.insert_text("victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc", "Hitting at least 10 enemies with Animosity refunds 40.0% of its cooldown. Critical strike chance bonus for allies is reduced to 25.0%.")
+mod_api.insert_text("victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc", "Hitting at least 10 enemies with Animosity refunds 40.0% of its cooldown. Critical strike chance bonus for allies is reduced to 15.0%.")
 

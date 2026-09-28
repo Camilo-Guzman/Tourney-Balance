@@ -279,6 +279,14 @@ mod_api.update_talent("es_questingknight", 2, 1, {
 })
 
 --[[
+	Virtue of Knightly Temper
+]]
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
+	damage_multiplier = 3 --4
+})
+mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 3 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
+
+--[[
 	Virtue of Heroism
 ]]
 -- Heavy attacks can't be interrupted. The perk is read on the owner's client (CharacterStateHelper), while the
@@ -297,14 +305,6 @@ mod_api.update_talent("es_questingknight", 2, 3, {
 	}
 })
 mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%%. Heavy attacks can no longer be interrupted.")
-
---[[
-	Virtue of Knightly Temper
-]]
-mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
-	damage_multiplier = 2 --4
-})
-mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 2 times the amount of damage of the Critical Strike. Half of 4 effect versus Lords and Monsters.")
 
 --[[
 	Virtue of the Penitent
