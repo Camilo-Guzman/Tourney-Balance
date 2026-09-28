@@ -13,7 +13,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Amaranthe**
-		- Additionally regen 2 ammo while below 50% ammo every tick.
+		- Additionally regen 2 ammo every tick.
 		- Heath regen no longer replaces temp health.
 
 		### Talents

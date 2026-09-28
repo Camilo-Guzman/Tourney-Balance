@@ -134,7 +134,7 @@ mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_passive_damag
         multiplier = 0.05,
     },
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power and 5% melee damage for every 25 health missing. Max Stacks 6. Saltzpyre overheals up to 100 Overhealth. Damage taken by the team is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power and 5% melee damage for every 25 health missing. Max Stacks 6. Saltzpyre overheals up to 50 Overhealth. Damage taken by the team is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
