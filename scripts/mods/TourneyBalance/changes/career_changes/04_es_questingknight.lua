@@ -287,7 +287,7 @@ mod_api.update_talent("es_questingknight", 2, 1, {
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_crit_can_insta_kill",  {
 	damage_multiplier = 3 --4
 })
-mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 2 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
+mod_api.insert_text("markus_questing_knight_crit_can_insta_kill_desc", "Critical Strikes instantly slay enemies if their current health is less than 3 times the amount of damage of the Critical Strike. Half effect versus Lords and Monsters.")
 
 --[[
 	Virtue of Heroism
@@ -384,14 +384,16 @@ mod_api.update_talent("es_questingknight", 5, 2, {
 	Virtue of the Joust
 ]]
 -- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
--- while the melee weapon or Blessed Blade is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
+-- while a melee weapon or Blessed Blade is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
 local TB_JOUST_MOVEMENT_PENALTY_BUFFS = {
 	"planted_decrease_movement",
 	"planted_fast_decrease_movement",
 	"planted_charging_decrease_movement",
 }
+-- Grail Knight carries a second melee weapon in his ranged slot, so that slot counts too
 local TB_JOUST_WEAPON_SLOTS = {
 	slot_melee = true,
+	slot_ranged = true,
 	slot_career_skill_weapon = true,
 }
 
@@ -412,7 +414,7 @@ for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
 		return mod:is_action_movement_speed_up(params) or not tb_joust_removes_movement_penalty(unit)
 	end)
 end
-mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from melee weapons and Blessed Blade.")
+mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement penalty from weapons.")
 
 --[[
 	Virtue of the Impetuous Knight
@@ -447,16 +449,22 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback", {
 	refresh_durations = true,
 	icon = "markus_questing_knight_ability_buff_on_kill"
 })
--- Both applied on career skill use (the talent lives on the owner's client, where on_ability_activated procs).
+-- Both applied on the Grail Knight's own career skill use. on_ability_activated procs on every local player's buffs
+-- whenever anyone ults (params[1] is the activating unit), so check it's the owner, like vanilla add_buff_reff_buff_stack.
 -- The networked add_buff proc puts them on the server as well as the owner.
+mod_api.insert_proc_function("tb_grail_add_buff_on_own_ability", function (owner_unit, buff, params)
+	if params[1] == owner_unit then
+		ProcFunctions.add_buff(owner_unit, buff, params)
+	end
+end)
 mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_movement_speed_on_ability", {
-	buff_func = "add_buff",
+	buff_func = "tb_grail_add_buff_on_own_ability",
 	buff_to_add = "markus_questing_knight_ability_buff_on_kill_movement_speed",
 	event = "on_ability_activated",
 	max_stacks = 1
 })
 mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback_on_ability", {
-	buff_func = "add_buff",
+	buff_func = "tb_grail_add_buff_on_own_ability",
 	buff_to_add = "tb_grail_no_knockback",
 	event = "on_ability_activated",
 	max_stacks = 1

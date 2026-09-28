@@ -49,6 +49,7 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 
 		**Ranger's Parting Gift**
 		- Free bomb only applies to engineer bombs.
+		- Added 25% ranged power for 10s after using Disengage.
 	$END_TB
 ]]
 
@@ -336,7 +337,28 @@ mod:hook(ActionChargedProjectileUtility, "fire_charged_projectile", function (fu
 
 	return result
 end)
-mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Does not stack.")
+-- 25% ranged power for 10s after using Disengage
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_parting_gift_ranged_power", {
+	stat_buff = "power_level_ranged",
+	multiplier = 0.25,
+	duration = 10,
+	max_stacks = 1,
+	refresh_durations = true,
+	icon = "bardin_ranger_ability_free_grenade"
+})
+-- Applied on career skill use (the talent lives on the owner's client, where on_ability_activated procs).
+-- The networked add_buff proc puts it on the server as well as the owner.
+mod_api.insert_talent_buff_template("dwarf_ranger", "tb_parting_gift_ranged_power_on_ability", {
+	buff_func = "add_buff",
+	buff_to_add = "tb_parting_gift_ranged_power",
+	event = "on_ability_activated",
+	max_stacks = 1
+})
+-- Appended to the talent's existing buffs so the vanilla free grenade buff is kept
+local parting_gift_talent = Talents.dwarf_ranger[TalentIDLookup.bardin_ranger_ability_free_grenade.talent_id]
+parting_gift_talent.buffs = parting_gift_talent.buffs or {}
+table.insert(parting_gift_talent.buffs, "tb_parting_gift_ranged_power_on_ability")
+mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed and grants 25%% ranged power for 10 seconds. Free bomb does not stack.")
 
 --[[
 	Exhilarating Vapours

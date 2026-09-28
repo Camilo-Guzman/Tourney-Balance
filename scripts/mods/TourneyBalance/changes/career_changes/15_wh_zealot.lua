@@ -335,7 +335,7 @@ mod_api.insert_career_passives("wh_1", {
     "tb_victor_zealot_chasten_attack_speed",
     "tb_victor_zealot_chasten_healing_received",
 })
-mod_api.insert_perk_text("tb_wh_1d", "Chasten", "Increases attack speed by 5% and healing received by 30%.")
+mod_api.insert_perk_text("tb_wh_1d", "Chasten", "Increases attack speed by 10% and healing received by 30%.")
 mod_api.insert_career_perk_descriptions("wh_1", "tb_wh_1d")
 
 --[[
@@ -425,7 +425,7 @@ mod_api.update_talent("wh_zealot", 4, 2, {
 ]]
 -- Power buff lasts 15 seconds
 mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_activated_ability_power_on_hit_buff", {
-    duration = 15 -- 5
+    duration = 10 -- 5
 })
 mod_api.update_talent("wh_zealot", 6, 1, {
     description_values = {
@@ -434,7 +434,7 @@ mod_api.update_talent("wh_zealot", 6, 1, {
             value = 0.02,
         },
         {
-            value = 15, -- 5
+            value = 10, -- 5
         },
         {
             value = 10,

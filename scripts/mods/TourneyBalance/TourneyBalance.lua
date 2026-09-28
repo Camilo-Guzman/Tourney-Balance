@@ -157,6 +157,23 @@ mod:hook(PlayerUnitHealthExtension, "add_heal", function (func, ...)
     return _player_add_heal_chain(...)
 end)
 
+--- ActionMeleeStart.client_owner_post_update dispatcher
+-- Same hook-collision problem as IngameHud above: 02_career_changes.lua (Timed Block Long) and 09_we_waywatcher.lua
+-- (Ricochet charged popup) both need to run after it. Register through mod:add_melee_start_post_update_function(fn)
+-- instead of calling mod:hook/hook_safe(ActionMeleeStart, "client_owner_post_update", ...) directly.
+-- fn(self, dt, t, world) runs after the original, in registration order.
+local _melee_start_post_update_functions = {}
+function mod.add_melee_start_post_update_function(self, func)
+    _melee_start_post_update_functions[#_melee_start_post_update_functions + 1] = func
+end
+mod:hook(ActionMeleeStart, "client_owner_post_update", function (func, self, dt, t, world)
+    func(self, dt, t, world)
+
+    for i = 1, #_melee_start_post_update_functions do
+        _melee_start_post_update_functions[i](self, dt, t, world)
+    end
+end)
+
 --- Buff apply conditions
 -- To stop specific buffs from being added (e.g. movement penalties), chain a condition onto the template's
 -- sub-buffs instead of hooking BuffExtension.add_buff: add_buff checks sub_buff.apply_condition itself, so the

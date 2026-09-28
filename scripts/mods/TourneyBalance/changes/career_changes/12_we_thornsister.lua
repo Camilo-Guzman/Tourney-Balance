@@ -96,23 +96,6 @@ mod_api.update_talent("we_thornsister", 2, 1, {
 })
 mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 10%. Gain additional 10% attack speed, while above 80% health.")
 
-
---[[
-	Atharti's Delight
--- only converts poison to bleed on headshots (no native "on headshot" event exists, so gate the vanilla func on hit_zone_name instead)
-mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
-	local hit_zone_name = params[3]
-
-	if hit_zone_name == "head" or hit_zone_name == "neck" then
-		return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
-	end
-end)
-mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
-	buff_func = "tb_thorn_sister_add_bleed_on_headshot"
-})
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned targets make them bleed.")
---]]
-
 --[[
 	Briar's Malice
 ]]

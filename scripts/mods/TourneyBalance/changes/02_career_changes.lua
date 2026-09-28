@@ -36,9 +36,8 @@ mod:hook_safe(ActionBlock, "client_owner_start_action", function (self, new_acti
 	self._status_extension.timed_block_long = t + 0.75
 end)
 -- Efficient check using ActionMeleeStart.client_owner_post_update setting timed_block first.
-mod:hook(ActionMeleeStart, "client_owner_post_update", function (func, self, dt, t, world)
-	func(self, dt, t, world)
-
+-- Registered through the dispatcher in TourneyBalance.lua, runs after the original.
+mod:add_melee_start_post_update_function(function (self, dt, t, world)
 	local status_extension = self.status_extension
 	
 	if status_extension.timed_block == t + 0.5 then

@@ -6,7 +6,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		---
 		## Foot Knight
 		### Career Ability
-		- Ult cooldown increased to 40s (from 30s).
 		- Ult blast radius buffed to 5 (from 3) for all ults.
 
 		### Passives
@@ -39,7 +38,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Press weapon_inspect while blocking to cycle between modes and team mates.
 
 		**It's Hero Time**
-		- Reduced the refund to 50% of cooldown (from 100%).
+		- Added 15s internal cooldown.
 		
 		**Inspiring Blow**
 		- Now only affects the Foot Knight himself (no longer nearby allies).
@@ -48,11 +47,8 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Mainstay grants effect at 10% cooldown regeneration for 1.0s
 
 		**Numb to Pain**
-		- Invulnerability duration on ult increased to 5s (from 3s).
-		- Damage prevented by the invulnerability still charges the ult at the normal on-damage-taken rate (hit trading).
-
-		**Battering Ram**
-		- Charge width reduced to 4 (from 5), matching the description's double width.
+		- Invulnerability duration on ult increased to 6s (from 3s).
+		- Hit trading at 10% effectiveness.
 
 		**Bull of Ostland**
 		- Attack speed buff from ult hits lasts 15s (from 10s).
@@ -65,7 +61,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 ]]
 -- Increased ult cooldown
-ActivatedAbilitySettings.es_2[1].cooldown = 40 -- 30
+-- ActivatedAbilitySettings.es_2[1].cooldown = 40 -- 30
 
 -- Charge + blast damage/stagger cleave. Edited in place: damage profiles resolve their cleave_distribution name to
 -- this exact table at load (damage_profile_templates.lua), so swapping in a new table at runtime has no effect.
@@ -520,45 +516,45 @@ mod_api.update_talent("es_knight", 2, 3, { -- update description
 --[[
 	It's Hero Time
 ]]
--- 15s ICD nerf (disabled in favour of 50% refund)
--- mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
--- 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
--- })
--- mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
--- 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
--- 	is_cooldown = true,
--- 	duration = 15,
--- 	duration_end_func = "add_buff_local",
--- 	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
--- })
+-- 15s ICD nerf
+mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
+	icon = "markus_knight_movement_speed_on_incapacitated_allies",
+})
+mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
+	icon = "markus_knight_movement_speed_on_incapacitated_allies",
+ 	is_cooldown = true,
+ 	duration = 15,
+ 	duration_end_func = "add_buff_local",
+ 	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
+})
 mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, buff, params)
 	if not Unit.alive(player_unit) then
 		return
 	end
 
-	-- local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
-	--
-	-- if not buff_extension or buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
-	-- 	return
-	-- end
+	local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
+	
+	if not buff_extension or buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
+	 	return
+	end
 
 	local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
 
-	if not career_extension then -- or career_extension:current_ability_cooldown(1) == 0 then
+	if not career_extension or career_extension:current_ability_cooldown(1) == 0 then
 		return
 	end
 
-	career_extension:reduce_activated_ability_cooldown_percent(0.5) -- 1
+	career_extension:reduce_activated_ability_cooldown_percent(1) -- 0.7
 
-	-- local ready_buff = buff_extension:get_buff_type("tb_markus_knight_hero_time_ready_buff")
-	--
-	-- if ready_buff then
-	-- 	buff_extension:remove_buff(ready_buff.id)
-	-- end
-	--
-	-- buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
+	local ready_buff = buff_extension:get_buff_type("tb_markus_knight_hero_time_ready_buff")
+	
+	if ready_buff then
+		buff_extension:remove_buff(ready_buff.id)
+	end
+	
+	buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
 end)
-mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Refunds 50% cooldown on Valiant Charge when an ally is incapacitated.")
+mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 15 second cooldown.")
 
 -- Fix Hero Time not proccing if ally already disabled
 mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
@@ -606,9 +602,9 @@ mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", fu
 	buff.disabled_allies = disabled_allies
 
 	-- It's Hero Time: show the "ready" icon (disabled along with the ICD)
-	-- if not buff_extension:has_buff_type("tb_markus_knight_hero_time_ready_buff") and not buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
-	-- 	buff_system:add_buff(owner_unit, "tb_markus_knight_hero_time_ready_buff", owner_unit, true)
-	-- end
+	if not buff_extension:has_buff_type("tb_markus_knight_hero_time_ready_buff") and not buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
+	 	buff_system:add_buff(owner_unit, "tb_markus_knight_hero_time_ready_buff", owner_unit, true)
+	end
 end)
 
 --[[
@@ -648,7 +644,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_ability_inv
 mod_api.update_talent("es_knight", 6, 1, {
 	description_values = {
 		{
-			value = 5 -- 3
+			value = 6 -- 3
 		}
 	},
 })
@@ -658,7 +654,7 @@ mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charg
 -- Hit trading: damage prevented by Numb to Pain still charges the ult at the normal on-damage-taken rate.
 local NUMB_TO_PAIN_BUFF = "markus_knight_ability_invulnerability_buff"
 local CDR_ON_DAMAGE_TAKEN_BUFF = "markus_knight_ability_cooldown_on_damage_taken"
-local ULT_REGEN_MODIFIER = 0.2 -- x * 0.35
+local ULT_REGEN_MODIFIER = 0.1 -- x * 0.35
 
 local tb_reduce_cooldown_on_owner = require("scripts/mods/TourneyBalance/_api/shared_utils").reduce_cooldown_on_owner
 
