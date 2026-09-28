@@ -149,9 +149,9 @@ mod:hook(PassiveAbilityQuestingKnight, "_get_possible_challenges", function (fun
 end)
 
 -- The quest HUD shows Localize(<challenge template name>)
-mod_api.insert_text("find_grimoire", "Find a Grimoire or gain " .. QUEST_HEALTH_GOAL .. " health")
-mod_api.insert_text("find_tome", "Find a Tome or land " .. QUEST_HEADSHOT_GOAL .. " headshots")
-mod_api.insert_text("tb_team_use_ultimates", "Kill a Monster or use " .. QUEST_TEAM_ULTIMATES_GOAL .. " career abilities")
+mod_api.insert_text("find_grimoire", "Find a Grimoire or gain health")
+mod_api.insert_text("find_tome", "Find a Tome or land headshots")
+mod_api.insert_text("tb_team_use_ultimates", "Kill a Monster or use career abilities")
 
 -- Cooldown regeneration reward: 20% base, 30% with Virtue of the Grail (improved rewards)
 BuffTemplates.markus_questing_knight_passive_cooldown_reduction.buffs[1].multiplier = 0.2 -- 0.1
@@ -160,10 +160,6 @@ mod_api.insert_text("markus_questing_knight_passive_cooldown_reduction", "+20%% 
 mod_api.insert_text("markus_questing_knight_passive_cooldown_reduction_improved", "+30%% Cooldown Regeneration")
 
 -- Grimoire/Tome quests: the goal is the health/headshot count, so the vanilla quest HUD counts them down.
--- The whole team contributes: the server broadcasts team-wide events, and every active Grail Knight quest of that
--- type progresses (same as the vanilla book pickup events, which fire for whoever picks the book up).
--- A book pickup (vanilla event returns 1) completes the quest outright instead; progress is clamped to the goal.
--- (These templates are only used by Grail Knight quests.)
 local find_grimoire_events = InGameChallengeTemplates.find_grimoire.events
 local find_tome_events = InGameChallengeTemplates.find_tome.events
 

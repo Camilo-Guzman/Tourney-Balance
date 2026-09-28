@@ -17,12 +17,14 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		### Talents
 		**Surge of Malice**
-		- Now grants 10% Attack Speed passively.
-		- Lowered required health threshold to 70% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
+		- Now grants 5% Attack Speed passively.
+		- Lowered required health threshold to 80% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
 
 		**Briar's Malice**
-		- Increased crit stacks granted on ability use to 5 (from 2).
 		- Only consume crit stacks on hit, and at most 1 stack per attack (even against multiple enemies).
+
+		**Atharti's Delight**
+		- Bleed now only applies on melee headshots.
 
 		**Bonded Spirit**
 		- Updated description: Internal CD of losing cooldown is  1s.
@@ -84,7 +86,7 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_attack_s
 })
 mod_api.insert_talent_buff_template("wood_elf", "tb_surge_of_malice_passive", {
 	stat_buff = "attack_speed",
-	multiplier = 0.10,
+	multiplier = 0.5,
 })
 mod_api.update_talent("we_thornsister", 2, 1, {
 	description = "kerillian_thorn_sister_attack_speed_on_full_desc",
@@ -94,18 +96,18 @@ mod_api.update_talent("we_thornsister", 2, 1, {
 		"tb_surge_of_malice_passive",
 	},
 })
-mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 10%. Gain additional 10% attack speed, while above 80% health.")
+mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 5%. Gain additional 10% attack speed, while above 80% health.")
 
 --[[
 	Briar's Malice
 ]]
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_any_ability", {
-	amount_to_add = 5, -- 2
+	amount_to_add = 2, -- 2
 })
 mod_api.update_talent("we_thornsister", 2, 3, {
 	description_values = {
 		{
-			value = 5, -- 2
+			value = 2, -- 2
 		},
 	},
 })
@@ -145,6 +147,24 @@ mod_api.insert_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_
 		max_stacks = 1,
 	},
 })
+
+--[[
+	Atharti's Delight
+]]
+-- Bleed only applies on melee headshots (still requires the target to be poisoned)
+mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
+	local hit_zone_name = params[3]
+
+	if hit_zone_name ~= "head" and hit_zone_name ~= "neck" and hit_zone_name ~= "weakspot" then
+		return
+	end
+
+	return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
+end)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
+	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
+})
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned enemies cause them to bleed.")
 
 --[[
 	Bonded Spirit

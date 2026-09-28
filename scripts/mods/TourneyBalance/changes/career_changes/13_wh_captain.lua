@@ -21,8 +21,8 @@ local is_local = shared_utils.is_local
 		- Headshotting Witch-Hunted enemies extends the duration by 2s.
 
 		**Fervency**
-		- Increased duration to 12s (from 6s).
-		- Added ult makes first 24 hits guaranteed melee crits.
+		- Increased duration to 10s (from 6s).
+		- Added ult makes first 20 hits guaranteed melee crits.
 	$END_TB
 ]]
 
@@ -373,20 +373,20 @@ end)
 ]]
 -- Extend durationto 10s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
-	duration = 12, -- 6
+	duration = 10, -- 6
 })
 
 -- Additionall 20 stacks of guaranteed melee crit hits on ult use
-mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 24 stacks of melee crits buff
+mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
 	icon = "victor_witchhunter_activated_ability_guaranteed_crit_self_buff",
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
-	max_stacks = 24,
+	max_stacks = 20,
 })
-mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_provider", { -- provides the 24 stacks on ult
+mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_provider", { -- provides the 20 stacks on ult
 	buff_func = "add_buff_reff_buff_stack",
 	buff_to_add = "tb_fervency_crit_stacks",
-	amount_to_add = 24,
+	amount_to_add = 20,
 	event = "on_ability_activated",
 })
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_stack_consumer", { -- consumes 1 stack per enemy hit
