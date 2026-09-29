@@ -14,15 +14,11 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Cooldown Regeneration reward increased to 20% (from 10%), and 30% with improved rewards (from 15%).
 
 		### Talents
-		**Virtue of the Ideal**
-		- Increased power per stack to 10% (from 8%).
-
-		**Virtue of Heroism**
-		- Heavy attacks can no longer be interrupted.
-		- Charging a heavy attack past the point where it becomes available now adds up to 30% extra heavy attack damage (full bonus at 0.67s longer), on top of the flat 30%.
-
 		**Virtue of Knightly Temper**
 		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
+		**Virtue of Heroism**
+		- Heavy attacks deal up to 3 times damage based on charge time.
+		- Heavy attacks can no longer be interrupted.
 		
 		**Virtue of the Penitent**
 		- Increased required kills as follows
@@ -255,29 +251,6 @@ end)
 	Talents
 
 ]]
-
---[[
-	Virtue of the Ideal
-]]
--- 10% power per stack (from 8%)
-mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_kills_buff_power_stacking_buff", {
-	multiplier = 0.1 --0.08
-})
-mod_api.update_talent("es_questingknight", 2, 1, {
-	description_values = { -- update description
-		{
-			value_type = "percent",
-			value = 0.1, -- buff_tweak_data.markus_questing_knight_kills_buff_power_stacking_buff.multiplier
-		},
-		{
-			value = 10, -- duration
-		},
-		{
-			value = 3, -- max_stacks
-		},
-	},
-})
-
 --[[
 	Virtue of Knightly Temper
 ]]
@@ -304,7 +277,7 @@ mod_api.update_talent("es_questingknight", 2, 3, {
 		"tb_grail_uninterruptible_heavy"
 	}
 })
-mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%% charging up to 300%%. Heavy attacks can no longer be interrupted.")
+mod_api.insert_text("markus_questing_knight_charged_attacks_increased_power_desc", "Increases heavy attack damage by 30%%. Heavy attacks deal up to 3 times damage based on charge time and can no longer be interrupted.")
 
 -- Charge bonus, on top of the flat 30%: up to +30% heavy attack damage, scaling with how long the charge was held past
 -- the point where the heavy attack became available
@@ -491,7 +464,7 @@ end)
 mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_health_refund_over_time", {
 	heal_amount_fraction = 0.25 -- 0.5
 })
--- Another 25% after 7s: a second refund, same vanilla proc and remove func with a longer delay
+-- Another 25% after 10s: a second refund, same vanilla proc and remove func with a longer delay
 mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late", {
 	buff_func = "add_heal_percent_of_damage_taken_over_time_buff",
 	buff_to_add = "tb_grail_health_refund_over_time_late_delayed_heal",
