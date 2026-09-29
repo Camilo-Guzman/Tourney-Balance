@@ -234,10 +234,10 @@ mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit
 			local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
 			local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
 
-			-- if ammo_extension and ammo_extension:total_ammo_fraction() < regen_cap then
-			local ammo_amount = 2
-			ammo_extension:add_ammo_to_reserve(ammo_amount)
-			-- end
+			if ammo_extension then -- and ammo_extension:total_ammo_fraction() < regen_cap then
+				local ammo_amount = 2
+				ammo_extension:add_ammo_to_reserve(ammo_amount)
+			end
 		end
 
 
