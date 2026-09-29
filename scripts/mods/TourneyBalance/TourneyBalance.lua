@@ -123,7 +123,7 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function (...)
 end)
 
 --- PlayerUnitHealthExtension.add_heal dispatcher
--- Same hook-collision problem as IngameHud above: 15_wh_zealot.lua and 04_es_questingknight.lua both need to
+-- Same hook-collision problem as IngameHud above: 04_es_questingknight.lua and 10_we_maidenguard.lua both need to
 -- wrap add_heal. Register through mod:add_player_add_heal_wrapper(fn) instead of calling
 -- mod:hook(PlayerUnitHealthExtension, "add_heal", ...) directly. fn(func, self, ...) is shaped like a mod:hook
 -- callback (func = next wrapper in line, ending at the original add_heal).

@@ -3,6 +3,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 local shared_utils = require("scripts/mods/TourneyBalance/_api/shared_utils")
 local is_local = shared_utils.is_local
 local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 --[[
 	$BEGIN_TB
@@ -13,12 +14,13 @@ local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
 
 		### Passives
 		**Fiery Faith**
-		- Each stack now also grants 5% melee damage.
-		- Overhealing converts into max 50 Overhealth.
-		- Damage taken by Zealot or his allies is absorbed by Overhealth first.
+		- Now also grants 5% melee power for every 25 total health missing (temporary health counts as health), up to 6 stacks.
+		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
+		- Damage taken by his allies is absorbed by Overhealth first.
         - Can hit trade with it.
 
 		**Ironheart**
+		- While above 50% health, lethal hits leave Zealot on 1 health.
 		- Fixed invincibility not proccing on client.
 
 		**Chasten (new)**
@@ -37,6 +39,18 @@ local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
 
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
+
+		**Crusade**
+		- Each stack also grants 2.5% attack speed.
+
+		**Devotion**
+		- Now removes all movement penalties like Waywatcher's Fervent Huntress (from only no slowdown when hit).
+
+		**Redemption through Blood**
+		- Additionally increases melee damage by 5% for every missing stamina shield.
+
+		**Calloused Withou and Within**
+		- Additionally decreases Heart of Iron's cooldown to 60 seconds.
 
 		**Flagellant's Zeal**
 		- Increased power buff duration to 15 seconds (from 5).
@@ -62,6 +76,11 @@ end)
 
 ]]
 -- Ironheart
+-- Talent row 5 col 3 swaps in a longer invulnerability whose expiry starts a shorter cooldown (see Talents below)
+local IRONHEART_INVULNERABILITY_BUFF = "victor_zealot_invulnerability_on_lethal_damage_taken"
+local IRONHEART_TALENT_INVULNERABILITY_BUFF = "tb_victor_zealot_invulnerability_on_lethal_damage_taken_talent"
+local IRONHEART_TALENT = "victor_zealot_reduced_damage_taken"
+
 -- Fix Zealot invulnerability desync/invincibility bug: this proc runs on both client and server, and the
 -- server is always faster to evaluate the killing blow. The original code only added the buff locally via
 -- buff_extension:add_buff, so the server could already consider the owner unkillable without ever telling
@@ -73,7 +92,7 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
     if not Managers.state.network.is_server and ALIVE[owner_unit] then
         local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
 
-        return buff_extension:has_buff_type("victor_zealot_invulnerability_on_lethal_damage_taken")
+        return buff_extension:has_buff_type(IRONHEART_INVULNERABILITY_BUFF) or buff_extension:has_buff_type(IRONHEART_TALENT_INVULNERABILITY_BUFF)
     end
 
     if ALIVE[owner_unit] and not status_extension:is_knocked_down() then
@@ -90,6 +109,11 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
         local killing_blow = current_health <= damage
         local template = buff.template
         local buff_to_add = template.buff_to_add
+        local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
+
+        if talent_extension and talent_extension:has_talent(IRONHEART_TALENT) then
+            buff_to_add = IRONHEART_TALENT_INVULNERABILITY_BUFF
+        end
 
         if killing_blow then
             mod_api.add_buff(owner_unit, buff_to_add)
@@ -99,13 +123,18 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
     end
 end)
 
+-- Vanilla shares Slayer's "career_passive_desc_dr_2c" text, so give Zealot his own
+PassiveAbilitySettings.wh_1.perks[1].description = "tb_career_passive_desc_wh_1b"
+mod_api.insert_text("tb_career_passive_desc_wh_1b", "While above 50% health, lethal hits leave Saltzpyre on 1 health. Otherwise, taking fatal damage grants invulnerability for 5 seconds. Can only trigger once every 60 seconds.")
+-- Survive lethal hits above 20% health: registered after the Fiery Faith wrapper, see below
+
 --[[
     Fiery Faith - Overhealth
 ]]
--- THP Zealot gains beyond his max health (e.g. while at full health) is stored in a team-wide overhealth pool
--- (max 100). Damage taken by any hero is absorbed by the pool first. The pool is server-authoritative; its
+-- Damage Zealot takes is stored in a team-wide overhealth pool (max 50). Damage taken by his teammates is
+-- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
-local OVERHEALTH_MAX = 50
+local OVERHEALTH_MAX = 100
 local OVERHEALTH_PASSIVE_BUFF = "victor_zealot_passive_increased_damage" -- Fiery Faith parent buff
 local OVERHEALTH_ICON_BUFF = "tb_victor_zealot_overhealth_icon"
 local OVERHEALTH_NETWORK_ID = "tb_zealot_overhealth"
@@ -118,23 +147,58 @@ local overhealth_display = 0 -- every peer, math.ceil of the pool
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
--- Each Fiery Faith stack also grants 5% melee damage. The second sub-buff needs its own name so
--- num_buff_type (counted by the first sub-buff's name) and max_stacks keep working per stack.
-mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_passive_damage", {
-    {
-        icon = "victor_zealot_passive",
-        max_stacks = 6,
-        stat_buff = "power_level",
-        multiplier = 0.05,
-    },
-    {
-        name = "tb_victor_zealot_passive_melee_damage",
-        max_stacks = 6,
-        stat_buff = "increased_weapon_damage_melee",
-        multiplier = 0.05,
-    },
+-- 5% melee power for every 25 total health missing, up to 6 stacks. Unlike the vanilla power stacks (which only
+-- count missing permanent health), temporary health counts as health here. Same server-controlled stacking as
+-- vanilla's activate_buff_stacks_based_on_health_chunks, so the stacks replicate to clients.
+mod_api.insert_buff_function("tb_activate_buff_stacks_based_on_total_health_chunks", function (unit, buff, params)
+    if not Managers.state.network.is_server then
+        return
+    end
+
+    local health_extension = ScriptUnit.extension(unit, "health_system")
+    local buff_extension = ScriptUnit.extension(unit, "buff_system")
+    local buff_system = Managers.state.entity:system("buff_system")
+    local template = buff.template
+    local buff_to_add = template.buff_to_add
+    local chunk_size = template.chunk_size
+    local uncursed_max_health = health_extension:get_uncursed_max_health()
+    local damage_taken = uncursed_max_health - health_extension:current_health()
+    local max_stacks = math.min(math.floor(uncursed_max_health / chunk_size) - 1, template.max_stacks)
+    local num_chunks = math.clamp(math.floor(damage_taken / chunk_size), 0, max_stacks)
+    local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+    local stack_ids = buff.stack_ids
+
+    if not stack_ids then
+        stack_ids = {}
+        buff.stack_ids = stack_ids
+    end
+
+    for _ = num_buff_stacks + 1, num_chunks do
+        stack_ids[#stack_ids + 1] = buff_system:add_buff(unit, buff_to_add, unit, true)
+    end
+
+    for _ = num_chunks + 1, num_buff_stacks do
+        buff_system:remove_server_controlled_buff(unit, table.remove(stack_ids, 1))
+    end
+end)
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_passive_melee_power", {
+    buff_to_add = "tb_victor_zealot_passive_melee_power_buff",
+    chunk_size = 25,
+    max_stacks = 6,
+    update_func = "tb_activate_buff_stacks_based_on_total_health_chunks",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power and 5% melee damage for every 25 health missing. Max Stacks 6. Saltzpyre overheals up to 50 Overhealth. Damage taken by the team is absorbed by Overhealth first.")
+-- Same icon as the vanilla Fiery Faith stacks; debuff = true gives it the red outline to tell the two apart
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_passive_melee_power_buff", {
+    icon = "victor_zealot_passive",
+    debuff = true,
+    max_stacks = 6,
+    stat_buff = "power_level_melee",
+    multiplier = 0.05,
+})
+mod_api.insert_career_passives("wh_1", {
+    "tb_victor_zealot_passive_melee_power",
+})
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing and 5% melee power for every 25 total health missing (temporary health counts as health). Max Stacks 6 each. Damage Saltzpyre takes is converted into Overhealth for his allies (up to 50). Damage taken by allies is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
@@ -154,36 +218,6 @@ end)
 mod:add_game_state_changed_function(function ()
     overhealth_pool = 0
     overhealth_display = 0
-end)
-
--- Gain: overflowing THP and permanent healing (same split as vanilla add_heal's two branches)
--- Registered through the add_heal dispatcher in TourneyBalance.lua.
-mod:add_player_add_heal_wrapper(function (func, self, healer_unit, heal_amount, heal_source_name, heal_type)
-    local game = self.game
-    local game_object_id = self.health_game_object_id
-    local status_extension = self.status_extension
-    local buff_extension = ScriptUnit.has_extension(self.unit, "buff_system")
-
-    if self.is_server and game and game_object_id and heal_amount > 0 and buff_extension and buff_extension:has_buff_type(OVERHEALTH_PASSIVE_BUFF)
-        and not status_extension:is_knocked_down() then
-        local current_health = GameSession.game_object_field(game, game_object_id, "current_health")
-        local current_temporary_health = GameSession.game_object_field(game, game_object_id, "current_temporary_health")
-        local max_health = GameSession.game_object_field(game, game_object_id, "max_health")
-        local overflow
-
-        if status_extension:is_permanent_heal(heal_type) then
-            -- Permanent heals convert THP into permanent health first, so only healing past max permanent health is wasted
-            overflow = math.clamp(current_health + heal_amount - max_health, 0, heal_amount)
-        else
-            overflow = math.clamp(current_health + current_temporary_health + heal_amount - max_health, 0, heal_amount)
-        end
-
-        if overflow > 0 then
-            set_overhealth_pool(overhealth_pool + overflow)
-        end
-    end
-
-    return func(self, healer_unit, heal_amount, heal_source_name, heal_type)
 end)
 
 -- Hit trading: each career's passive has its own "<career>_ability_cooldown_on_damage_taken" buff with its own
@@ -223,13 +257,14 @@ local function get_cdr_on_damage_taken_bonus(unit)
     return buff_name and BuffTemplates[buff_name].buffs[1].bonus
 end
 
--- Absorb: applied after all other damage reductions. Registered through the dispatcher in TourneyBalance.lua.
--- apply_buffs_to_damage only runs with a non-zero pool on the server, so clients always fall through.
+-- Gain and absorb: applied after all other damage reductions, including the Ironheart clamp below, so Zealot's
+-- gain is the damage he actually takes. Registered through the dispatcher in TourneyBalance.lua.
+-- apply_buffs_to_damage only runs for players on the server.
 mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, ...)
     local damage = func(current_damage, attacked_unit, attacker_unit, damage_source, ...)
 
-    -- Self-inflicted damage (THP decay, life tap, overcharge) doesn't consume the pool
-    if overhealth_pool <= 0 or damage <= 0 or attacker_unit == attacked_unit then
+    -- Self-inflicted damage (THP decay, life tap, overcharge) neither fills nor consumes the pool
+    if damage <= 0 or attacker_unit == attacked_unit then
         return damage
     end
 
@@ -245,10 +280,25 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
         return damage
     end
 
-    -- Don't waste the pool on hits that won't land (Numb to Pain's wrapper zeroes damage outside this one)
     local buff_extension = ScriptUnit.has_extension(attacked_unit, "buff_system")
 
-    if buff_extension and (buff_extension:has_buff_perk("invulnerable") or buff_extension:has_buff_type(NUMB_TO_PAIN_BUFF)) then
+    if not buff_extension then
+        return damage
+    end
+
+    -- Hits that won't land neither fill nor consume the pool (Numb to Pain's wrapper zeroes damage outside this one)
+    if buff_extension:has_buff_perk("invulnerable") or buff_extension:has_buff_type(NUMB_TO_PAIN_BUFF) then
+        return damage
+    end
+
+    -- Zealot converts the damage he takes into overhealth for his teammates
+    if buff_extension:has_buff_type(OVERHEALTH_PASSIVE_BUFF) then
+        set_overhealth_pool(overhealth_pool + damage)
+
+        return damage
+    end
+
+    if overhealth_pool <= 0 then
         return damage
     end
 
@@ -266,6 +316,41 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
     end
 
     return damage - absorbed
+end)
+
+-- Ironheart: lethal hits taken above 20% max health leave Zealot on 1 health. Runs on the server before
+-- on_damage_taken procs, so the clamped hit no longer counts as a killing blow and doesn't consume the
+-- invulnerability. Registered after the Fiery Faith wrapper, so it runs inside it and the pool gains the
+-- clamped amount.
+local IRONHEART_SURVIVE_HEALTH_THRESHOLD = 0.5
+
+mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, ...)
+    local damage = func(current_damage, attacked_unit, ...)
+
+    if damage <= 0 then
+        return damage
+    end
+
+    local career_extension = ScriptUnit.has_extension(attacked_unit, "career_system")
+
+    if not career_extension or career_extension:career_name() ~= "wh_zealot" then
+        return damage
+    end
+
+    local status_extension = ScriptUnit.has_extension(attacked_unit, "status_system")
+
+    if not status_extension or status_extension:is_knocked_down() or status_extension:is_dead() then
+        return damage
+    end
+
+    local health_extension = ScriptUnit.extension(attacked_unit, "health_system")
+    local current_health = health_extension:current_health()
+
+    if damage >= current_health and current_health > health_extension:get_max_health() * IRONHEART_SURVIVE_HEALTH_THRESHOLD then
+        return current_health - 1
+    end
+
+    return damage
 end)
 
 -- Icon: local-only buff on the local player's unit while the pool is non-empty (not network synced)
@@ -419,6 +504,190 @@ mod_api.update_talent("wh_zealot", 4, 2, {
         },
     },
 })
+
+--[[
+    Crusade
+]]
+-- Each stack also grants 2.5% attack speed. The second sub-buff needs its own name so num_buff_type (counted by
+-- the first sub-buff's name) and max_stacks keep working per stack.
+mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_passive_move_speed_buff", {
+    {
+        apply_buff_func = "apply_movement_buff",
+        icon = "victor_zealot_passive_move_speed",
+        max_stacks = 6,
+        multiplier = 1.05,
+        remove_buff_func = "remove_movement_buff",
+        path_to_movement_setting_to_modify = {
+            "move_speed",
+        },
+    },
+    {
+        name = "tb_victor_zealot_passive_move_speed_attack_speed",
+        max_stacks = 6,
+        stat_buff = "attack_speed",
+        multiplier = 0.025,
+    },
+})
+mod_api.update_talent("wh_zealot", 4, 1, {
+    description = "tb_victor_zealot_passive_move_speed_desc",
+    description_values = {},
+})
+mod_api.insert_text("tb_victor_zealot_passive_move_speed_desc", "Increases movement speed by 5% and attack speed by 2.5% for every 25 health missing, up to 6 stacks.")
+
+--[[
+    Devotion
+]]
+-- No movement penalties, like Waywatcher's Fervent Huntress: reuses its marker buff, which the apply conditions in
+-- 09_we_waywatcher.lua check for (attacking, blocking, aiming, being hit and slowing debuffs no longer slow).
+mod_api.update_talent("wh_zealot", 5, 1, {
+    description = "tb_victor_zealot_move_speed_on_damage_taken_desc",
+    description_values = {},
+    buffs = {
+        "victor_zealot_move_speed_on_damage_taken",
+        "tb_fervent_huntress_no_movement_penalties",
+    },
+})
+mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking damage increases movement speed by 30% for 2 seconds. Saltzpyre is no longer affected by movement penalties.")
+
+--[[
+    Redeption through Blood
+]]
+-- 5% melee damage per missing stamina shield. Stamina only exists on the owner's machine, but melee damage is
+-- calculated on the server, so the owner reports its missing shields to the server, which keeps that many
+-- server-controlled stacks (replicated to every peer).
+local MISSING_STAMINA_NETWORK_ID = "tb_zealot_missing_stamina"
+local MISSING_STAMINA_DAMAGE_BUFF = "tb_victor_zealot_melee_damage_per_missing_stamina_buff"
+local MISSING_STAMINA_MAX_STACKS = 10
+local FATIGUE_POINTS_PER_SHIELD = 2
+
+local missing_stamina_stack_ids = setmetatable({}, { __mode = "k" }) -- server only, unit -> server buff ids
+
+local function set_missing_stamina_stacks(unit, num_stacks)
+    if not ALIVE[unit] then
+        return
+    end
+
+    local buff_system = Managers.state.entity:system("buff_system")
+    local stack_ids = missing_stamina_stack_ids[unit]
+
+    if not stack_ids then
+        stack_ids = {}
+        missing_stamina_stack_ids[unit] = stack_ids
+    end
+
+    num_stacks = math.clamp(num_stacks, 0, MISSING_STAMINA_MAX_STACKS)
+
+    while #stack_ids < num_stacks do
+        local server_buff_id = buff_system:add_buff(unit, MISSING_STAMINA_DAMAGE_BUFF, unit, true)
+
+        if not server_buff_id then
+            return
+        end
+
+        stack_ids[#stack_ids + 1] = server_buff_id
+    end
+
+    while #stack_ids > num_stacks do
+        buff_system:remove_server_controlled_buff(unit, table.remove(stack_ids))
+    end
+end
+
+mod:network_register(MISSING_STAMINA_NETWORK_ID, function (sender_peer_id, num_stacks)
+    if not Managers.state.network or not Managers.state.network.is_server then
+        return
+    end
+
+    local player = Managers.player:player_from_peer_id(sender_peer_id)
+    local unit = player and player.player_unit
+
+    if unit then
+        set_missing_stamina_stacks(unit, num_stacks or 0)
+    end
+end)
+
+-- Runs wherever the talent buff lives (the owner's machine, the server for bots)
+mod_api.insert_buff_function("tb_victor_zealot_update_missing_stamina", function (unit, buff, params)
+    local status_extension = ScriptUnit.has_extension(unit, "status_system")
+    local network_manager = Managers.state.network
+
+    if not status_extension or not network_manager then
+        return
+    end
+
+    local used_fatigue_points = status_extension:current_fatigue_points()
+    local missing_shields = math.floor(used_fatigue_points / FATIGUE_POINTS_PER_SHIELD)
+
+    if missing_shields == buff.tb_missing_shields then
+        return
+    end
+
+    buff.tb_missing_shields = missing_shields
+
+    if network_manager.is_server then
+        set_missing_stamina_stacks(unit, missing_shields)
+    else
+        mod:network_send(MISSING_STAMINA_NETWORK_ID, network_manager.network_transmit.server_peer_id, missing_shields)
+    end
+end)
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_melee_damage_per_missing_stamina", {
+    update_func = "tb_victor_zealot_update_missing_stamina",
+})
+mod_api.insert_talent_buff_template("witch_hunter", MISSING_STAMINA_DAMAGE_BUFF, {
+    max_stacks = MISSING_STAMINA_MAX_STACKS,
+    stat_buff = "increased_weapon_damage_melee",
+    multiplier = 0.05,
+})
+mod_api.update_talent("wh_zealot", 5, 2, {
+    description = "tb_victor_zealot_max_stamina_on_damage_taken_desc",
+    description_values = {},
+    buffs = {
+        "victor_zealot_max_stamina_on_damage_taken",
+        "tb_victor_zealot_melee_damage_per_missing_stamina",
+    },
+})
+mod_api.insert_text("tb_victor_zealot_max_stamina_on_damage_taken_desc", "Taking damage from an enemy fully restores stamina. Increases melee damage by 5% for every missing stamina shield.")
+
+--[[
+    Calloused Without and Within
+]]
+-- Heart of Iron adjusted
+local IRONHEART_TALENT_COOLDOWN_BUFF = "tb_victor_zealot_invulnerability_cooldown_talent"
+
+mod_api.insert_talent_buff_template("witch_hunter", IRONHEART_TALENT_COOLDOWN_BUFF, {
+    buff_to_add = "victor_zealot_gain_invulnerability_on_lethal_damage_taken",
+    duration = 60,
+    duration_end_func = "add_buff_local",
+    icon = "victor_zealot_passive_invulnerability",
+    is_cooldown = true,
+    max_stacks = 1,
+    refresh_durations = true,
+})
+mod_api.insert_buff_function("tb_add_victor_zealot_invulnerability_cooldown_talent", function (unit, buff, params)
+    if Unit.alive(unit) then
+        ScriptUnit.extension(unit, "buff_system"):add_buff(IRONHEART_TALENT_COOLDOWN_BUFF)
+    end
+end)
+mod_api.insert_talent_buff_template("witch_hunter", IRONHEART_TALENT_INVULNERABILITY_BUFF, {
+    icon = "victor_zealot_passive_invulnerability",
+    duration = 5,
+    max_stacks = 1,
+    priority_buff = true,
+    remove_buff_func = "tb_add_victor_zealot_invulnerability_cooldown_talent",
+    stat_buff = "damage_taken",
+    multiplier = -1,
+    perks = {
+        buff_perks.ignore_death,
+    },
+}, {
+    activation_effect = "fx/screenspace_potion_03",
+    activation_sound = "hud_gameplay_stance_tank_activate",
+    deactivation_sound = "hud_gameplay_stance_deactivate",
+})
+mod_api.update_talent("wh_zealot", 5, 3, {
+    description = "tb_victor_zealot_reduced_damage_taken_desc",
+    description_values = {},
+})
+mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damage taken by 10%. Heart of Iron's cooldown is reduced to 60 seconds.")
 
 --[[
     Flagellant's Zeal
