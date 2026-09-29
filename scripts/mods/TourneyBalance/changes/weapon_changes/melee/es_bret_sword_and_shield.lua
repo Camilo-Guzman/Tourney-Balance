@@ -4,7 +4,7 @@ local mod = get_mod("TourneyBalance")
 local action_one = Weapons.one_handed_sword_shield_template_2.actions.action_one
 
 -- Heavy Overhead (default) and Heavy Poke (default_stab_heavy) can be held indefinitely
-for _, sub_action_name in ipairs({ "default", "default_stab_heavy" }) do
+for _, sub_action_name in ipairs({ "default", "default_left", "default_left_heavy","default_stab_heavy" }) do
 	local chain_actions = action_one[sub_action_name].allowed_chain_actions
 
 	for i = #chain_actions, 1, -1 do

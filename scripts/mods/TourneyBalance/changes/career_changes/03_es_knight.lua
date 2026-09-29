@@ -122,7 +122,7 @@ mod_api.insert_talent_buff_template("empire_soldier", ROCK_OF_REIKLAND_BUFF, {
 		name = "tb_markus_knight_rock_of_reikland_damage_taken",
 		max_stacks = 1,
 		stat_buff = "damage_taken",
-		multiplier = -0.1,
+		multiplier = -0.15,
 	},
 })
 

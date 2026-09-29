@@ -38,7 +38,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		| **Cataclysm 3** | 500 | 100 |
 
 		**Virtue of Stoicism**
-		- Now regenerates 25% of damage taken as temporary health after 5s, and another 25% after 7s (from 50% after 5s).
+		- Now regenerates 25% of damage taken as temporary health after 5s, and another 25% after 10s (from 50% after 5s).
 
 		**Virtue of Discipline**
 		- Increased duration to 10s (from 6s).
@@ -499,7 +499,7 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_ov
 	heal_amount_fraction = 0.25
 })
 mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late_delayed_heal", {
-	duration = 7,
+	duration = 10,
 	max_stacks = 1,
 	refresh_durations = true,
 	remove_buff_func = "refund_damage_taken",
@@ -511,7 +511,7 @@ mod_api.update_talent("es_questingknight", 5, 1, {
 		"tb_grail_health_refund_over_time_late"
 	}
 })
-mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds, and another 25.0%% after 7 seconds.")
+mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds and 10 seconds each.")
 
 --[[
 	Virtue of Discipline

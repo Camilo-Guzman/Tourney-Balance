@@ -1,10 +1,19 @@
 local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 --[[
 	$BEGIN_TB
 		---
 		## Unchained
+		### Passives
+		**Unchained (new)**
+		- No longer explodes from overcharge, and enters the Unchained state instead for 10 seconds.
+		- Immediately swaps to the melee weapon, and can't swap back to the ranged weapon.
+		- Burns for 10 health per second (non-lethal).
+		- Gains 40% attack speed, 40% melee power and 40% critical strike chance.
+		- Using Living Bomb immediately ends the Unchained state.
+
 		### Talents
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 20% (from 100%).
@@ -13,7 +22,149 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 --[[
 
+	Passives
+
+]]
+--[[
 	Unchained
+]]
+local UNCHAINED_STATE_BUFF = "tb_sienna_unchained_unchained_state"
+local UNCHAINED_DURATION = 10
+local UNCHAINED_BURN_PER_SECOND = 10
+-- life_tap skips damage reduction and damage to overcharge conversion, wounded_dot does not interrupt interaction
+local UNCHAINED_BURN_SOURCE = "life_tap"
+local UNCHAINED_BURN_TYPE = "wounded_dot"
+
+mod_api.insert_buff_function("tb_unchained_state_burn_tick", function (unit, buff, params)
+	if not Managers.state.network.is_server or not HEALTH_ALIVE[unit] then
+		return
+	end
+
+	local status_extension = ScriptUnit.has_extension(unit, "status_system")
+
+	if status_extension and status_extension:is_knocked_down() then
+		return
+	end
+
+	-- Non-lethal: never tick below 1 health
+	local health_extension = ScriptUnit.has_extension(unit, "health_system")
+	local current_health = health_extension and health_extension:current_health() or 0
+	local damage = math.min(UNCHAINED_BURN_PER_SECOND, current_health - 1)
+
+	if damage <= 0 then
+		return
+	end
+
+	DamageUtils.add_damage_network(unit, unit, damage, "full", UNCHAINED_BURN_TYPE, nil, Vector3(0, 0, 0), UNCHAINED_BURN_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+end)
+-- on_ability_activated procs on every local player's buffs whenever anyone ults (params[1] is the activating unit).
+-- Returning true lets remove_on_proc end the whole state (all sub-buffs share the buff id).
+mod_api.insert_proc_function("tb_unchained_state_end_on_own_ability", function (owner_unit, buff, params)
+	return params[1] == owner_unit
+end)
+-- no_overcharge_explosion: overcharging again during the state vents instead of exploding or re-entering the state
+mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
+	{
+		icon = "sienna_unchained_passive",
+		duration = UNCHAINED_DURATION,
+		debuff = true,
+		max_stacks = 1,
+		update_frequency = 1,
+		update_func = "tb_unchained_state_burn_tick",
+		event = "on_ability_activated",
+		buff_func = "tb_unchained_state_end_on_own_ability",
+		remove_on_proc = true,
+		perks = {
+			buff_perks.no_overcharge_explosion,
+		},
+	},
+	{
+		name = "tb_sienna_unchained_unchained_state_attack_speed",
+		duration = UNCHAINED_DURATION,
+		max_stacks = 1,
+		stat_buff = "attack_speed",
+		multiplier = 0.4,
+	},
+	{
+		name = "tb_sienna_unchained_unchained_state_power",
+		duration = UNCHAINED_DURATION,
+		max_stacks = 1,
+		stat_buff = "power_level_melee",
+		multiplier = 0.4,
+	},
+	{
+		name = "tb_sienna_unchained_unchained_state_crit",
+		duration = UNCHAINED_DURATION,
+		max_stacks = 1,
+		stat_buff = "critical_strike_chance",
+		bonus = 0.4,
+	},
+})
+mod_api.insert_text(UNCHAINED_STATE_BUFF, "Unchained")
+mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", "Instead of exploding from overcharge, Sienna is locked to her melee weapon for 10 seconds, gaining 40% attack speed, melee power and critical strike chance, while burning for 10 health per second (non-lethal). Using Living Bomb ends this state.")
+mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
+
+-- Units that still need to be swapped to melee. Deferred to the next frame, since the state starts from inside the
+-- ranged weapon's own action update (add_charge), where stopping that action is not safe.
+local tb_unchained_pending_melee_swap = {}
+
+-- Runs on the owner, where overcharge lives. The state buff goes on locally first, so the vanilla threshold check
+-- right after sees its no_overcharge_explosion perk and vents instead of exploding.
+mod:hook(PlayerUnitOverchargeExtension, "_check_overcharge_level_thresholds", function (func, self, new_overcharge_value)
+	if self.max_value <= new_overcharge_value and not self._buff_extension:has_buff_perk("no_overcharge_explosion") then
+		local unit = self.unit
+		local career_extension = ScriptUnit.has_extension(unit, "career_system")
+
+		if career_extension and career_extension:career_name() == "bw_unchained" then
+			Managers.state.entity:system("buff_system"):add_buff_synced(unit, UNCHAINED_STATE_BUFF, BuffSyncType.LocalAndServer)
+
+			tb_unchained_pending_melee_swap[unit] = true
+		end
+	end
+
+	return func(self, new_overcharge_value)
+end)
+
+mod:add_update_function(function (dt)
+	if next(tb_unchained_pending_melee_swap) == nil then
+		return
+	end
+
+	for unit in pairs(tb_unchained_pending_melee_swap) do
+		local buff_extension = ALIVE[unit] and ScriptUnit.has_extension(unit, "buff_system")
+
+		if not buff_extension or not buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
+			tb_unchained_pending_melee_swap[unit] = nil
+		elseif not ScriptUnit.extension(unit, "status_system"):is_disabled() then
+			tb_unchained_pending_melee_swap[unit] = nil
+
+			local inventory_extension = ScriptUnit.extension(unit, "inventory_system")
+
+			if inventory_extension:get_wielded_slot_name() == "slot_ranged" then
+				inventory_extension:wield("slot_melee")
+			end
+		end
+	end
+end)
+
+-- Every wield (keybinds, wield switch, scroll) goes through wield_input, so dropping slot_ranged here blocks swapping back
+mod:hook(CharacterStateHelper, "wield_input", function (func, input_extension, inventory_extension, action_name)
+	local slot_to_wield, scroll_value, swap_from_storage_type = func(input_extension, inventory_extension, action_name)
+
+	if slot_to_wield == "slot_ranged" then
+		local buff_extension = ScriptUnit.has_extension(inventory_extension._unit, "buff_system")
+
+		if buff_extension and buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
+			return nil, scroll_value, swap_from_storage_type
+		end
+	end
+
+	return slot_to_wield, scroll_value, swap_from_storage_type
+end)
+
+--[[
+
+	Talents
 
 ]]
 --[[
