@@ -62,9 +62,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 	Ultimate
 
 ]]
--- Increased ult cooldown
--- ActivatedAbilitySettings.es_2[1].cooldown = 40 -- 30
-
 -- Charge + blast damage/stagger cleave. Edited in place: damage profiles resolve their cleave_distribution name to
 -- this exact table at load (damage_profile_templates.lua), so swapping in a new table at runtime has no effect.
 local charge_cleave_distribution = PowerLevelTemplates.cleave_distribution_markus_knight_charge
@@ -521,14 +518,14 @@ mod_api.update_talent("es_knight", 2, 3, { -- update description
 --[[
 	It's Hero Time
 ]]
--- 10s ICD nerf
+-- 15s ICD nerf
 mod_api.insert_buff_template("tb_markus_knight_hero_time_ready_buff", {
 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
 })
 mod_api.insert_buff_template("tb_markus_knight_hero_time_cooldown_buff", {
 	icon = "markus_knight_movement_speed_on_incapacitated_allies",
  	is_cooldown = true,
- 	duration = 10,
+ 	duration = 15,
  	duration_end_func = "add_buff_local",
  	buff_to_add = "tb_markus_knight_hero_time_ready_buff",
 })
@@ -559,7 +556,7 @@ mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, bu
 	
 	buff_extension:add_buff("tb_markus_knight_hero_time_cooldown_buff")
 end)
-mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 10 second cooldown.")
+mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 15 second cooldown.")
 
 -- Fix Hero Time not proccing if ally already disabled
 mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
@@ -623,18 +620,18 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_on
 	buff_func = "buff_on_stagger_enemy"
 })
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
-	duration = 1.5, -- 0.5
+	duration = 0.5, -- 0.5
 	multiplier = 2, -- 2
 	icon = "markus_knight_improved_passive_defence_aura"
 })
-mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 200%% (20%%) for 1.5 (1.5) seconds.")
+mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 200%% (20%%) for 0.5 (0.5) seconds.")
 
 -- Separate, weaker buff for the Mainstay stagger-count proc
 mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
 	max_stacks = 1,
 	refresh_durations = true,
 	stat_buff = "cooldown_regen",
-	duration = 1.5,
+	duration = 0.5,
 	multiplier = 0.2,
 	icon = "markus_knight_improved_passive_defence_aura",
 })
@@ -649,7 +646,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_ability_inv
 mod_api.update_talent("es_knight", 6, 1, {
 	description_values = {
 		{
-			value = 6 -- 3
+			value = 5 -- 3
 		}
 	},
 })
