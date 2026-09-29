@@ -21,7 +21,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Lowered required health threshold to 70% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
 
 		**Atharti's Delight**
-		- Bleed now only applies on melee headshots, but no longer requires the target to be poisoned.
+		- Now only active for 3s after landing a melee headshot (refreshed on each headshot).
 
 		**Briar's Malice**
 		- Crit stacks granted increased to 3 (from 2)
@@ -152,32 +152,34 @@ mod_api.insert_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_
 --[[
 	Atharti's Delight
 ]]
--- Bleed only applies on melee headshots (no longer requires the target to be poisoned)
-local bleed_buff_params = {}
+-- Melee headshots grant the original effect (melee hits on poisoned enemies cause bleed) for 3s, refreshable.
+mod_api.insert_talent_buff_template("wood_elf", "tb_atharti_delight_active", {
+	icon = "kerillian_thornsister_crit_big_bleed",
+	duration = 3,
+	max_stacks = 1,
+	refresh_durations = true,
+})
 mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
-	local hit_unit = params[1]
-	local hit_zone_name = params[3]
+	local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
 
-	if hit_zone_name ~= "head" and hit_zone_name ~= "neck" and hit_zone_name ~= "weakspot" then
+	if not buff_extension then
 		return
 	end
 
-	if ALIVE[owner_unit] and ALIVE[hit_unit] and ScriptUnit.has_extension(hit_unit, "buff_system") then
-		local buff_system = Managers.state.entity:system("buff_system")
-		local career_extension = ScriptUnit.extension(owner_unit, "career_system")
+	local hit_zone_name = params[3]
 
-		table.clear(bleed_buff_params)
+	if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
+		buff_extension:add_buff("tb_atharti_delight_active")
+	end
 
-		bleed_buff_params.power_level = career_extension:get_career_power_level()
-		bleed_buff_params.attacker_unit = owner_unit
-
-		buff_system:add_buff_synced(hit_unit, buff.template.bleed, BuffSyncType.LocalAndServer, bleed_buff_params)
+	if buff_extension:has_buff_type("tb_atharti_delight_active") then
+		return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
 	end
 end)
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
 	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
 })
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots cause enemies to bleed.")
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots cause melee hits against poisoned enemies to inflict bleed for 3 seconds.")
 
 --[[
 	Bonded Spirit

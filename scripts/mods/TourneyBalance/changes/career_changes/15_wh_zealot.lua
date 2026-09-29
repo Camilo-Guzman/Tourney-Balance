@@ -125,7 +125,7 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
 end)
 
 -- Heart of Iron perk description (perks[2], Zealot-only text)
-mod_api.insert_text("career_passive_desc_wh_1c", "Resist death on taking lethal damage (120 secoonds cooldown). While above 50% health, lethal hits leave Saltzpyre on 1 health.")
+mod_api.insert_text("career_passive_desc_wh_1c", "Resist death on taking lethal damage every 120 seconds. While above 50% health, lethal hits leave Saltzpyre on 1 health.")
 -- Survive lethal hits above 20% health: registered after the Fiery Faith wrapper, see below
 
 --[[
