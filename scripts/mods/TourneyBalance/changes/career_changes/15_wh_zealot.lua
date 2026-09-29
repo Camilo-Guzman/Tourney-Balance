@@ -123,9 +123,8 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
     end
 end)
 
--- Vanilla shares Slayer's "career_passive_desc_dr_2c" text, so give Zealot his own
-PassiveAbilitySettings.wh_1.perks[1].description = "tb_career_passive_desc_wh_1b"
-mod_api.insert_text("tb_career_passive_desc_wh_1b", "While above 50% health, lethal hits leave Saltzpyre on 1 health. Otherwise, taking fatal damage grants invulnerability for 5 seconds. Can only trigger once every 60 seconds.")
+-- Heart of Iron perk description (perks[2], Zealot-only text)
+mod_api.insert_text("career_passive_desc_wh_1c", "Resist death on taking lethal damage (120 secoonds cooldown). While above 50% health, lethal hits leave Saltzpyre on 1 health.")
 -- Survive lethal hits above 20% health: registered after the Fiery Faith wrapper, see below
 
 --[[
@@ -198,7 +197,7 @@ mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_passive_me
 mod_api.insert_career_passives("wh_1", {
     "tb_victor_zealot_passive_melee_power",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing and 5% melee power for every 25 total health missing (temporary health counts as health). Max Stacks 6 each. Damage Saltzpyre takes is converted into Overhealth for his allies (up to 50). Damage taken by allies is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing and 5% melee power for every 25 total health missing. Max Stacks 6 each. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
