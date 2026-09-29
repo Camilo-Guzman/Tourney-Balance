@@ -9,9 +9,9 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Passives
 		**Unchained (new)**
 		- No longer explodes from overcharge, and enters the Unchained state instead for 10 seconds.
-		- Immediately swaps to the melee weapon, and can't swap back to the ranged weapon.
-		- Burns for 10 health per second (non-lethal).
-		- Gains 40% attack speed, 40% melee power and 40% critical strike chance.
+		- Can't use the ranged weapon for the duration.
+		- Burns for 20 health per second (non-lethal).
+		- Gains 30% attack speed, 10% melee power and 10% critical strike chance.
 		- Using Living Bomb immediately ends the Unchained state.
 
 		### Talents
@@ -30,7 +30,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 ]]
 local UNCHAINED_STATE_BUFF = "tb_sienna_unchained_unchained_state"
 local UNCHAINED_DURATION = 10
-local UNCHAINED_BURN_PER_SECOND = 10
+local UNCHAINED_BURN_PER_SECOND = 20
 -- life_tap skips damage reduction and damage to overcharge conversion, wounded_dot does not interrupt interaction
 local UNCHAINED_BURN_SOURCE = "life_tap"
 local UNCHAINED_BURN_TYPE = "wounded_dot"
@@ -83,30 +83,30 @@ mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
 		duration = UNCHAINED_DURATION,
 		max_stacks = 1,
 		stat_buff = "attack_speed",
-		multiplier = 0.4,
+		multiplier = 0.3,
 	},
 	{
 		name = "tb_sienna_unchained_unchained_state_power",
 		duration = UNCHAINED_DURATION,
 		max_stacks = 1,
 		stat_buff = "power_level_melee",
-		multiplier = 0.4,
+		multiplier = 0.1,
 	},
 	{
 		name = "tb_sienna_unchained_unchained_state_crit",
 		duration = UNCHAINED_DURATION,
 		max_stacks = 1,
 		stat_buff = "critical_strike_chance",
-		bonus = 0.4,
+		bonus = 0.1,
 	},
 })
 mod_api.insert_text(UNCHAINED_STATE_BUFF, "Unchained")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", "Instead of exploding from overcharge, Sienna is locked to her melee weapon for 10 seconds, gaining 40% attack speed, melee power and critical strike chance, while burning for 10 health per second (non-lethal). Using Living Bomb ends this state.")
+mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", "Instead of exploding from overcharge, Sienna can't use her ranged weapon for 10 seconds, gaining 30% attack speed, 10% melee power and 10% critical strike chance, while burning for 20 health per second (non-lethal). Using Living Bomb ends this state.")
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
--- Units that still need to be swapped to melee. Deferred to the next frame, since the state starts from inside the
--- ranged weapon's own action update (add_charge), where stopping that action is not safe.
-local tb_unchained_pending_melee_swap = {}
+-- Units whose ranged action still needs to be stopped. Deferred to the next frame, since the state starts from inside
+-- the ranged weapon's own action update (add_charge), where stopping that action is not safe.
+local tb_unchained_pending_ranged_stop = {}
 
 -- Runs on the owner, where overcharge lives. The state buff goes on locally first, so the vanilla threshold check
 -- right after sees its no_overcharge_explosion perk and vents instead of exploding.
@@ -118,48 +118,48 @@ mod:hook(PlayerUnitOverchargeExtension, "_check_overcharge_level_thresholds", fu
 		if career_extension and career_extension:career_name() == "bw_unchained" then
 			Managers.state.entity:system("buff_system"):add_buff_synced(unit, UNCHAINED_STATE_BUFF, BuffSyncType.LocalAndServer)
 
-			tb_unchained_pending_melee_swap[unit] = true
+			tb_unchained_pending_ranged_stop[unit] = true
 		end
 	end
 
 	return func(self, new_overcharge_value)
 end)
 
+local function tb_unchained_ranged_locked(unit)
+	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+
+	if not buff_extension or not buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
+		return false
+	end
+
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+
+	return inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_ranged"
+end
+
+-- Ends a ranged action already running when the state starts (charging, beam or flamethrower channels would keep going)
 mod:add_update_function(function (dt)
-	if next(tb_unchained_pending_melee_swap) == nil then
+	if next(tb_unchained_pending_ranged_stop) == nil then
 		return
 	end
 
-	for unit in pairs(tb_unchained_pending_melee_swap) do
-		local buff_extension = ALIVE[unit] and ScriptUnit.has_extension(unit, "buff_system")
+	for unit in pairs(tb_unchained_pending_ranged_stop) do
+		tb_unchained_pending_ranged_stop[unit] = nil
 
-		if not buff_extension or not buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
-			tb_unchained_pending_melee_swap[unit] = nil
-		elseif not ScriptUnit.extension(unit, "status_system"):is_disabled() then
-			tb_unchained_pending_melee_swap[unit] = nil
-
-			local inventory_extension = ScriptUnit.extension(unit, "inventory_system")
-
-			if inventory_extension:get_wielded_slot_name() == "slot_ranged" then
-				inventory_extension:wield("slot_melee")
-			end
+		if ALIVE[unit] and tb_unchained_ranged_locked(unit) then
+			CharacterStateHelper.stop_weapon_actions(ScriptUnit.extension(unit, "inventory_system"), "interrupted")
 		end
 	end
 end)
 
--- Every wield (keybinds, wield switch, scroll) goes through wield_input, so dropping slot_ranged here blocks swapping back
-mod:hook(CharacterStateHelper, "wield_input", function (func, input_extension, inventory_extension, action_name)
-	local slot_to_wield, scroll_value, swap_from_storage_type = func(input_extension, inventory_extension, action_name)
-
-	if slot_to_wield == "slot_ranged" then
-		local buff_extension = ScriptUnit.has_extension(inventory_extension._unit, "buff_system")
-
-		if buff_extension and buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
-			return nil, scroll_value, swap_from_storage_type
-		end
+-- Every weapon action (attacks, chains, venting) starts through start_action, while swapping weapons is its own
+-- action_wield. Refusing everything but action_wield on the ranged weapon leaves it unusable, but still swappable.
+mod:hook(WeaponUnitExtension, "start_action", function (func, self, action_name, ...)
+	if action_name and action_name ~= "action_wield" and tb_unchained_ranged_locked(self.owner_unit) then
+		return
 	end
 
-	return slot_to_wield, scroll_value, swap_from_storage_type
+	return func(self, action_name, ...)
 end)
 
 --[[
