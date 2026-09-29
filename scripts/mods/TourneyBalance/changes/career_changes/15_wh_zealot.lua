@@ -15,6 +15,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Passives
 		**Fiery Faith**
 		- Now also grants 5% melee power for every 25 total health missing (temporary health counts as health), up to 6 stacks.
+		- Fiery Faith stacks are doubled while on the last life (up to 12).
 		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
 		- Damage taken by his allies is absorbed by Overhealth first.
         - Can hit trade with it.
@@ -146,24 +147,36 @@ local overhealth_display = 0 -- every peer, math.ceil of the pool
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
--- 5% melee power for every 25 total health missing, up to 6 stacks. Unlike the vanilla power stacks (which only
--- count missing permanent health), temporary health counts as health here. Same server-controlled stacking as
--- vanilla's activate_buff_stacks_based_on_health_chunks, so the stacks replicate to clients.
-mod_api.insert_buff_function("tb_activate_buff_stacks_based_on_total_health_chunks", function (unit, buff, params)
+-- Both Fiery Faith stack types: vanilla's activate_buff_stacks_based_on_health_chunks (server-controlled stacks that
+-- replicate to clients), plus
+--  - tb_count_temporary_health: temporary health counts as health (the melee power stacks). Vanilla's power stacks
+--    only count missing permanent health.
+--  - While Zealot is on his last life (the next knockdown kills him), the number of stacks and the stack cap are doubled.
+local FIERY_FAITH_MAX_STACKS = 6
+local FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER = 2
+
+mod_api.insert_buff_function("tb_activate_fiery_faith_stacks", function (unit, buff, params)
     if not Managers.state.network.is_server then
         return
     end
 
     local health_extension = ScriptUnit.extension(unit, "health_system")
     local buff_extension = ScriptUnit.extension(unit, "buff_system")
+    local status_extension = ScriptUnit.extension(unit, "status_system")
     local buff_system = Managers.state.entity:system("buff_system")
     local template = buff.template
     local buff_to_add = template.buff_to_add
     local chunk_size = template.chunk_size
     local uncursed_max_health = health_extension:get_uncursed_max_health()
-    local damage_taken = uncursed_max_health - health_extension:current_health()
+    local current_health = template.tb_count_temporary_health and health_extension:current_health() or health_extension:current_permanent_health()
+    local damage_taken = uncursed_max_health - current_health
     local max_stacks = math.min(math.floor(uncursed_max_health / chunk_size) - 1, template.max_stacks)
     local num_chunks = math.clamp(math.floor(damage_taken / chunk_size), 0, max_stacks)
+
+    if status_extension:wounded_and_on_last_wound() then
+        num_chunks = num_chunks * FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER
+    end
+
     local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
     local stack_ids = buff.stack_ids
 
@@ -180,24 +193,34 @@ mod_api.insert_buff_function("tb_activate_buff_stacks_based_on_total_health_chun
         buff_system:remove_server_controlled_buff(unit, table.remove(stack_ids, 1))
     end
 end)
+-- Vanilla power stacks: same function, so they double on the last life too. The stack buff's cap is raised to
+-- fit the doubled count; the parent's max_stacks still caps the normal count at 6.
+mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_passive_increased_damage", {
+    update_func = "tb_activate_fiery_faith_stacks", -- "activate_buff_stacks_based_on_health_chunks"
+})
+mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_passive_damage", {
+    max_stacks = FIERY_FAITH_MAX_STACKS * FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER, -- 6
+})
+-- 5% melee power for every 25 total health missing, up to 6 stacks
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_passive_melee_power", {
     buff_to_add = "tb_victor_zealot_passive_melee_power_buff",
     chunk_size = 25,
-    max_stacks = 6,
-    update_func = "tb_activate_buff_stacks_based_on_total_health_chunks",
+    max_stacks = FIERY_FAITH_MAX_STACKS,
+    tb_count_temporary_health = true,
+    update_func = "tb_activate_fiery_faith_stacks",
 })
 -- Same icon as the vanilla Fiery Faith stacks; debuff = true gives it the red outline to tell the two apart
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_passive_melee_power_buff", {
     icon = "victor_zealot_passive",
     debuff = true,
-    max_stacks = 6,
+    max_stacks = FIERY_FAITH_MAX_STACKS * FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER,
     stat_buff = "power_level_melee",
     multiplier = 0.05,
 })
 mod_api.insert_career_passives("wh_1", {
     "tb_victor_zealot_passive_melee_power",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing and 5% melee power for every 25 total health missing. Max Stacks 6 each. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing and 5% melee power for every 25 total health missing. Max Stacks 6 each, doubled while on the last life. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
