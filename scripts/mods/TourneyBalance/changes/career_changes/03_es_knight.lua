@@ -50,7 +50,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Numb to Pain**
 		- Invulnerability duration on ult increased to 6s (from 3s).
-		- Hit trading at 10% effectiveness.
 
 		**Bull of Ostland**
 		- Attack speed buff from ult hits lasts 15s (from 10s).
@@ -641,52 +640,16 @@ mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
 ]]
 -- Invulnerability on ult duration increased to 6s
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_ability_invulnerability_buff", {
-	duration = 5 -- 3
+	duration = 6 -- 3
 })
 mod_api.update_talent("es_knight", 6, 1, {
 	description_values = {
 		{
-			value = 5 -- 3
+			value = 6 -- 3
 		}
 	},
 })
-mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charge makes Kruber immune to damage for %s seconds. Damage prevented reduces the cooldown of Valiant Charge at 20%% effectiveness.")
-
--- Numb to Pain is a damage_taken -100% stat buff
--- Hit trading: damage prevented by Numb to Pain still charges the ult at the normal on-damage-taken rate.
-local NUMB_TO_PAIN_BUFF = "markus_knight_ability_invulnerability_buff"
-local CDR_ON_DAMAGE_TAKEN_BUFF = "markus_knight_ability_cooldown_on_damage_taken"
-local ULT_REGEN_MODIFIER = 0.1 -- x * 0.35
-
-local tb_reduce_cooldown_on_owner = require("scripts/mods/TourneyBalance/_api/shared_utils").reduce_cooldown_on_owner
-
--- Registered through the dispatcher in TourneyBalance.lua
-mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, ...)
-	local buff_extension = ScriptUnit.has_extension(attacked_unit, "buff_system")
-	local numb_to_pain = buff_extension and buff_extension:get_non_stacking_buff(NUMB_TO_PAIN_BUFF)
-	local damage_taken_stat = numb_to_pain and numb_to_pain.stat_buff_index and buff_extension._stat_buffs.damage_taken[numb_to_pain.stat_buff_index]
-
-	if not damage_taken_stat then
-		return func(current_damage, attacked_unit, attacker_unit, damage_source, ...)
-	end
-
-	local saved_multiplier = damage_taken_stat.multiplier
-
-	damage_taken_stat.multiplier = saved_multiplier - numb_to_pain.multiplier
-
-	local prevented_damage = func(current_damage, attacked_unit, attacker_unit, damage_source, ...)
-
-	damage_taken_stat.multiplier = saved_multiplier
-
-	-- Same conditions as vanilla's proc: real damage, not self-inflicted, not temp health decay
-	if prevented_damage > 0 and attacker_unit ~= attacked_unit and damage_source ~= "temporary_health_degen" then
-		local bonus = BuffTemplates[CDR_ON_DAMAGE_TAKEN_BUFF].buffs[1].bonus
-
-		tb_reduce_cooldown_on_owner(attacked_unit, bonus * prevented_damage * ULT_REGEN_MODIFIER)
-	end
-
-	return 0
-end)
+mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charge makes Kruber immune to damage for %s seconds.")
 
 --[[
 	Bull of Ostland
