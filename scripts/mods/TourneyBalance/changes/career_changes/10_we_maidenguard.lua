@@ -12,8 +12,12 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 		## Handmaiden
 		### Career Ability
 		- Increased hitbox width/depth ult to 2/3 (from 1.5/0.4).
+		- Cooldown resets when an ally becomes incapacitated or disabled.
 
 		### Passives
+		**Ariel's Benison**
+		- Added effect: Knocked down allies within her aura are invulnerable.
+
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
 		- Healing received beyond max health is given as THP, split between allies in the aura that are not at full health.
@@ -65,6 +69,62 @@ mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
     status_extension.do_lunge.damage.depth_padding = 3  --0.4    --length of hitbox
     status_extension.do_lunge.damage.offset_forward = 0   --0    --position of hitbox
 
+end)
+
+mod_api.insert_text("career_active_desc_we_2_2", "Kerillian swiftly dashes forward, moving through enemies. Cooldown resets when an ally becomes incapacitated or disabled.")
+
+-- Ult cooldown resets when an ally becomes incapacitated or disabled (knocked down, pounced, grabbed, ledge hanging, ...).
+-- The cooldown lives on the owner, so this polls ally status on the owning peer (local player, or server for bots)
+-- and fires on the not-disabled -> disabled transition. Ally status flags are synced to every peer.
+mod:hook(CareerExtension, "update", function (func, self, unit, input, dt, context, t)
+    func(self, unit, input, dt, context, t)
+
+    if self._career_name ~= "we_maidenguard" then
+        return
+    end
+
+    local player = self.player
+
+    if not player or not (player.local_player or (self.is_server and player.bot_player)) then
+        return
+    end
+
+    local side = Managers.state.side.side_by_unit[unit]
+    local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+
+    if not player_and_bot_units then
+        return
+    end
+
+    local ally_disabled = self._tb_ally_disabled
+
+    if not ally_disabled then
+        ally_disabled = {}
+        self._tb_ally_disabled = ally_disabled
+    end
+
+    local reset = false
+
+    for i = 1, #player_and_bot_units do
+        local ally_unit = player_and_bot_units[i]
+
+        if ally_unit ~= unit and ALIVE[ally_unit] then
+            local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
+            local disabled = ally_status_extension and ally_status_extension:is_disabled() or false
+            local was_disabled = ally_disabled[ally_unit]
+
+            -- First sighting (nil) only records the state, so joining/spawning next to a downed ally doesn't reset
+            if disabled and was_disabled == false then
+                reset = true
+            end
+
+            ally_disabled[ally_unit] = disabled
+        end
+    end
+
+    if reset then
+        self:reduce_activated_ability_cooldown_percent(1)
+    end
 end)
 
 local function tb_noop() end
@@ -280,6 +340,62 @@ mod:add_player_add_heal_wrapper(function (func, self, healer_unit, heal_amount, 
     table.clear(renewal_recipients)
 
     return result
+end)
+
+--[[
+    Ariel's Benison
+]]
+-- Replace the vanilla Ariel's Benison perk text (career_passive_name_we_2c) instead of adding a second entry
+mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that grants knocked down allies invulnerability. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health.")
+
+-- Knocked down allies inside the Renewal aura of a standing Handmaiden take no damage (including bleed-out).
+-- Short-circuits before the rest of the chain, so e.g. Zealot's overhealth pool isn't consumed for nothing.
+-- Registered through the apply_buffs_to_damage dispatcher in TourneyBalance.lua (server only).
+local function is_protected_by_ariels_benison(attacked_unit)
+    local side = Managers.state.side.side_by_unit[attacked_unit]
+    local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+    local attacked_position = POSITION_LOOKUP[attacked_unit]
+
+    if not player_and_bot_units or not attacked_position then
+        return false
+    end
+
+    local range = get_renewal_aura_range()
+    local range_sq = range * range
+
+    for i = 1, #player_and_bot_units do
+        local ally_unit = player_and_bot_units[i]
+
+        if ally_unit ~= attacked_unit and HEALTH_ALIVE[ally_unit] then
+            local career_extension = ScriptUnit.has_extension(ally_unit, "career_system")
+
+            if career_extension and career_extension:career_name() == "we_maidenguard" then
+                local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
+                local ally_position = POSITION_LOOKUP[ally_unit]
+
+                if ally_status_extension and not ally_status_extension:is_knocked_down() and ally_position
+                    and Vector3.distance_squared(attacked_position, ally_position) <= range_sq then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, victim_units, damage_type, ...)
+    -- Level kill volumes and forced deaths still go through
+    if damage_type ~= "forced" and damage_source ~= "volume_insta_kill" then
+        local status_extension = ScriptUnit.has_extension(attacked_unit, "status_system")
+
+        if status_extension and status_extension.is_knocked_down and status_extension:is_knocked_down()
+            and is_protected_by_ariels_benison(attacked_unit) then
+            return 0
+        end
+    end
+
+    return func(current_damage, attacked_unit, attacker_unit, damage_source, victim_units, damage_type, ...)
 end)
 
 --[[

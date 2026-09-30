@@ -620,7 +620,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_on
 })
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
 	duration = 0.5, -- 0.5
-	multiplier = 2, -- 2
+	multiplier = 1, -- 2
 	icon = "markus_knight_improved_passive_defence_aura"
 })
 mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 200%% (20%%) for 0.5 (0.5) seconds.")
@@ -631,7 +631,7 @@ mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
 	refresh_durations = true,
 	stat_buff = "cooldown_regen",
 	duration = 0.5,
-	multiplier = 0.2,
+	multiplier = 0.5,
 	icon = "markus_knight_improved_passive_defence_aura",
 })
 
