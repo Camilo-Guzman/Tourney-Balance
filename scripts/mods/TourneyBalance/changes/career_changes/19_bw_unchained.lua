@@ -46,6 +46,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Fuel for the Fire**
 		- Added: Blood Magic generates no overcharge for 15 seconds after using Living Bomb.
+		- Living Bomb no longer clears overcharge (still ends the Unchained state).
 
 		**Wildfire**
 		- Aura burn over its full duration now deals the burn damage of 4 Warrior Priest Bubble explosions.
@@ -301,7 +302,8 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 end
 
 -- Vanilla career_ability_bw_unchained.lua _run_ability, with:
--- baseline self temp health and Witch Hunter Captain shout stagger, Bomb Balm allies only, Fuel for the Fire no Blood Magic overcharge
+-- baseline self temp health and Witch Hunter Captain shout stagger, Bomb Balm allies only,
+-- Fuel for the Fire keeps overcharge and stops Blood Magic overcharge
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -322,9 +324,14 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	})
 
 	if is_server and bot_player or local_player then
-		local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
+		-- Fuel for the Fire keeps overcharge. The Unchained state still ends: it's removed by on_ability_activated
+		-- (start_activated_ability_cooldown below), not by this reset
+		if not talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
+			local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
 
-		overcharge_extension:reset()
+			overcharge_extension:reset()
+		end
+
 		career_extension:set_state("sienna_activate_unchained")
 	end
 
@@ -820,7 +827,7 @@ mod_api.insert_talent_buff_template("bright_wizard", FUEL_FOR_THE_FIRE_NO_BLOOD_
 mod_api.update_talent("bw_unchained", 6, 1, {
 	description_values = {},
 })
-mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_desc", "Each enemy hit by Living Bomb increases power by 5% for 15 seconds. Stacking up to 5 times. Blood Magic generates no overcharge for the duration.")
+mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_desc", "Each enemy hit by Living Bomb increases power by 5% for 15 seconds. Stacking up to 5 times. Blood Magic generates no overcharge for the duration. Living Bomb no longer clears overcharge.")
 
 --[[
 	Wildfire
