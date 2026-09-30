@@ -21,7 +21,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
         - Can hit trade with it.
 
 		**Ironheart**
-		- While above 50% health, lethal hits leave Zealot on 1 health.
 		- Fixed invincibility not proccing on client.
 
 		**Chasten (new)**
@@ -124,10 +123,6 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
         end
     end
 end)
-
--- Heart of Iron perk description (perks[2], Zealot-only text)
-mod_api.insert_text("career_passive_desc_wh_1c", "Resist death on taking lethal damage every 120 seconds. While above 50% health, lethal hits leave Saltzpyre on 1 health.")
--- Survive lethal hits above 20% health: registered after the Fiery Faith wrapper, see below
 
 --[[
     Fiery Faith - Overhealth
@@ -280,8 +275,7 @@ local function get_cdr_on_damage_taken_bonus(unit)
     return buff_name and BuffTemplates[buff_name].buffs[1].bonus
 end
 
--- Gain and absorb: applied after all other damage reductions, including the Ironheart clamp below, so Zealot's
--- gain is the damage he actually takes. Registered through the dispatcher in TourneyBalance.lua.
+-- Gain and absorb: applied after all other damage reductions, so Zealot's gain is the damage he actually takes. Registered through the dispatcher in TourneyBalance.lua.
 -- apply_buffs_to_damage only runs for players on the server.
 mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, ...)
     local damage = func(current_damage, attacked_unit, attacker_unit, damage_source, ...)
@@ -339,41 +333,6 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
     end
 
     return damage - absorbed
-end)
-
--- Ironheart: lethal hits taken above 20% max health leave Zealot on 1 health. Runs on the server before
--- on_damage_taken procs, so the clamped hit no longer counts as a killing blow and doesn't consume the
--- invulnerability. Registered after the Fiery Faith wrapper, so it runs inside it and the pool gains the
--- clamped amount.
-local IRONHEART_SURVIVE_HEALTH_THRESHOLD = 0.5
-
-mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, ...)
-    local damage = func(current_damage, attacked_unit, ...)
-
-    if damage <= 0 then
-        return damage
-    end
-
-    local career_extension = ScriptUnit.has_extension(attacked_unit, "career_system")
-
-    if not career_extension or career_extension:career_name() ~= "wh_zealot" then
-        return damage
-    end
-
-    local status_extension = ScriptUnit.has_extension(attacked_unit, "status_system")
-
-    if not status_extension or status_extension:is_knocked_down() or status_extension:is_dead() then
-        return damage
-    end
-
-    local health_extension = ScriptUnit.extension(attacked_unit, "health_system")
-    local current_health = health_extension:current_health()
-
-    if damage >= current_health and current_health > health_extension:get_max_health() * IRONHEART_SURVIVE_HEALTH_THRESHOLD then
-        return current_health - 1
-    end
-
-    return damage
 end)
 
 -- Icon: local-only buff on the local player's unit while the pool is non-empty (not network synced)
