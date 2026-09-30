@@ -8,6 +8,8 @@ Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left.damag
 Weapons.two_handed_hammers_template_1.actions.action_one.light_attack_push_left_up.damage_profile = "tb_2h_hammer_heavy"
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_right.anim_time_scale = 1.2
 Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left.anim_time_scale = 1.2
+Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_right.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+Weapons.two_handed_hammers_template_1.actions.action_one.heavy_attack_left.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
 
 NewDamageProfileTemplates.tb_2h_hammer_heavy = {
 	stagger_duration_modifier = 1.8,

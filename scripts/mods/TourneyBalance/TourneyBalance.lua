@@ -174,6 +174,23 @@ mod:hook(ActionMeleeStart, "client_owner_post_update", function (func, self, dt,
     end
 end)
 
+--- CareerExtension.update dispatcher
+-- Same hook-collision problem as IngameHud above: 10_we_maidenguard.lua (Dash reset) and 01_es_mercenary.lua
+-- (On Yer Feet, Mates!) both need a per-frame career tick. Register through mod:add_career_update_function(fn)
+-- instead of calling mod:hook/hook_safe(CareerExtension, "update", ...) directly.
+-- fn(self, unit, input, dt, context, t) runs after the original, in registration order.
+local _career_update_functions = {}
+function mod.add_career_update_function(self, func)
+    _career_update_functions[#_career_update_functions + 1] = func
+end
+mod:hook(CareerExtension, "update", function (func, self, unit, input, dt, context, t)
+    func(self, unit, input, dt, context, t)
+
+    for i = 1, #_career_update_functions do
+        _career_update_functions[i](self, unit, input, dt, context, t)
+    end
+end)
+
 --- Buff apply conditions
 -- To stop specific buffs from being added (e.g. movement penalties), chain a condition onto the template's
 -- sub-buffs instead of hooking BuffExtension.add_buff: add_buff checks sub_buff.apply_condition itself, so the

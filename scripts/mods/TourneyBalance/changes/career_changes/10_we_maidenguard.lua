@@ -16,7 +16,7 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 
 		### Passives
 		**Ariel's Benison**
-		- Added effect: Knocked down allies within her aura are invulnerable.
+		- Added effect: Knocked down allies within her aura take 80% reduced damage.
 
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
@@ -76,9 +76,8 @@ mod_api.insert_text("career_active_desc_we_2_2", "Kerillian swiftly dashes forwa
 -- Ult cooldown resets when an ally becomes incapacitated or disabled (knocked down, pounced, grabbed, ledge hanging, ...).
 -- The cooldown lives on the owner, so this polls ally status on the owning peer (local player, or server for bots)
 -- and fires on the not-disabled -> disabled transition. Ally status flags are synced to every peer.
-mod:hook(CareerExtension, "update", function (func, self, unit, input, dt, context, t)
-    func(self, unit, input, dt, context, t)
-
+-- Registered through the CareerExtension.update dispatcher in TourneyBalance.lua.
+mod:add_career_update_function(function (self, unit, input, dt, context, t)
     if self._career_name ~= "we_maidenguard" then
         return
     end
@@ -346,11 +345,13 @@ end)
     Ariel's Benison
 ]]
 -- Replace the vanilla Ariel's Benison perk text (career_passive_name_we_2c) instead of adding a second entry
-mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that grants knocked down allies invulnerability. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health.")
+mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage taken by knocked down allies by 80%. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health.")
 
--- Knocked down allies inside the Renewal aura of a standing Handmaiden take no damage (including bleed-out).
--- Short-circuits before the rest of the chain, so e.g. Zealot's overhealth pool isn't consumed for nothing.
+-- Knocked down allies inside the Renewal aura of a standing Handmaiden take 80% less damage (including bleed-out).
+-- Reduces the incoming damage before the rest of the chain, so e.g. Zealot's overhealth pool only absorbs the reduced amount.
 -- Registered through the apply_buffs_to_damage dispatcher in TourneyBalance.lua (server only).
+local ARIELS_BENISON_DAMAGE_REDUCTION = 0.8
+
 local function is_protected_by_ariels_benison(attacked_unit)
     local side = Managers.state.side.side_by_unit[attacked_unit]
     local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
@@ -391,7 +392,7 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
 
         if status_extension and status_extension.is_knocked_down and status_extension:is_knocked_down()
             and is_protected_by_ariels_benison(attacked_unit) then
-            return 0
+            current_damage = current_damage * (1 - ARIELS_BENISON_DAMAGE_REDUCTION)
         end
     end
 

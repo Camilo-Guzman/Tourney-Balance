@@ -20,6 +20,12 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 		
 		**Strike Together**
 		- Changed to Paced Strikes activates on hitting 1 enemy.
+
+		**Stand Clear**
+		- Additionally removes the movement slowdown from melee weapons.
+
+		**On Yer Feet, Mates!**
+		- Ultimate cooldown is instantly refunded when an ally is knocked down.
 	$END_TB
 ]]
 
@@ -128,5 +134,98 @@ end)
 mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_crit_count", {
 	buff_func = "tb_add_buff_on_first_target_hit_helborg" --"add_buff_on_first_target_hit"
 })
+
+--[[
+	Stand Clear
+]]
+-- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
+-- while a melee weapon is wielded. Same approach as Virtue of the Joust (04_es_questingknight.lua).
+local TB_STAND_CLEAR_MOVEMENT_PENALTY_BUFFS = {
+	"planted_decrease_movement",
+	"planted_fast_decrease_movement",
+	"planted_charging_decrease_movement",
+}
+
+local function tb_stand_clear_removes_movement_penalty(unit)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	if not (talent_extension and talent_extension:has_talent("markus_mercenary_dodge_range")) then
+		return false
+	end
+
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+
+	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+end
+
+for _, buff_name in ipairs(TB_STAND_CLEAR_MOVEMENT_PENALTY_BUFFS) do
+	mod:add_buff_apply_condition(buff_name, function (unit, template, params)
+		return mod:is_action_movement_speed_up(params) or not tb_stand_clear_removes_movement_penalty(unit)
+	end)
+end
+mod_api.insert_text("markus_mercenary_dodge_range_desc", "Increases dodge distance and dodge speed by 20%%. Removes the movement slowdown from melee weapons.")
+
+--[[
+	On Yer Feet, Mates!
+]]
+-- Ult cooldown refunds when an ally gets knocked down. The cooldown lives on the owner, so this polls ally status
+-- on the owning peer (local player, or server for bots) and fires on the not-downed -> downed transition.
+-- Ally status flags are synced to every peer. Registered through the CareerExtension.update dispatcher in TourneyBalance.lua.
+mod:add_career_update_function(function (self, unit, input, dt, context, t)
+	if self._career_name ~= "es_mercenary" then
+		return
+	end
+
+	local player = self.player
+
+	if not player or not (player.local_player or (self.is_server and player.bot_player)) then
+		return
+	end
+
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	if not (talent_extension and talent_extension:has_talent("markus_mercenary_activated_ability_revive")) then
+		self._tb_ally_knocked_down = nil
+		return
+	end
+
+	local side = Managers.state.side.side_by_unit[unit]
+	local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+
+	if not player_and_bot_units then
+		return
+	end
+
+	local ally_knocked_down = self._tb_ally_knocked_down
+
+	if not ally_knocked_down then
+		ally_knocked_down = {}
+		self._tb_ally_knocked_down = ally_knocked_down
+	end
+
+	local refund = false
+
+	for i = 1, #player_and_bot_units do
+		local ally_unit = player_and_bot_units[i]
+
+		if ally_unit ~= unit and ALIVE[ally_unit] then
+			local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
+			local knocked_down = ally_status_extension and ally_status_extension:is_knocked_down() or false
+			local was_knocked_down = ally_knocked_down[ally_unit]
+
+			-- First sighting (nil) only records the state, so picking the talent/joining next to a downed ally doesn't refund
+			if knocked_down and was_knocked_down == false then
+				refund = true
+			end
+
+			ally_knocked_down[ally_unit] = knocked_down
+		end
+	end
+
+	if refund then
+		self:reduce_activated_ability_cooldown_percent(1)
+	end
+end)
+mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost also revives knocked down allies. Cooldown is instantly refunded when an ally is knocked down.")
 
 
