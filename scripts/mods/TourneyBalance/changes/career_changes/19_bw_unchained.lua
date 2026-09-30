@@ -826,7 +826,8 @@ mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_des
 	Wildfire
 ]]
 -- Total aura burn on an enemy standing in it the whole time = 4 Warrior Priest Bubble explosion burns.
--- One Bubble burn (victor_priest_nuke_dot): burning_dot (0.07) every 0.7s for 5s = 7 ticks at career power, 4 of them = 28 ticks.
+-- One Bubble burn (victor_priest_nuke_dot, see 16_wh_priest.lua): burning_dot (0.07) every 3.5s for 25s = 7 ticks at
+-- career power, 4 of them = 28 ticks.
 -- Aura: 10s + 2s lingering burn, ticking every 0.7s = ~17 ticks, so each tick is 0.07 * 28 / 17 = ~0.115.
 -- Replaces vanilla burning_dot_unchained_pulse (burning_dot every 2s at 200 power)
 local WILDFIRE_BURN_BUFF = "tb_sienna_unchained_wildfire_burn"

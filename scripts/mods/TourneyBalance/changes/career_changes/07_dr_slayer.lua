@@ -22,10 +22,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Attack speed increased to 15% (from 10%).
 
 		**Impatience**
-		- Trophy Hunter stacks last 10 seconds (from 2).
-
-		**High Tally**
-		- Increases Trophy Hunter's maximum stacks to 5 (from 4).
+		- Trophy Hunter stacks last 5 seconds (from 2).
 
 		**Adrenaline Surge**
 		- Changed to 67% cooldown reduction per Trophy Hunter stack (300% only at max stacks).
@@ -40,7 +37,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Now converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.
 
 		**Dawi Drop**
-		- Additionally grants max Trophy Hunter stacks (up to 5, with High Tally) when Leap starts.
+		- Additionally grants max Trophy Hunter stacks (up to 4, with High Tally) when Leap starts.
 
 		**No Escape**
 		- Melee and ranged attacks no longer slow movement while Leap is active.
@@ -59,7 +56,7 @@ local function tb_slayer_has_talent(unit, talent_name)
 end
 
 -- Impatience extends Trophy Hunter stacks, runs wherever the buff is added (server and owner)
-local TB_IMPATIENCE_STACK_DURATION = 10
+local TB_IMPATIENCE_STACK_DURATION = 5
 
 local function tb_slayer_trophy_hunter_duration(unit, sub_buff_template, duration, buff_extension, params)
 	if duration and tb_slayer_has_talent(unit, "bardin_slayer_passive_movement_speed") then
@@ -89,7 +86,7 @@ mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_passive_at
 mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_passive_attack_speed_high_tally", {
 	stat_buff = "attack_speed",
 	multiplier = 0.05,
-	max_stacks = 5,
+	max_stacks = 4, -- High Tally
 	duration = 2,
 	refresh_durations = true,
 })
@@ -179,15 +176,7 @@ mod_api.update_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_movem
 	duration = TB_IMPATIENCE_STACK_DURATION, -- 2
 	icon = "bardin_slayer_passive_movement_speed", -- Added, Impatience's talent icon
 })
-mod_api.insert_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%%. Trophy Hunter stacks now last 10 seconds.")
-
---[[
-	High Tally
-]]
-mod_api.update_talent_buff_template("dwarf_ranger", "bardin_slayer_passive_increased_max_stacks", {
-	max_stacks = 5, -- 4
-})
-mod_api.insert_text("bardin_slayer_passive_increased_max_stacks_desc", "Increases Trophy Hunter's maximum stacks to 5.")
+mod_api.insert_text("bardin_slayer_passive_movement_speed_desc", "Each stack of Trophy Hunter increases movement speed by 10.0%%. Trophy Hunter stacks now last 5 seconds.")
 
 --[[
 	Adrenaline Surge
@@ -322,7 +311,7 @@ mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_
 	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
 	stat_buff = "damage_taken",
 	multiplier = -0.03,
-	max_stacks = 5,
+	max_stacks = 4, -- High Tally
 	duration = 2,
 	refresh_durations = true,
 })
@@ -359,7 +348,7 @@ mod:hook_safe(CareerAbilityDRSlayer, "_do_leap", function (self)
 		local buff_names = tb_slayer_trophy_hunter_buff_names(unit_3p)
 		local buff_system = Managers.state.network.is_server and Managers.state.entity:system("buff_system")
 
-		for _ = 1, 5 do -- covers max_stacks 3 (base/Impatience/Adrenaline Surge) and 5 (High Tally)
+		for _ = 1, 4 do -- covers max_stacks 3 (base/Impatience/Adrenaline Surge) and 4 (High Tally)
 			for _, buff_name in ipairs(buff_names) do
 				if buff_system then
 					buff_system:add_buff(unit_3p, buff_name, unit_3p, false)
