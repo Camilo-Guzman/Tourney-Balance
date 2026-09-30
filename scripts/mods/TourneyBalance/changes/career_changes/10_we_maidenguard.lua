@@ -326,7 +326,7 @@ mod_api.insert_proc_function("maidenguard_reset_unharmed_buff", function (owner_
                 attacker_unit = owner_unit
             })
         else
-            network_transmit:send_rpc_server("rpc_insert_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
+            network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
         end
 
         return true

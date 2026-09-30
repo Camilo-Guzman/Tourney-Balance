@@ -21,7 +21,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Lowered required health threshold to 70% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
 
 		**Atharti's Delight**
-		- Now only active for 3s after landing a melee headshot (refreshed on each headshot).
+		- Now only active for 2s after landing a melee headshot (refreshed on each headshot).
 
 		**Briar's Malice**
 		- Crit stacks granted increased to 3 (from 2)
@@ -152,10 +152,10 @@ mod_api.insert_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_
 --[[
 	Atharti's Delight
 ]]
--- Melee headshots grant the original effect (melee hits on poisoned enemies cause bleed) for 3s, refreshable.
+-- Melee headshots grant the original effect (melee hits on poisoned enemies cause bleed) for 2s, refreshable.
 mod_api.insert_talent_buff_template("wood_elf", "tb_atharti_delight_active", {
 	icon = "kerillian_thornsister_crit_big_bleed",
-	duration = 3,
+	duration = 2,
 	max_stacks = 1,
 	refresh_durations = true,
 })
@@ -179,7 +179,7 @@ end)
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
 	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
 })
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots cause melee hits against poisoned enemies to inflict bleed for 3 seconds.")
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots cause melee hits against poisoned enemies to inflict bleed for 2 seconds.")
 
 --[[
 	Bonded Spirit

@@ -19,11 +19,14 @@ local is_local = shared_utils.is_local
 
 		**I Shall Judge You All**
 		- Apply Witch Hunt and mark all enemies within Animosity's range.
-		- Headshotting Witch-Hunted enemies extends the duration by 2s.
+		- Headshotting Witch-Hunted enemies extends the duration by 1s.
 
 		**Fervency**
 		- Increased duration to 10s (from 6s).
 		- Added ult makes first 20 hits guaranteed melee crits.
+
+		**The Unending Hunt**
+		- Decreased crit chance granted to team to 15% (from 25%)
 	$END_TB
 ]]
 
@@ -124,7 +127,7 @@ mod_api.insert_proc_function("tb_isjya_refresh_animosity_on_headshot", function 
 		local remaining = math.max(0, aura_buff.start_time + aura_buff.duration - t)
 
 		aura_buff.start_time = t
-		aura_buff.duration = remaining + 2 -- duration extension
+		aura_buff.duration = remaining + 1 -- duration extension
 	end
 end)
 
@@ -444,7 +447,7 @@ mod_api.update_talent("wh_captain", 6, 2, {
 		"tb_fervency_stack_consumer"
 	},
 })
-mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 12 seconds and the next 24 melee hits. No longer affects teammates and ranged attacks.")
+mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 10 seconds and the next 20 melee hits. No longer affects teammates and ranged attacks.")
 
 --[[
 	Unending Hunt

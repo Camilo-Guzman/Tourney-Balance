@@ -30,7 +30,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- No longer affected by movement penalties: no slowdown from attacking, blocking, aiming, being hit or slowing debuffs.
 
 		**Ricochet**
-		- Fully charging for 0.7 second grants ricochet projectiles true-flight.
+		- Fully charging for 0.5 second grants ricochet projectiles true-flight.
 		- Applying true-flight costs 10% ult cooldown drained over 10 seconds and disables your ultimate.
 		- Fixed ricocheting after enemy cleave.
 
@@ -431,8 +431,8 @@ mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
 	},
 })
 
--- Ricochet conversion additionally requires the shot to have been held (charged) for >= 1 real second before firing.
-local TB_RICOCHET_HOLD_TIME_REQUIRED = 0.7
+-- Ricochet conversion additionally requires the shot to have been held (charged) for >= 0.5 real second before firing.
+local TB_RICOCHET_HOLD_TIME_REQUIRED = 0.5
 local tb_ricochet_pending_held_1s = false
 
 -- Center-screen popup + persistent icon while trueflight is imbued

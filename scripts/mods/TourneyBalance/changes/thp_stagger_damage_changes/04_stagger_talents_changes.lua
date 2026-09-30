@@ -123,7 +123,7 @@ mod_api.insert_buff_template("tb_mainstay_stagger_mark_buff", {
 	refresh_durations = true,
 	name = "mainstay_stagger_mark_buff",
 	stat_buff = "dummy_stagger",
-	max_stacks = 2, -- Mainstay stacks
+	max_stacks = 1, -- Mainstay stacks
 	duration = 2,
 	bonus = 1,
 })
@@ -157,7 +157,7 @@ mainstay_stagger_talent_text = "\n\nDeal 40% more melee damage to staggered enem
 mod_api.insert_text("tb_finesse_unbalance_desc",
 "Melee headshots inflict 40% bonus damage. Does not stack with damage bonus from stagger effects." .. base_stagger_talent_text)
 mod_api.insert_text("tb_linesman_unbalance_desc",
-"Melee hits apply up to 2 stagger counts for 2 seconds only accounted by Mainstay. Excludes Lords and Bosses." .. mainstay_stagger_talent_text)
+"Melee hits apply 1 count for 2 seconds only accounted by Mainstay. Excludes Lords and Bosses." .. mainstay_stagger_talent_text)
 mod_api.insert_text("tb_power_level_unbalance_desc",
 "Increases total Power Level by 10%. This is calculated before other buffs are applied." .. base_stagger_talent_text)
 mod_api.insert_text("tb_tank_unbalance_desc",

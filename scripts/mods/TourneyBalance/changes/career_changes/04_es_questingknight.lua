@@ -16,6 +16,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		### Talents
 		**Virtue of Knightly Temper**
 		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
+		
 		**Virtue of Heroism**
 		- Heavy attacks deal up to 3 times damage based on charge time.
 		- Heavy attacks can no longer be interrupted.
