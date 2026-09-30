@@ -14,33 +14,26 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Fiery Faith**
-		- Fiery Faith stacks are doubled while on the last life (up to 12). This also applies to Castigate, Crusade, Holy Fortitude and Armour of Faith.
 		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
 		- Damage taken by his allies is absorbed by Overhealth first.
-        - Can hit trade with it.
+		- Can hit trade with it.
 
 		**Ironheart**
 		- Fixed invincibility not proccing on client.
 
 		**Chasten (new)**
-		- Increases attack speed by 10%.
 		- Increases healing received by 30%.
 
 		### Talents
-		**Castigate**
-		- Now grants 1.25% attack speed per Fiery Faith stack (from 10% below 50% health, 20% below 20% health).
-
 		**Smite**
 		- Added random crits.
+		- Now grants a guaranteed critical strike every 4 hits (from 5).
 
 		**Unbending Purpose**
-		- Change to 20% melee power (from 5% power).
+		- Additionally increases melee damage by 20%.
 
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
-
-		**Crusade**
-		- Each stack also grants 2.5% attack speed.
 
 		**Devotion**
 		- Now removes all movement penalties like Waywatcher's Fervent Huntress (from only no slowdown when hit).
@@ -49,11 +42,11 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Redemption through Blood**
 		- Additionally increases melee damage by 5% for every missing half stamina shield.
 
-		**Calloused Withou and Within**
+		**Calloused Without and Within**
 		- Additionally decreases Heart of Iron's cooldown to 60 seconds.
 
 		**Flagellant's Zeal**
-		- Increased power buff duration to 15 seconds (from 5).
+		- Increased power buff duration to 10 seconds (from 5).
 	$END_TB
 ]]
 
@@ -76,7 +69,8 @@ end)
 
 ]]
 -- Ironheart
--- Talent row 5 col 3 swaps in a longer invulnerability whose expiry starts a shorter cooldown (see Talents below)
+-- Calloused Without and Within swaps in a copy of the invulnerability whose expiry starts a shorter cooldown
+-- (see Talents below)
 local IRONHEART_INVULNERABILITY_BUFF = "victor_zealot_invulnerability_on_lethal_damage_taken"
 local IRONHEART_TALENT_INVULNERABILITY_BUFF = "tb_victor_zealot_invulnerability_on_lethal_damage_taken_talent"
 local IRONHEART_TALENT = "victor_zealot_reduced_damage_taken"
@@ -126,7 +120,7 @@ end)
 --[[
     Fiery Faith - Overhealth
 ]]
--- Damage Zealot takes is stored in a team-wide overhealth pool (max 50). Damage taken by his teammates is
+-- Damage Zealot takes is stored in a team-wide overhealth pool (max 100). Damage taken by his teammates is
 -- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
 local OVERHEALTH_MAX = 100
@@ -142,63 +136,7 @@ local overhealth_display = 0 -- every peer, math.ceil of the pool
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
--- Fiery Faith stacks and the talents stacking with them (Castigate, Crusade, Holy Fortitude, Armour of Faith):
--- vanilla's activate_buff_stacks_based_on_health_chunks (server-controlled stacks that replicate to clients), except
--- while Zealot is on his last life (the next knockdown kills him) the number of stacks and the stack cap are doubled.
--- Each stack buff's max_stacks must fit the doubled count; the parent's max_stacks still caps the normal count at 6.
-local FIERY_FAITH_MAX_STACKS = 6
-local FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER = 2
-local FIERY_FAITH_DOUBLED_MAX_STACKS = FIERY_FAITH_MAX_STACKS * FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER
-
-mod_api.insert_buff_function("tb_activate_fiery_faith_stacks", function (unit, buff, params)
-    if not Managers.state.network.is_server then
-        return
-    end
-
-    local health_extension = ScriptUnit.extension(unit, "health_system")
-    local buff_extension = ScriptUnit.extension(unit, "buff_system")
-    local status_extension = ScriptUnit.extension(unit, "status_system")
-    local buff_system = Managers.state.entity:system("buff_system")
-    local template = buff.template
-    local buff_to_add = template.buff_to_add
-    local chunk_size = template.chunk_size
-    local uncursed_max_health = health_extension:get_uncursed_max_health()
-    local damage_taken = health_extension:get_damage_taken("uncursed_max_health")
-    local max_stacks = math.min(math.floor(uncursed_max_health / chunk_size) - 1, template.max_stacks)
-    local num_chunks = math.clamp(math.floor(damage_taken / chunk_size), 0, max_stacks)
-
-    if status_extension:wounded_and_on_last_wound() then
-        num_chunks = num_chunks * FIERY_FAITH_LAST_LIFE_STACK_MULTIPLIER
-    end
-
-    local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
-    local stack_ids = buff.stack_ids
-
-    if not stack_ids then
-        stack_ids = {}
-        buff.stack_ids = stack_ids
-    end
-
-    for _ = num_buff_stacks + 1, num_chunks do
-        stack_ids[#stack_ids + 1] = buff_system:add_buff(unit, buff_to_add, unit, true)
-    end
-
-    for _ = num_chunks + 1, num_buff_stacks do
-        buff_system:remove_server_controlled_buff(unit, table.remove(stack_ids, 1))
-    end
-end)
--- Fiery Faith power stacks. Crusade, Holy Fortitude and Armour of Faith are switched over in the Talents section.
-local function use_fiery_faith_stacks(parent_buff_name, stack_buff_name)
-    mod_api.update_talent_buff_template("witch_hunter", parent_buff_name, {
-        update_func = "tb_activate_fiery_faith_stacks", -- "activate_buff_stacks_based_on_health_chunks"
-    })
-    mod_api.update_talent_buff_template("witch_hunter", stack_buff_name, {
-        max_stacks = FIERY_FAITH_DOUBLED_MAX_STACKS, -- 6
-    })
-end
-
-use_fiery_faith_stacks("victor_zealot_passive_increased_damage", "victor_zealot_passive_damage")
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6, doubled while on the last life. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
@@ -257,8 +195,8 @@ local function get_cdr_on_damage_taken_bonus(unit)
     return buff_name and BuffTemplates[buff_name].buffs[1].bonus
 end
 
--- Gain and absorb: applied after all other damage reductions, so Zealot's gain is the damage he actually takes. Registered through the dispatcher in TourneyBalance.lua.
--- apply_buffs_to_damage only runs for players on the server.
+-- Gain and absorb: applied after all other damage reductions, so Zealot's gain is the damage he actually takes.
+-- Registered through the dispatcher in TourneyBalance.lua. apply_buffs_to_damage only runs for players on the server.
 mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_unit, attacker_unit, damage_source, ...)
     local damage = func(current_damage, attacked_unit, attacker_unit, damage_source, ...)
 
@@ -370,21 +308,15 @@ end)
 --[[
     Chasten - listed
 ]]
--- 10% attack speed (moved from Castigate)
-mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_chasten_attack_speed", {
-    stat_buff = "attack_speed",
-    multiplier = 0.1, -- 0.05
-})
 -- 30% healing received (moved from Holy Fortitude)
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_chasten_healing_received", {
     stat_buff = "healing_received",
     multiplier = 0.3,
 })
 mod_api.insert_career_passives("wh_1", {
-    "tb_victor_zealot_chasten_attack_speed",
     "tb_victor_zealot_chasten_healing_received",
 })
-mod_api.insert_perk_text("tb_wh_1d", "Chasten", "Increases attack speed by 10% and healing received by 30%.")
+mod_api.insert_perk_text("tb_wh_1d", "Chasten", "Increases healing received by 30%.")
 mod_api.insert_career_perk_descriptions("wh_1", "tb_wh_1d")
 
 --[[
@@ -392,34 +324,6 @@ mod_api.insert_career_perk_descriptions("wh_1", "tb_wh_1d")
 	Talents
 
 ]]
---[[
-    Castigate
-]]
--- 1.25% attack speed per Fiery Faith stack (from 10% below 50% health, 20% below 20% health). Same chunks and
--- last-life doubling as the Fiery Faith power stacks, so the count always matches them. Stacks are server-controlled,
--- so the talent's buffs live on the server.
-mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_castigate", {
-    buff_to_add = "tb_victor_zealot_castigate_buff",
-    chunk_size = 25,
-    max_stacks = FIERY_FAITH_MAX_STACKS,
-    update_func = "tb_activate_fiery_faith_stacks",
-})
-mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_castigate_buff", {
-    icon = "victor_zealot_attack_speed_on_health_percent",
-    max_stacks = FIERY_FAITH_DOUBLED_MAX_STACKS,
-    stat_buff = "attack_speed",
-    multiplier = 0.0125,
-})
-mod_api.update_talent("wh_zealot", 2, 1, {
-    buffer = "server",
-    description = "zealot_castigate_desc",
-    description_values = {},
-    buffs = {
-        "tb_victor_zealot_castigate",
-    },
-})
-mod_api.insert_text("zealot_castigate_desc", "Increases attack speed by 1.25% for every stack of Fiery Faith.")
-
 --[[
     Smite
 ]]
@@ -437,7 +341,11 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_crit_count_bu
     event = "on_hit", -- "on_critical_action"
     buff_func = "tb_remove_crit_count_buff_on_crit_hit_smite" -- "dummy_function"
 })
-mod_api.insert_text("victor_zealot_crit_count_desc", "Every 5 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
+-- Every 4 hits grant a guaranteed crit: the counter grants the crit buff and resets when it reaches max stacks
+mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_counter_buff", {
+    max_stacks = 4, -- 5
+})
+mod_api.insert_text("victor_zealot_crit_count_desc", "Every 4 hits grant a guaranteed critical strike. Critical strikes can still occur randomly.")
 -- (FIX) Clients get 2 stack counts per hit
 local add_buff_on_first_target_hit = ProcFunctions.add_buff_on_first_target_hit
 mod_api.insert_proc_function("tb_add_buff_on_first_target_hit_smite", function (owner_unit, buff, params)
@@ -452,25 +360,29 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_crit_count", 
 --[[
     Unbending Purpose
 ]]
--- Now grants 20% melee power.
-mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_power", {
-	stat_buff = "power_level_melee", -- power_level
-	multiplier = 0.2 -- 0.05
+-- Vanilla 5% power, plus 20% melee damage. Melee damage is calculated on the server, where this talent's buffs live.
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_power_melee_damage", {
+    max_stacks = 1,
+    stat_buff = "increased_weapon_damage_melee",
+    multiplier = 0.2,
 })
 mod_api.update_talent("wh_zealot", 2, 3, {
     description = "zealot_unbending_purpose_desc",
     description_values = {},
+    buffs = {
+        "victor_zealot_power",
+        "tb_victor_zealot_power_melee_damage",
+    },
 })
-mod_api.insert_text("zealot_unbending_purpose_desc", "Increases melee power by 20.0%.")
+mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 5.0% and melee damage by 20.0%.")
 
 --[[
     Holy Fortitude
 ]]
--- 10% healing received per stack, stacks doubled on the last life
+-- 10% healing received per stack
 mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_passive_healing_received_buff", {
     multiplier = 0.1 -- 0.15
 })
-use_fiery_faith_stacks("victor_zealot_passive_healing_received", "victor_zealot_passive_healing_received_buff")
 mod_api.update_talent("wh_zealot", 4, 2, {
     description_values = {
         {
@@ -479,44 +391,6 @@ mod_api.update_talent("wh_zealot", 4, 2, {
         },
     },
 })
-
---[[
-    Crusade
-]]
--- Each stack also grants 2.5% attack speed, stacks doubled on the last life. The second sub-buff needs its own name
--- so num_buff_type (counted by the first sub-buff's name) and max_stacks keep working per stack.
-mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_passive_move_speed", {
-    update_func = "tb_activate_fiery_faith_stacks", -- "activate_buff_stacks_based_on_health_chunks"
-})
-mod_api.insert_talent_buff_template("witch_hunter", "victor_zealot_passive_move_speed_buff", {
-    {
-        apply_buff_func = "apply_movement_buff",
-        icon = "victor_zealot_passive_move_speed",
-        max_stacks = FIERY_FAITH_DOUBLED_MAX_STACKS, -- 6
-        multiplier = 1.05,
-        remove_buff_func = "remove_movement_buff",
-        path_to_movement_setting_to_modify = {
-            "move_speed",
-        },
-    },
-    {
-        name = "tb_victor_zealot_passive_move_speed_attack_speed",
-        max_stacks = FIERY_FAITH_DOUBLED_MAX_STACKS,
-        stat_buff = "attack_speed",
-        multiplier = 0.025,
-    },
-})
-mod_api.update_talent("wh_zealot", 4, 1, {
-    description = "tb_victor_zealot_passive_move_speed_desc",
-    description_values = {},
-})
-mod_api.insert_text("tb_victor_zealot_passive_move_speed_desc", "Increases movement speed by 5% and attack speed by 2.5% for every 25 health missing, up to 6 stacks, doubled while on the last life.")
-
---[[
-    Armour of Faith
-]]
--- Stacks doubled on the last life
-use_fiery_faith_stacks("victor_zealot_passive_damage_taken", "victor_zealot_passive_damage_taken_buff")
 
 --[[
     Devotion
@@ -541,15 +415,14 @@ mod_api.update_talent("wh_zealot", 5, 1, {
 mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking damage increases movement speed by 30% for 2 seconds. Saltzpyre is no longer affected by movement penalties and immune to knockback from ranged projectiles and Warpfire.")
 
 --[[
-    Redeption through Blood
+    Redemption through Blood
 ]]
--- 5% melee damage per missing stamina shield. Stamina only exists on the owner's machine, but melee damage is
--- calculated on the server, so the owner reports its missing shields to the server, which keeps that many
--- server-controlled stacks (replicated to every peer).
+-- 5% melee damage per missing half stamina shield (one fatigue point each). Stamina only exists on the owner's
+-- machine, but melee damage is calculated on the server, so the owner reports its missing half shields to the
+-- server, which keeps that many server-controlled stacks (replicated to every peer).
 local MISSING_STAMINA_NETWORK_ID = "tb_zealot_missing_stamina"
 local MISSING_STAMINA_DAMAGE_BUFF = "tb_victor_zealot_melee_damage_per_missing_stamina_buff"
 local MISSING_STAMINA_MAX_STACKS = 10
-local FATIGUE_POINTS_PER_SHIELD = 1 --2
 
 local missing_stamina_stack_ids = setmetatable({}, { __mode = "k" }) -- server only, unit -> server buff ids
 
@@ -605,19 +478,18 @@ mod_api.insert_buff_function("tb_victor_zealot_update_missing_stamina", function
         return
     end
 
-    local used_fatigue_points = status_extension:current_fatigue_points()
-    local missing_shields = math.floor(used_fatigue_points / FATIGUE_POINTS_PER_SHIELD)
+    local missing_half_shields = status_extension:current_fatigue_points()
 
-    if missing_shields == buff.tb_missing_shields then
+    if missing_half_shields == buff.tb_missing_half_shields then
         return
     end
 
-    buff.tb_missing_shields = missing_shields
+    buff.tb_missing_half_shields = missing_half_shields
 
     if network_manager.is_server then
-        set_missing_stamina_stacks(unit, missing_shields)
+        set_missing_stamina_stacks(unit, missing_half_shields)
     else
-        mod:network_send(MISSING_STAMINA_NETWORK_ID, network_manager.network_transmit.server_peer_id, missing_shields)
+        mod:network_send(MISSING_STAMINA_NETWORK_ID, network_manager.network_transmit.server_peer_id, missing_half_shields)
     end
 end)
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_melee_damage_per_missing_stamina", {
@@ -641,7 +513,9 @@ mod_api.insert_text("tb_victor_zealot_max_stamina_on_damage_taken_desc", "Taking
 --[[
     Calloused Without and Within
 ]]
--- Heart of Iron adjusted
+-- Heart of Iron's cooldown is 60 seconds (from 120). The Ironheart proc above grants this copy of the vanilla
+-- invulnerability while the talent is taken; its expiry starts the shorter cooldown, which then re-grants the
+-- regular Ironheart proc buff like vanilla's cooldown does.
 local IRONHEART_TALENT_COOLDOWN_BUFF = "tb_victor_zealot_invulnerability_cooldown_talent"
 
 mod_api.insert_talent_buff_template("witch_hunter", IRONHEART_TALENT_COOLDOWN_BUFF, {
@@ -683,7 +557,7 @@ mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damag
 --[[
     Flagellant's Zeal
 ]]
--- Power buff lasts 15 seconds
+-- Power buff lasts 10 seconds
 mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_activated_ability_power_on_hit_buff", {
     duration = 10 -- 5
 })
