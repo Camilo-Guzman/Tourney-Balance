@@ -73,14 +73,7 @@ mod:hook_origin(ActionCareerWHPriestUtility, "_add_buffs_to_target", function (t
 	local talent_extension = ScriptUnit.extension(warrior_priest_unit, "talent_system")
 
 	if talent_extension:has_talent("victor_priest_6_1") then
-		params = MechanismOverrides.get(spell_params_improved)
-		params.external_optional_duration = spell_params_improved.external_optional_duration
-
-		local mechanism_name = Managers.mechanism:current_mechanism_name()
-
-		if spell_params_improved.mechanism_overrides[mechanism_name] then
-			params.external_optional_duration = spell_params_improved.mechanism_overrides[mechanism_name].external_optional_duration
-		end
+		params = spell_params_improved
 	elseif talent_extension:has_talent("victor_priest_6_2") then
 		params = spell_params_self_cast
 	end

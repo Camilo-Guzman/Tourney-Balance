@@ -48,6 +48,35 @@ function shared_utils.reduce_cooldown_on_owner(unit, amount)
     end
 end
 
+--[[
+    reduce_cooldown_percent_on_owner(unit, fraction) - Same as reduce_cooldown_on_owner, but by a fraction of the
+    max cooldown (0.1 = 10%), through the percent variant of the same rpc.
+]]
+function shared_utils.reduce_cooldown_percent_on_owner(unit, fraction)
+    local owner_player = Managers.player:owner(unit)
+
+    if not owner_player then
+        return
+    end
+
+    if not owner_player.remote then
+        local career_extension = ScriptUnit.has_extension(unit, "career_system")
+
+        if career_extension then
+            career_extension:reduce_activated_ability_cooldown_percent(fraction)
+        end
+
+        return
+    end
+
+    local network_manager = Managers.state.network
+    local unit_id = network_manager:unit_game_object_id(unit)
+
+    if unit_id then
+        network_manager.network_transmit:send_rpc("rpc_reduce_activated_ability_cooldown_percent", owner_player:network_id(), unit_id, fraction, 1, false)
+    end
+end
+
 return shared_utils
 
 

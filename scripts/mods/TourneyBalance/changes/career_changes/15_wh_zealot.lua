@@ -46,9 +46,10 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Devotion**
 		- Now removes all movement penalties like Waywatcher's Fervent Huntress (from only no slowdown when hit).
+		- Grants immunity to knockback from ranged projectiles and Warpfire.
 
 		**Redemption through Blood**
-		- Additionally increases melee damage by 5% for every missing stamina shield.
+		- Additionally increases melee damage by 5% for every missing half stamina shield.
 
 		**Calloused Withou and Within**
 		- Additionally decreases Heart of Iron's cooldown to 60 seconds.
@@ -559,17 +560,24 @@ mod_api.insert_text("tb_victor_zealot_passive_move_speed_desc", "Increases movem
 --[[
     Devotion
 ]]
--- No movement penalties, like Waywatcher's Fervent Huntress: reuses its marker buff, which the apply conditions in
--- 09_we_waywatcher.lua check for (attacking, blocking, aiming, being hit and slowing debuffs no longer slow).
+-- No movement penalties, like Waywatcher's Fervent Huntress
+-- Also immune to knockback from Warpfire and projectiles, like Grail Knight after Blessed Blade
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_devotion_no_knockback", {
+    max_stacks = 1,
+    perks = {
+        buff_perks.no_ranged_knockback,
+    },
+})
 mod_api.update_talent("wh_zealot", 5, 1, {
     description = "tb_victor_zealot_move_speed_on_damage_taken_desc",
     description_values = {},
     buffs = {
         "victor_zealot_move_speed_on_damage_taken",
         "tb_fervent_huntress_no_movement_penalties",
+        "tb_victor_zealot_devotion_no_knockback",
     },
 })
-mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking damage increases movement speed by 30% for 2 seconds. Saltzpyre is no longer affected by movement penalties.")
+mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking damage increases movement speed by 30% for 2 seconds. Saltzpyre is no longer affected by movement penalties and immune to knockback from ranged projectiles and Warpfire.")
 
 --[[
     Redeption through Blood
@@ -580,7 +588,7 @@ mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking 
 local MISSING_STAMINA_NETWORK_ID = "tb_zealot_missing_stamina"
 local MISSING_STAMINA_DAMAGE_BUFF = "tb_victor_zealot_melee_damage_per_missing_stamina_buff"
 local MISSING_STAMINA_MAX_STACKS = 10
-local FATIGUE_POINTS_PER_SHIELD = 2
+local FATIGUE_POINTS_PER_SHIELD = 1 --2
 
 local missing_stamina_stack_ids = setmetatable({}, { __mode = "k" }) -- server only, unit -> server buff ids
 
@@ -667,7 +675,7 @@ mod_api.update_talent("wh_zealot", 5, 2, {
         "tb_victor_zealot_melee_damage_per_missing_stamina",
     },
 })
-mod_api.insert_text("tb_victor_zealot_max_stamina_on_damage_taken_desc", "Taking damage from an enemy fully restores stamina. Increases melee damage by 5% for every missing stamina shield.")
+mod_api.insert_text("tb_victor_zealot_max_stamina_on_damage_taken_desc", "Taking damage from an enemy fully restores stamina. Increases melee damage by 5% for every missing half stamina shield.")
 
 --[[
     Calloused Without and Within
