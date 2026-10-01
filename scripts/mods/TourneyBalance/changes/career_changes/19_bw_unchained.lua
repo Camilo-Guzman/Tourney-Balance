@@ -10,6 +10,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Career Ability
 		**Living Bomb**
 		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
+		- Grants Sienna 30 temporary health (Bomb Balm's self heal, now baseline).
 
 		### Passives
 		**Aqshy's Blaze (new)**
@@ -44,7 +45,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Living Bomb no longer clears overcharge (still ends Aqshy's Blaze).
 
 		**Bomb Balm**
-		- Only grants temporary health to nearby allies, no longer to Sienna.
+		- Sienna's own temporary health is now baseline on Living Bomb, so Bomb Balm only adds the heal for nearby allies.
 
 	$END_TB
 ]]
@@ -253,7 +254,7 @@ end)
 local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 local FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF = "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic"
 
-mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
+mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies, and gains 30 temporary health.")
 
 local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
 	local owner_unit = self._owner_unit
@@ -276,7 +277,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
 end
 
--- Vanilla _run_ability, plus WHC shout, Bomb Balm allies only, Fuel for the Fire changes
+-- Vanilla _run_ability, plus WHC shout, baseline self heal, Bomb Balm allies only, Fuel for the Fire changes
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -316,6 +317,13 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 
 	local career_power_level = career_extension:get_career_power_level()
 	local heal_type_id = NetworkLookup.heal_types.career_skill
+	local heal_amount = TalentUtils.get_talent_attribute("sienna_unchained_activated_ability_temp_health", "heal_amount")
+	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
+
+	-- Bomb Balm's self heal, baseline
+	if owner_unit_go_id then
+		network_transmit:send_rpc_server("rpc_request_heal", owner_unit_go_id, heal_amount, heal_type_id)
+	end
 
 	-- Bomb Balm: allies only
 	if talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
@@ -327,7 +335,6 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 		Broadphase.query(broadphase, POSITION_LOOKUP[owner_unit], radius, nearby_player_units)
 
 		local side_manager = Managers.state.side
-		local heal_amount = TalentUtils.get_talent_attribute("sienna_unchained_activated_ability_temp_health", "heal_amount")
 
 		for _, player_unit in pairs(nearby_player_units) do
 			if player_unit ~= owner_unit and not side_manager:is_enemy(owner_unit, player_unit) then
@@ -715,4 +722,4 @@ mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_des
 mod_api.update_talent("bw_unchained", 6, 3, {
 	description_values = {},
 })
-mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb grants 30 temporary health to nearby allies (not Sienna).")
+mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb also grants 30 temporary health to nearby allies.")
