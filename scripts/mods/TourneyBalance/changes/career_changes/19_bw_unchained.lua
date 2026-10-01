@@ -13,19 +13,19 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Aqshy's Blaze (new)**
-		- No longer explodes from overcharge, and enters the Unchained state instead for 10 seconds.
+		- No longer explodes from overcharge, and enters Aqshy's Blaze instead for 10 seconds.
 		- Can't attack with the ranged weapon for the duration.
 		- Loses 10% of maximum health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
-		- Using Living Bomb immediately ends the Unchained state.
+		- Using Living Bomb immediately ends Aqshy's Blaze.
 
 		### Talents
 		**Outburst**
-		- Removed: Pushes no longer ignite enemies (moved to Enfeebling Flames).
+		- Push ignite now applies a weak, long lasting burn.
 		- Added: Increases stagger power by 20%.
 		- Added: After a charged attack, the next push also costs half stamina.
 
 		**Chain Reaction**
-		- Reworked: Burning enemies hit as the first target of a charged attack explode for 40 damage, applying a weak burn to surrounding enemies (from 40% chance to explode burning enemies on kill).
+		- Added: Burning enemies killed by a melee headshot always explode.
 
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
@@ -33,19 +33,15 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Numb to Pain**
 		- Now also grants a stack on any damage taken (from only venting).
 
-		**Enfeebling Flames**
-		- Added: Pushes ignite enemies (moved from Outburst).
-		- Added: All of Sienna's attacks apply a weak, long lasting burn.
-
 		**Abandon**
-		- Reworked: The Unchained state lasts 2.5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
+		- Reworked: Aqshy's Blaze lasts 2.5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
 
 		**Natural Talent**
-		- Added: Grants 40% attack speed and 40% increased healing received during the Unchained state.
+		- Added: Grants 40% attack speed and 40% increased healing received during Aqshy's Blaze.
 
 		**Fuel for the Fire**
 		- Added: Blood Magic generates no overcharge for 15 seconds after using Living Bomb.
-		- Living Bomb no longer clears overcharge (still ends the Unchained state).
+		- Living Bomb no longer clears overcharge (still ends Aqshy's Blaze).
 
 		**Bomb Balm**
 		- Only grants temporary health to nearby allies, no longer to Sienna.
@@ -59,47 +55,44 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 ]]
 --[[
-	Unchained
+	Aqshy's Blaze
 ]]
-local UNCHAINED_STATE_BUFF = "tb_sienna_unchained_unchained_state"
-local UNCHAINED_DURATION = 10
-local UNCHAINED_MAX_HEALTH_COST = 0.1 -- per second, share of max health
-local UNCHAINED_COOLDOWN_PER_SECOND = 0.1
--- life_tap skips damage reduction and damage to overcharge conversion, wounded_dot does not interrupt interaction
-local UNCHAINED_BURN_SOURCE = "life_tap"
-local UNCHAINED_BURN_TYPE = "wounded_dot"
+local AQSHYS_BLAZE_BUFF = "tb_sienna_unchained_unchained_state"
+local AQSHYS_BLAZE_DURATION = 10
+local AQSHYS_BLAZE_MAX_HEALTH_COST = 0.1 -- of max health, per second
+local AQSHYS_BLAZE_COOLDOWN = 0.1 -- of ult, per second
+-- life_tap: no damage reduction or Blood Magic. wounded_dot: doesn't interrupt
+local AQSHYS_BLAZE_DAMAGE_SOURCE = "life_tap"
+local AQSHYS_BLAZE_DAMAGE_TYPE = "wounded_dot"
 
--- Row 5 col 2 talent (vanilla health to ult at high overcharge) now speeds up the state instead:
--- shorter state, converting a % of max health 4 times per second
-local HEALTH_TO_ULT_TALENT = "sienna_unchained_health_to_ult"
-local HEALTH_TO_ULT_DURATION = 2.5
-local HEALTH_TO_ULT_TICKS_PER_SECOND = 4
-local HEALTH_TO_ULT_MAX_HEALTH_COST = 0.05
-local HEALTH_TO_ULT_COOLDOWN = 0.1
+-- Abandon (row 5 col 2)
+local ABANDON_TALENT = "sienna_unchained_health_to_ult"
+local ABANDON_DURATION = 2.5
+local ABANDON_TICKS_PER_SECOND = 4
+local ABANDON_MAX_HEALTH_COST = 0.05 -- per tick
+local ABANDON_COOLDOWN = 0.1 -- per tick
 
-local function tb_unchained_has_health_to_ult(unit)
+local function tb_has_abandon(unit)
 	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
 
-	return talent_extension and talent_extension:has_talent(HEALTH_TO_ULT_TALENT) or false
+	return talent_extension and talent_extension:has_talent(ABANDON_TALENT) or false
 end
 
--- duration_modifier_func for every sub-buff tied to the state's length
-local function tb_unchained_state_duration(unit, sub_buff_template, duration)
-	return tb_unchained_has_health_to_ult(unit) and HEALTH_TO_ULT_DURATION or duration
+local function tb_aqshys_blaze_duration(unit, sub_buff_template, duration)
+	return tb_has_abandon(unit) and ABANDON_DURATION or duration
 end
 
--- Ticks 4 times per second (update_frequency), the base passive only acts on every 4th tick.
--- Health goes on the server, the cooldown to the owner (CareerExtension doesn't sync)
-mod_api.insert_buff_function("tb_unchained_state_health_to_cooldown_tick", function (unit, buff, params)
+-- Every 4th tick without Abandon. Health on the server, cooldown on the owner
+mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function (unit, buff, params)
 	if not Managers.state.network.is_server or not HEALTH_ALIVE[unit] then
 		return
 	end
 
-	local health_to_ult = tb_unchained_has_health_to_ult(unit)
+	local has_abandon = tb_has_abandon(unit)
 
 	buff.tb_tick_count = (buff.tb_tick_count or 0) + 1
 
-	if not health_to_ult and buff.tb_tick_count % HEALTH_TO_ULT_TICKS_PER_SECOND ~= 0 then
+	if not has_abandon and buff.tb_tick_count % ABANDON_TICKS_PER_SECOND ~= 0 then
 		return
 	end
 
@@ -115,53 +108,54 @@ mod_api.insert_buff_function("tb_unchained_state_health_to_cooldown_tick", funct
 		return
 	end
 
-	local cost = health_extension:get_max_health() * UNCHAINED_MAX_HEALTH_COST
-	local cooldown = UNCHAINED_COOLDOWN_PER_SECOND
+	local cost = health_extension:get_max_health() * AQSHYS_BLAZE_MAX_HEALTH_COST
+	local cooldown = AQSHYS_BLAZE_COOLDOWN
 
-	if health_to_ult then
-		cost = health_extension:get_max_health() * HEALTH_TO_ULT_MAX_HEALTH_COST
-		cooldown = HEALTH_TO_ULT_COOLDOWN
+	if has_abandon then
+		cost = health_extension:get_max_health() * ABANDON_MAX_HEALTH_COST
+		cooldown = ABANDON_COOLDOWN
 	end
 
-	-- Non-lethal: never tick below 1 health. Only a tick paid in full converts into cooldown
+	-- Non-lethal, only full ticks give cooldown
 	local damage = math.min(cost, health_extension:current_health() - 1)
 
 	if damage <= 0 then
 		return
 	end
 
-	DamageUtils.add_damage_network(unit, unit, damage, "full", UNCHAINED_BURN_TYPE, nil, Vector3(0, 0, 0), UNCHAINED_BURN_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+	DamageUtils.add_damage_network(unit, unit, damage, "full", AQSHYS_BLAZE_DAMAGE_TYPE, nil, Vector3(0, 0, 0), AQSHYS_BLAZE_DAMAGE_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
 
 	if damage >= cost then
 		reduce_cooldown_percent_on_owner(unit, cooldown)
 	end
 end)
--- on_ability_activated procs on every local player's buffs whenever anyone ults (params[1] is the activating unit).
--- Returning true lets remove_on_proc end the whole template (all sub-buffs share the buff id).
-mod_api.insert_proc_function("tb_unchained_state_end_on_own_ability", function (owner_unit, buff, params)
+
+-- Ends on own ult (remove_on_proc)
+mod_api.insert_proc_function("tb_aqshys_blaze_end_on_own_ability", function (owner_unit, buff, params)
 	return params[1] == owner_unit
 end)
--- no_overcharge_explosion: overcharging again during the state vents instead of exploding or re-entering the state
-mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
+
+-- no_overcharge_explosion: further overcharge vents
+mod_api.insert_talent_buff_template("bright_wizard", AQSHYS_BLAZE_BUFF, {
 	icon = "sienna_unchained_passive",
-	duration = UNCHAINED_DURATION,
-	duration_modifier_func = tb_unchained_state_duration,
+	duration = AQSHYS_BLAZE_DURATION,
+	duration_modifier_func = tb_aqshys_blaze_duration,
 	debuff = true,
 	max_stacks = 1,
-	update_frequency = 1 / HEALTH_TO_ULT_TICKS_PER_SECOND,
-	update_func = "tb_unchained_state_health_to_cooldown_tick",
+	update_frequency = 1 / ABANDON_TICKS_PER_SECOND,
+	update_func = "tb_aqshys_blaze_health_to_cooldown_tick",
 	event = "on_ability_activated",
-	buff_func = "tb_unchained_state_end_on_own_ability",
+	buff_func = "tb_aqshys_blaze_end_on_own_ability",
 	remove_on_proc = true,
 	perks = {
 		buff_perks.no_overcharge_explosion,
 	},
 })
-mod_api.insert_text(UNCHAINED_STATE_BUFF, "Aqshy's Blaze")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
+mod_api.insert_text(AQSHYS_BLAZE_BUFF, "Aqshy's Blaze")
+mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal). Using Living Bomb ends this state.", AQSHYS_BLAZE_DURATION, AQSHYS_BLAZE_MAX_HEALTH_COST * 100, AQSHYS_BLAZE_COOLDOWN * 100))
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
--- Natural Talent's stat buffs, entered together with the state (defined here, used by the overcharge hook below)
+-- Natural Talent (row 5 col 3), added with the state
 local NATURAL_TALENT_TALENT = "sienna_unchained_reduced_overcharge"
 local NATURAL_TALENT_STATE_BUFF = "tb_sienna_unchained_natural_talent_state"
 local NATURAL_TALENT_ATTACK_SPEED = 0.4
@@ -169,32 +163,29 @@ local NATURAL_TALENT_HEALING_RECEIVED = 0.4
 
 mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, {
 	{
-		duration = UNCHAINED_DURATION,
-		duration_modifier_func = tb_unchained_state_duration,
+		duration = AQSHYS_BLAZE_DURATION,
+		duration_modifier_func = tb_aqshys_blaze_duration,
 		max_stacks = 1,
 		stat_buff = "attack_speed",
 		multiplier = NATURAL_TALENT_ATTACK_SPEED,
 		event = "on_ability_activated",
-		buff_func = "tb_unchained_state_end_on_own_ability",
+		buff_func = "tb_aqshys_blaze_end_on_own_ability",
 		remove_on_proc = true,
 	},
-	-- Read where the heal is applied (server), the state buff is LocalAndServer
 	{
 		name = "tb_sienna_unchained_natural_talent_state_healing",
-		duration = UNCHAINED_DURATION,
-		duration_modifier_func = tb_unchained_state_duration,
+		duration = AQSHYS_BLAZE_DURATION,
+		duration_modifier_func = tb_aqshys_blaze_duration,
 		max_stacks = 1,
 		stat_buff = "healing_received",
 		multiplier = NATURAL_TALENT_HEALING_RECEIVED,
 	},
 })
 
--- Units whose ranged action still needs to be stopped. Deferred to the next frame, since the state starts from inside
--- the ranged weapon's own action update (add_charge), where stopping that action is not safe.
-local tb_unchained_pending_ranged_stop = {}
+-- Deferred: stopping a ranged action inside its own update isn't safe
+local tb_aqshys_blaze_pending_ranged_stop = {}
 
--- Runs on the owner, where overcharge lives. The state buff goes on locally first, so the vanilla threshold check
--- right after sees its no_overcharge_explosion perk and vents instead of exploding.
+-- Owner side. Adding the buff first makes vanilla vent instead of exploding
 mod:hook(PlayerUnitOverchargeExtension, "_check_overcharge_level_thresholds", function (func, self, new_overcharge_value)
 	if self.max_value <= new_overcharge_value and not self._buff_extension:has_buff_perk("no_overcharge_explosion") then
 		local unit = self.unit
@@ -204,23 +195,23 @@ mod:hook(PlayerUnitOverchargeExtension, "_check_overcharge_level_thresholds", fu
 			local buff_system = Managers.state.entity:system("buff_system")
 			local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
 
-			buff_system:add_buff_synced(unit, UNCHAINED_STATE_BUFF, BuffSyncType.LocalAndServer)
+			buff_system:add_buff_synced(unit, AQSHYS_BLAZE_BUFF, BuffSyncType.LocalAndServer)
 
 			if talent_extension and talent_extension:has_talent(NATURAL_TALENT_TALENT) then
 				buff_system:add_buff_synced(unit, NATURAL_TALENT_STATE_BUFF, BuffSyncType.LocalAndServer)
 			end
 
-			tb_unchained_pending_ranged_stop[unit] = true
+			tb_aqshys_blaze_pending_ranged_stop[unit] = true
 		end
 	end
 
 	return func(self, new_overcharge_value)
 end)
 
-local function tb_unchained_ranged_locked(unit)
+local function tb_aqshys_blaze_ranged_locked(unit)
 	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
 
-	if not buff_extension or not buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
+	if not buff_extension or not buff_extension:has_buff_type(AQSHYS_BLAZE_BUFF) then
 		return false
 	end
 
@@ -229,25 +220,24 @@ local function tb_unchained_ranged_locked(unit)
 	return inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_ranged"
 end
 
--- Ends a ranged action already running when the state starts (charging, beam or flamethrower channels would keep going)
+-- Stops a ranged action already running when the state starts
 mod:add_update_function(function (dt)
-	if next(tb_unchained_pending_ranged_stop) == nil then
+	if next(tb_aqshys_blaze_pending_ranged_stop) == nil then
 		return
 	end
 
-	for unit in pairs(tb_unchained_pending_ranged_stop) do
-		tb_unchained_pending_ranged_stop[unit] = nil
+	for unit in pairs(tb_aqshys_blaze_pending_ranged_stop) do
+		tb_aqshys_blaze_pending_ranged_stop[unit] = nil
 
-		if ALIVE[unit] and tb_unchained_ranged_locked(unit) then
+		if ALIVE[unit] and tb_aqshys_blaze_ranged_locked(unit) then
 			CharacterStateHelper.stop_weapon_actions(ScriptUnit.extension(unit, "inventory_system"), "interrupted")
 		end
 	end
 end)
 
--- Every weapon action (attacks, chains, venting) starts through start_action, while swapping weapons is its own
--- action_wield. Refusing everything but action_wield on the ranged weapon leaves it unusable, but still swappable.
+-- Ranged lock: only wielding is allowed
 mod:hook(WeaponUnitExtension, "start_action", function (func, self, action_name, ...)
-	if action_name and action_name ~= "action_wield" and tb_unchained_ranged_locked(self.owner_unit) then
+	if action_name and action_name ~= "action_wield" and tb_aqshys_blaze_ranged_locked(self.owner_unit) then
 		return
 	end
 
@@ -259,8 +249,7 @@ end)
 	Ultimate
 
 ]]
-local LIVING_BOMB_EXPLOSION = "explosion_bw_unchained_ability"
--- Witch Hunter Captain's Animosity shout (ability_push, radius 10), already in NetworkLookup.explosion_templates
+-- Witch Hunter Captain's shout
 local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 local FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF = "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic"
 
@@ -287,9 +276,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
 end
 
--- Vanilla career_ability_bw_unchained.lua _run_ability, with:
--- baseline Witch Hunter Captain shout stagger, Bomb Balm allies only,
--- Fuel for the Fire keeps overcharge and stops Blood Magic overcharge
+-- Vanilla _run_ability, plus WHC shout, Bomb Balm allies only, Fuel for the Fire changes
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -310,8 +297,7 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	})
 
 	if is_server and bot_player or local_player then
-		-- Fuel for the Fire keeps overcharge. The Unchained state still ends: it's removed by on_ability_activated
-		-- (start_activated_ability_cooldown below), not by this reset
+		-- Fuel for the Fire keeps overcharge
 		if not talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
 			local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
 
@@ -322,7 +308,7 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	end
 
 	local rotation = Unit.local_rotation(owner_unit, 0)
-	local explosion_template_name = LIVING_BOMB_EXPLOSION
+	local explosion_template_name = "explosion_bw_unchained_ability"
 
 	if talent_extension:has_talent("sienna_unchained_activated_ability_fire_aura") then
 		explosion_template_name = "explosion_bw_unchained_ability_increased_radius"
@@ -331,7 +317,7 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	local career_power_level = career_extension:get_career_power_level()
 	local heal_type_id = NetworkLookup.heal_types.career_skill
 
-	-- Bomb Balm: heals allies only, not Sienna herself (vanilla heals her too)
+	-- Bomb Balm: allies only
 	if talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
 		local radius = 10
 		local nearby_player_units = FrameTable.alloc_table()
@@ -389,7 +375,7 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	end
 
 	if talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
-		-- Fuel for the Fire: Blood Magic stops generating overcharge. Read server side (apply_buffs_to_damage)
+		-- Fuel for the Fire: no Blood Magic overcharge
 		Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF, BuffSyncType.LocalAndServer)
 
 		local attack_type_id = NetworkLookup.buff_attack_types.ability
@@ -449,56 +435,37 @@ end)
 
 ]]
 --[[
-	Weak burn (Enfeebling Flames, Chain Reaction)
+	Outburst
 ]]
--- Weak, long lasting burn, the burn version of Sister of the Thorn's poison
-local WEAK_BURN_BUFF = "tb_sienna_unchained_enfeebling_burn"
+local OUTBURST_HALF_PUSH_BUFF = "tb_sienna_unchained_outburst_half_push"
+local OUTBURST_PUSH_COST_MULTIPLIER = 0.5
 
-NewDamageProfileTemplates.tb_sienna_unchained_enfeebling_burn = table.clone(DamageProfileTemplates.burning_dot)
-NewDamageProfileTemplates.tb_sienna_unchained_enfeebling_burn.default_target.power_distribution = {
-	attack = 0.03, -- burning_dot 0.07
-	impact = 0,
+-- Push ignite weak burn, vanilla burning_dot_unchained_push values in comments
+local WEAK_BURN_BUFF = "tb_sienna_unchained_weak_burn"
+
+NewDamageProfileTemplates.tb_sienna_unchained_weak_burn = table.clone(DamageProfileTemplates.burning_dot)
+NewDamageProfileTemplates.tb_sienna_unchained_weak_burn.default_target.power_distribution = {
+	attack = 0.03, -- 0.07 (burning_dot)
+	impact = 0, -- 0.05 (burning_dot has no_stagger)
 }
 
 mod_api.insert_buff_template(WEAK_BURN_BUFF, {
 	apply_buff_func = "start_dot_damage",
-	damage_profile = "tb_sienna_unchained_enfeebling_burn",
+	damage_profile = "tb_sienna_unchained_weak_burn", -- "burning_dot"
 	damage_type = "burninating",
-	duration = 10,
+	duration = 10, -- 6
 	max_stacks = 1,
 	refresh_durations = true,
-	time_between_dot_damages = 1,
+	time_between_dot_damages = 1, -- 2
 	update_func = "apply_dot_damage",
-	update_start_delay = 1,
+	update_start_delay = 1, -- 2
 	perks = {
 		buff_perks.burning,
 	},
 })
+-- Push ignite uses the weak burn
+BuffTemplates.burning_dot_unchained_push = BuffTemplates[WEAK_BURN_BUFF]
 
--- Server only
-local function tb_apply_weak_burn(owner_unit, target_unit)
-	local career_extension = ScriptUnit.extension(owner_unit, "career_system")
-
-	Managers.state.entity:system("buff_system"):add_buff(target_unit, WEAK_BURN_BUFF, owner_unit, false, career_extension:get_career_power_level(), owner_unit)
-end
-
-local function tb_is_burning(unit)
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-
-	return buff_extension and (buff_extension:has_buff_perk(buff_perks.burning) or buff_extension:has_buff_perk(buff_perks.burning_balefire) or buff_extension:has_buff_perk(buff_perks.burning_elven_magic))
-end
-
---[[
-	Outburst
-]]
--- Push ignite (sienna_unchained_burn_push perk) moved to Enfeebling Flames. Keeps the push arc after heavy attacks,
--- and adds stagger power plus a half stamina push after heavy attacks.
-local OUTBURST_HALF_PUSH_BUFF = "tb_sienna_unchained_outburst_half_push"
-local OUTBURST_PUSH_COST_MULTIPLIER = 0.5
-
-mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_burn_push", {
-	perks = {},
-})
 mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_outburst_stagger_power", {
 	stat_buff = "power_level_impact",
 	multiplier = 0.2,
@@ -506,7 +473,8 @@ mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_outbur
 mod_api.insert_talent_buff_template("bright_wizard", OUTBURST_HALF_PUSH_BUFF, {
 	max_stacks = 1,
 })
--- Local only: stamina is spent on the owner, so the server never needs (or consumes) this buff
+
+-- Owner only
 mod_api.insert_proc_function("tb_sienna_unchained_outburst_half_push_on_heavy", function (owner_unit, buff, params)
 	if params[2] ~= "heavy_attack" or not ALIVE[owner_unit] then
 		return
@@ -532,10 +500,9 @@ mod_api.update_talent("bw_unchained", 2, 2, {
 		"tb_sienna_unchained_outburst_half_push_on_heavy",
 	},
 })
-mod_api.insert_text("sienna_unchained_burn_push_desc_2", "Increases stagger power by 20%. After a charged attack, Sienna's next push has 70% increased arc and costs half stamina.")
+mod_api.insert_text("sienna_unchained_burn_push_desc_2", "Increases stagger power by 20%. Pushing ignites enemies for 10 seconds. After a charged attack, Sienna's next push has 70% increased arc and costs half stamina.")
 
--- The push start pays its stamina through add_fatigue_points (hooked in Dissipate below), which reads this
--- to tell a push apart from other stamina costs
+-- Read by add_fatigue_points (Dissipate) to spot push costs
 local tb_outburst_pushing_unit = nil
 
 mod:hook(ActionPushStagger, "client_owner_start_action", function (func, self, ...)
@@ -551,63 +518,32 @@ end)
 --[[
 	Chain Reaction
 ]]
--- Replaces vanilla's chance to explode burning enemies on kill: a charged attack's first target, if burning, explodes
--- for flat damage and spreads the weak burn. The explosion itself is vanilla's (visuals and stagger, negligible damage).
-local CHAIN_REACTION_DAMAGE = 40
-local CHAIN_REACTION_RADIUS = 2
-local chain_reaction_broadphase_results = {}
+-- On top of vanilla: guaranteed on melee headshot kills (vanilla explosion, proc_chance 1)
+mod_api.insert_proc_function("tb_sienna_unchained_explode_on_melee_headshot_kill", function (owner_unit, buff, params)
+	local killing_blow = params[1]
+	local hit_zone = killing_blow[DamageDataIndex.HIT_ZONE]
 
--- on_hit procs on the server for every attack type; the talent buffer is "server"
-mod_api.insert_proc_function("tb_sienna_unchained_chain_reaction", function (owner_unit, buff, params)
-	local hit_unit = params[1]
-
-	if not Managers.state.network.is_server or params[2] ~= "heavy_attack" or params[4] ~= 1 then
-		return
-	end
-
-	if not ALIVE[owner_unit] or not ALIVE[hit_unit] or not tb_is_burning(hit_unit) then
-		return
-	end
-
-	local position = POSITION_LOOKUP[hit_unit]
-	local career_power_level = ScriptUnit.extension(owner_unit, "career_system"):get_career_power_level()
-
-	Managers.state.entity:system("area_damage_system"):create_explosion(owner_unit, position, Quaternion.identity(), "sienna_unchained_burning_enemies_explosion", 1, "buff", career_power_level, false)
-
-	local side_manager = Managers.state.side
-	local ai_broadphase = Managers.state.entity:system("ai_system").broadphase
-
-	table.clear(chain_reaction_broadphase_results)
-
-	local num_nearby_enemies = Broadphase.query(ai_broadphase, position, CHAIN_REACTION_RADIUS, chain_reaction_broadphase_results)
-
-	for i = 1, num_nearby_enemies do
-		local enemy_unit = chain_reaction_broadphase_results[i]
-
-		if HEALTH_ALIVE[enemy_unit] and side_manager:is_enemy(owner_unit, enemy_unit) then
-			DamageUtils.add_damage_network(enemy_unit, owner_unit, CHAIN_REACTION_DAMAGE, "torso", "burn_shotgun", nil, Vector3(0, 0, 0), "buff", nil, owner_unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
-
-			if HEALTH_ALIVE[enemy_unit] then
-				tb_apply_weak_burn(owner_unit, enemy_unit)
-			end
-		end
+	if MeleeAttackTypes[killing_blow[DamageDataIndex.ATTACK_TYPE]] and (hit_zone == "head" or hit_zone == "neck") then
+		ProcFunctions.sienna_on_kill_explosion(owner_unit, buff, params)
 	end
 end)
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_chain_reaction", {
-	event = "on_hit",
-	buff_func = "tb_sienna_unchained_chain_reaction",
+mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_explode_on_melee_headshot_kill", {
+	event = "on_kill",
+	buff_func = "tb_sienna_unchained_explode_on_melee_headshot_kill",
+	proc_chance = 1,
 })
 mod_api.update_talent("bw_unchained", 2, 3, {
 	buffs = {
-		"tb_sienna_unchained_chain_reaction",
+		"sienna_unchained_exploding_burning_enemies",
+		"tb_sienna_unchained_explode_on_melee_headshot_kill",
 	},
 })
-mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("Burning enemies hit by the first target of a charged attack explode for %d damage, applying a weak burn to surrounding enemies.", CHAIN_REACTION_DAMAGE))
+mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", "Burning enemies have a small chance to explode on death. Burning enemies killed by a melee headshot always explode.")
 
 --[[
-	Dissipate Nerf
+	Dissipate
 ]]
--- Overcharge dissipation reduce to 50% of vanilla
+-- Vanilla add_fatigue_points, plus Dissipate 50% vent and Outburst half stamina push
 local block_breaking_fatigue_types = {
 	blocked_attack = true,
 	blocked_attack_2 = true,
@@ -650,7 +586,7 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 	local max_fatigue_points = self.max_fatigue_points
 	local fatigue_cost = amount * (max_fatigue / max_fatigue_points) * (fatigue_point_costs_multiplier or 1)
 
-	-- Outburst: half stamina push after a charged attack, consumed by the push
+	-- Outburst
 	if tb_outburst_pushing_unit == self.unit and not blocking_weapon_unit then
 		local half_push_buff = buff_extension:get_buff_type(OUTBURST_HALF_PUSH_BUFF)
 
@@ -678,7 +614,7 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 			if overcharge_extension and overcharge_extension:above_overcharge_threshold() then
 				fatigue_cost = fatigue_cost * 0.5
 
-				amount = amount * 0.5 -- 1 -- Dissipate Nerf
+				amount = amount * 0.5 -- 1
 
 				overcharge_extension:remove_charge(amount)
 			end
@@ -716,7 +652,7 @@ end)
 --[[
 	Numb to Pain
 ]]
--- Stacks on any damage taken, not only venting damage (vanilla sienna_unchained_add_buff_on_vent_damage).
+-- Any damage taken, not only venting (server)
 mod_api.insert_proc_function("tb_sienna_unchained_add_buffs_on_damage_taken", function (owner_unit, buff, params)
 	if not ALIVE[owner_unit] then
 		return
@@ -738,62 +674,27 @@ mod_api.update_talent("bw_unchained", 4, 3, {
 mod_api.insert_text("sienna_unchained_reduced_damage_taken_after_venting_desc_2", "Reduces damage taken by 5.0% and overcharge generated by Blood Magic by 16.6% for 15 seconds after venting or taking damage. Stacks 3 times.")
 
 --[[
-	Enfeebling Flames
-]]
--- Weak burn on every attack, the same one Chain Reaction spreads (tb_apply_weak_burn, defined above).
--- on_hit procs on the server for every attack type; the talent buffer is "server"
-mod_api.insert_proc_function("tb_sienna_unchained_enfeebling_burn_on_hit", function (owner_unit, buff, params)
-	local hit_unit = params[1]
-
-	if not Managers.state.network.is_server or not ALIVE[owner_unit] or not HEALTH_ALIVE[hit_unit] or not Managers.state.side:is_enemy(owner_unit, hit_unit) then
-		return
-	end
-
-	tb_apply_weak_burn(owner_unit, hit_unit)
-end)
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_enfeebling_burn_on_hit", {
-	event = "on_hit",
-	buff_func = "tb_sienna_unchained_enfeebling_burn_on_hit",
-})
--- Push ignite moved from Outburst, always active. The perk is read in the server's damage calculation
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_enfeebling_burn_push", {
-	perks = {
-		buff_perks.sienna_unchained_burn_push,
-	},
-})
-mod_api.update_talent("bw_unchained", 5, 1, {
-	description_values = {},
-	buffs = {
-		"tb_sienna_unchained_enfeebling_burn_on_hit",
-		"tb_sienna_unchained_enfeebling_burn_push",
-	},
-})
-mod_api.insert_text("sienna_unchained_burning_enemies_reduced_damage_desc", "Burning enemies deal 30% less damage. Pushes ignite enemies. All of Sienna's attacks apply a weak burn lasting 10 seconds.")
-
---[[
 	Abandon
 ]]
--- Vanilla effect (health to cooldown at high overcharge) removed; the talent now changes the Unchained state
--- (see tb_unchained_has_health_to_ult in the passive section)
+-- Effect lives in Aqshy's Blaze (ABANDON_*)
 mod_api.update_talent("bw_unchained", 5, 2, {
 	description_values = {},
 	buffs = {},
 })
-mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("The Unchained state lasts %g seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", HEALTH_TO_ULT_DURATION, HEALTH_TO_ULT_MAX_HEALTH_COST * 100, HEALTH_TO_ULT_COOLDOWN * 100, HEALTH_TO_ULT_TICKS_PER_SECOND))
+mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("Aqshy's Blaze lasts %g seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", ABANDON_DURATION, ABANDON_MAX_HEALTH_COST * 100, ABANDON_COOLDOWN * 100, ABANDON_TICKS_PER_SECOND))
 
 --[[
 	Natural Talent
 ]]
--- State buffs are added by the overcharge hook in the Unchained passive section
 mod_api.update_talent("bw_unchained", 5, 3, {
 	description_values = {},
 })
-mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During the Unchained state, Sienna gains %d%% attack speed and %d%% increased healing received.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_HEALING_RECEIVED * 100))
+mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During Aqshy's Blaze, Sienna gains %d%% attack speed and %d%% increased healing received.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_HEALING_RECEIVED * 100))
 
 --[[
 	Fuel for the Fire
 ]]
--- Added on Living Bomb (see _run_ability above). -100% overcharge from Blood Magic, clamped at 0 in apply_buffs_to_damage
+-- Added on Living Bomb, clamped at 0 in apply_buffs_to_damage
 mod_api.insert_talent_buff_template("bright_wizard", FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF, {
 	icon = "sienna_unchained_reduced_overcharge",
 	duration = 15,
@@ -810,7 +711,7 @@ mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_des
 --[[
 	Bomb Balm
 ]]
--- Allies only, see _run_ability above
+-- See _run_ability
 mod_api.update_talent("bw_unchained", 6, 3, {
 	description_values = {},
 })

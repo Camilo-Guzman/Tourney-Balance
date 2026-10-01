@@ -136,7 +136,7 @@ NewDamageProfileTemplates.medium_blunt_smiter_heavy_wiz = {
 			0.5
 		}
 	},
-	charge_value = "light_attack",
+	charge_value = "heavy_attack", -- was "light_attack": hits counted as light attacks for heavy attack talents/procs
 	cleave_distribution = {
 		attack = 0.075,
 		impact = 0.075
