@@ -11,7 +11,7 @@ local is_local = shared_utils.is_local
 		### Talents
 		**Riposte**
 		- Fix description: crits also applpy to ranged attacks.
-		- A melee headshot while Riposte is active grants a guaranteed melee crit on the next melee attack within 1 second. Only one extra crit per parry.
+		- A melee headshot while Riposte is active grants a guaranteed melee crit on the next melee attack within 2 seconds. A melee headshot with that crit grants one more, for up to two extra crits per parry.
 
 		**Templar's Knowledge**
 		- Duration increased to 15s (from 5s).
@@ -62,16 +62,34 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_guarante
 	buff_func = "tb_riposte_consume", -- "dummy_function"
 })
 
--- Melee-only copy, doesn't chain: consumed by the next melee hit (headshot or not), so there's only one extra crit
--- per parry. Ranged hits and cleave targets are ignored.
-mod_api.insert_proc_function("tb_riposte_melee_copy_consume", function (owner_unit, buff, params)
+-- Melee-only copies: each is consumed by the next melee hit (headshot or not). A melee headshot with the first copy
+-- grants a second copy, which doesn't chain, so there are at most two extra crits per parry.
+-- Ranged hits and cleave targets are ignored. Distinct buff names so the two tiers never share a type lookup.
+local RIPOSTE_MELEE_COPY_BUFF_2 = "tb_victor_witchhunter_guaranteed_melee_crit_on_headshot_buff_2"
+
+local function is_first_melee_target(params)
 	local target_number = params[4]
 	local buff_type = params[5]
 
 	return (buff_type == "MELEE_1H" or buff_type == "MELEE_2H") and target_number == 1
+end
+
+mod_api.insert_proc_function("tb_riposte_melee_copy_consume", function (owner_unit, buff, params)
+	if not is_first_melee_target(params) then
+		return false
+	end
+
+	if is_melee_headshot(params) and ALIVE[owner_unit] then
+		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(RIPOSTE_MELEE_COPY_BUFF_2)
+	end
+
+	return true
 end)
-mod_api.insert_talent_buff_template("witch_hunter", RIPOSTE_MELEE_COPY_BUFF, {
-	buff_func = "tb_riposte_melee_copy_consume",
+mod_api.insert_proc_function("tb_riposte_melee_copy_2_consume", function (owner_unit, buff, params)
+	return is_first_melee_target(params)
+end)
+
+local riposte_melee_copy_template = {
 	event = "on_hit",
 	icon = "victor_witchhunter_guaranteed_crit_on_timed_block",
 	duration = 2,
@@ -79,8 +97,14 @@ mod_api.insert_talent_buff_template("witch_hunter", RIPOSTE_MELEE_COPY_BUFF, {
 	remove_on_proc = true,
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
-})
-mod_api.insert_text("victor_witchhunter_guaranteed_crit_on_timed_block_desc", "Parrying causes your next attack within 2 seconds to be a guaranteed critical hit. Landing a melee headshot during this window grants another guaranteed melee critical strike within 2 seconds.")
+}
+mod_api.insert_talent_buff_template("witch_hunter", RIPOSTE_MELEE_COPY_BUFF, table.merge({
+	buff_func = "tb_riposte_melee_copy_consume",
+}, table.clone(riposte_melee_copy_template)))
+mod_api.insert_talent_buff_template("witch_hunter", RIPOSTE_MELEE_COPY_BUFF_2, table.merge({
+	buff_func = "tb_riposte_melee_copy_2_consume",
+}, table.clone(riposte_melee_copy_template)))
+mod_api.insert_text("victor_witchhunter_guaranteed_crit_on_timed_block_desc", "Parrying causes your next attack within 2 seconds to be a guaranteed critical hit. Landing a melee headshot during this window grants another guaranteed melee critical strike within 2 seconds. This can happen twice per parry.")
 
 --[[
 	Templar's Knowledge
