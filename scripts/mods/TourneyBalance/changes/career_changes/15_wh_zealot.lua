@@ -30,7 +30,8 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Now grants a guaranteed critical strike every 4 hits (from 5).
 
 		**Unbending Purpose**
-		- Additionally increases melee damage by 20%.
+		- Increased power to 10% (from 5%).
+		- Additionally increases weapon damage by 20%.
 
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
@@ -44,9 +45,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Calloused Without and Within**
 		- Additionally decreases Heart of Iron's cooldown to 60 seconds.
-
-		**Flagellant's Zeal**
-		- Increased power buff duration to 10 seconds (from 5).
 	$END_TB
 ]]
 
@@ -360,10 +358,14 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_crit_count", 
 --[[
     Unbending Purpose
 ]]
--- Vanilla 5% power, plus 20% melee damage. Melee damage is calculated on the server, where this talent's buffs live.
-mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_power_melee_damage", {
+-- 10% power (from 5%), plus 20% weapon damage (melee and ranged). Damage is calculated on the server, where this
+-- talent's buffs live.
+mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_power", {
+    multiplier = 0.1, -- 0.05
+})
+mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_power_weapon_damage", {
     max_stacks = 1,
-    stat_buff = "increased_weapon_damage_melee",
+    stat_buff = "increased_weapon_damage",
     multiplier = 0.2,
 })
 mod_api.update_talent("wh_zealot", 2, 3, {
@@ -371,10 +373,10 @@ mod_api.update_talent("wh_zealot", 2, 3, {
     description_values = {},
     buffs = {
         "victor_zealot_power",
-        "tb_victor_zealot_power_melee_damage",
+        "tb_victor_zealot_power_weapon_damage",
     },
 })
-mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 5.0% and melee damage by 20.0%.")
+mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 10.0% and weapon damage by 20.0%.")
 
 --[[
     Holy Fortitude
@@ -554,26 +556,5 @@ mod_api.update_talent("wh_zealot", 5, 3, {
 })
 mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damage taken by 10%. Heart of Iron's cooldown is reduced to 60 seconds.")
 
---[[
-    Flagellant's Zeal
-]]
--- Power buff lasts 10 seconds
-mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_activated_ability_power_on_hit_buff", {
-    duration = 10 -- 5
-})
-mod_api.update_talent("wh_zealot", 6, 1, {
-    description_values = {
-        {
-            value_type = "percent",
-            value = 0.02,
-        },
-        {
-            value = 10, -- 5
-        },
-        {
-            value = 10,
-        },
-    },
-})
 
 
