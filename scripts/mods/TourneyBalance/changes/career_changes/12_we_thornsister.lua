@@ -97,7 +97,7 @@ mod_api.update_talent("we_thornsister", 2, 1, {
 		"tb_surge_of_malice_passive",
 	},
 })
-mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 5%. Gain additional 10% attack speed, while above 80% health.")
+mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 5%. Gain additional 10% attack speed, while above 70% health.")
 
 --[[
 	Briar's Malice

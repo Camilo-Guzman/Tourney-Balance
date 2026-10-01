@@ -10,13 +10,12 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Career Ability
 		**Living Bomb**
 		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
-		- Grants Sienna 30 temporary health.
 
 		### Passives
 		**Unchained (new)**
 		- No longer explodes from overcharge, and enters the Unchained state instead for 10 seconds.
 		- Can't attack with the ranged weapon for the duration.
-		- Loses 10 health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
+		- Loses 10% of maximum health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
 		- Using Living Bomb immediately ends the Unchained state.
 
 		### Talents
@@ -36,24 +35,20 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Enfeebling Flames**
 		- Added: Pushes ignite enemies (moved from Outburst).
-		- Added: During the Unchained state, all of Sienna's attacks apply a weak, long lasting burn.
+		- Added: All of Sienna's attacks apply a weak, long lasting burn.
 
 		**Abandon**
-		- Reworked: The Unchained state lasts 5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
+		- Reworked: The Unchained state lasts 2.5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
 
 		**Natural Talent**
-		- Added: Grants 20% attack speed, 5% melee power and 5% critical strike chance during the Unchained state.
+		- Added: Grants 40% attack speed and 40% increased healing received during the Unchained state.
 
 		**Fuel for the Fire**
 		- Added: Blood Magic generates no overcharge for 15 seconds after using Living Bomb.
 		- Living Bomb no longer clears overcharge (still ends the Unchained state).
 
-		**Wildfire**
-		- Aura burn over its full duration now deals the burn damage of 4 Warrior Priest Bubble explosions.
-		- Removed increased stagger power (Living Bomb now has an AoE stagger baseline).
-
 		**Bomb Balm**
-		- Sienna's own 30 temporary health is now baseline on Living Bomb, so Bomb Balm additionally grants it to nearby allies (no double heal for Sienna).
+		- Only grants temporary health to nearby allies, no longer to Sienna.
 
 	$END_TB
 ]]
@@ -68,7 +63,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 ]]
 local UNCHAINED_STATE_BUFF = "tb_sienna_unchained_unchained_state"
 local UNCHAINED_DURATION = 10
-local UNCHAINED_HEALTH_PER_SECOND = 10
+local UNCHAINED_MAX_HEALTH_COST = 0.1 -- per second, share of max health
 local UNCHAINED_COOLDOWN_PER_SECOND = 0.1
 -- life_tap skips damage reduction and damage to overcharge conversion, wounded_dot does not interrupt interaction
 local UNCHAINED_BURN_SOURCE = "life_tap"
@@ -77,7 +72,7 @@ local UNCHAINED_BURN_TYPE = "wounded_dot"
 -- Row 5 col 2 talent (vanilla health to ult at high overcharge) now speeds up the state instead:
 -- shorter state, converting a % of max health 4 times per second
 local HEALTH_TO_ULT_TALENT = "sienna_unchained_health_to_ult"
-local HEALTH_TO_ULT_DURATION = 5
+local HEALTH_TO_ULT_DURATION = 2.5
 local HEALTH_TO_ULT_TICKS_PER_SECOND = 4
 local HEALTH_TO_ULT_MAX_HEALTH_COST = 0.05
 local HEALTH_TO_ULT_COOLDOWN = 0.1
@@ -120,7 +115,7 @@ mod_api.insert_buff_function("tb_unchained_state_health_to_cooldown_tick", funct
 		return
 	end
 
-	local cost = UNCHAINED_HEALTH_PER_SECOND
+	local cost = health_extension:get_max_health() * UNCHAINED_MAX_HEALTH_COST
 	local cooldown = UNCHAINED_COOLDOWN_PER_SECOND
 
 	if health_to_ult then
@@ -163,15 +158,14 @@ mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
 	},
 })
 mod_api.insert_text(UNCHAINED_STATE_BUFF, "Unchained")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d health into %d%% ult cooldown per second (non-lethal, only while she has the health to spare). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_HEALTH_PER_SECOND, UNCHAINED_COOLDOWN_PER_SECOND * 100))
+mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal, only while she has the health to spare). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
 -- Natural Talent's stat buffs, entered together with the state (defined here, used by the overcharge hook below)
 local NATURAL_TALENT_TALENT = "sienna_unchained_reduced_overcharge"
 local NATURAL_TALENT_STATE_BUFF = "tb_sienna_unchained_natural_talent_state"
-local NATURAL_TALENT_ATTACK_SPEED = 0.2
-local NATURAL_TALENT_MELEE_POWER = 0.05
-local NATURAL_TALENT_CRIT_CHANCE = 0.05
+local NATURAL_TALENT_ATTACK_SPEED = 0.4
+local NATURAL_TALENT_HEALING_RECEIVED = 0.4
 
 mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, {
 	{
@@ -184,21 +178,14 @@ mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, 
 		buff_func = "tb_unchained_state_end_on_own_ability",
 		remove_on_proc = true,
 	},
+	-- Read where the heal is applied (server), the state buff is LocalAndServer
 	{
-		name = "tb_sienna_unchained_natural_talent_state_power",
+		name = "tb_sienna_unchained_natural_talent_state_healing",
 		duration = UNCHAINED_DURATION,
 		duration_modifier_func = tb_unchained_state_duration,
 		max_stacks = 1,
-		stat_buff = "power_level_melee",
-		multiplier = NATURAL_TALENT_MELEE_POWER,
-	},
-	{
-		name = "tb_sienna_unchained_natural_talent_state_crit",
-		duration = UNCHAINED_DURATION,
-		duration_modifier_func = tb_unchained_state_duration,
-		max_stacks = 1,
-		stat_buff = "critical_strike_chance",
-		bonus = NATURAL_TALENT_CRIT_CHANCE,
+		stat_buff = "healing_received",
+		multiplier = NATURAL_TALENT_HEALING_RECEIVED,
 	},
 })
 
@@ -272,13 +259,12 @@ end)
 	Ultimate
 
 ]]
-local LIVING_BOMB_SELF_TEMP_HEALTH = 30
 local LIVING_BOMB_EXPLOSION = "explosion_bw_unchained_ability"
 -- Witch Hunter Captain's Animosity shout (ability_push, radius 10), already in NetworkLookup.explosion_templates
 local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 local FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF = "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic"
 
-mod_api.insert_text("career_active_desc_bw_3", string.format("Sienna vents all overcharge, dealing damage and staggering nearby enemies, and gains %d temporary health.", LIVING_BOMB_SELF_TEMP_HEALTH))
+mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
 
 local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
 	local owner_unit = self._owner_unit
@@ -302,7 +288,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 end
 
 -- Vanilla career_ability_bw_unchained.lua _run_ability, with:
--- baseline self temp health and Witch Hunter Captain shout stagger, Bomb Balm allies only,
+-- baseline Witch Hunter Captain shout stagger, Bomb Balm allies only,
 -- Fuel for the Fire keeps overcharge and stops Blood Magic overcharge
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
@@ -338,16 +324,14 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	local rotation = Unit.local_rotation(owner_unit, 0)
 	local explosion_template_name = LIVING_BOMB_EXPLOSION
 
-	local career_power_level = career_extension:get_career_power_level()
-	local heal_type_id = NetworkLookup.heal_types.career_skill
-	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
-
-	-- Baseline temp health for Sienna herself
-	if owner_unit_go_id then
-		network_transmit:send_rpc_server("rpc_request_heal", owner_unit_go_id, LIVING_BOMB_SELF_TEMP_HEALTH, heal_type_id)
+	if talent_extension:has_talent("sienna_unchained_activated_ability_fire_aura") then
+		explosion_template_name = "explosion_bw_unchained_ability_increased_radius"
 	end
 
-	-- Bomb Balm: additionally heals allies. Skips Sienna, who already got hers above (vanilla would heal her twice)
+	local career_power_level = career_extension:get_career_power_level()
+	local heal_type_id = NetworkLookup.heal_types.career_skill
+
+	-- Bomb Balm: heals allies only, not Sienna herself (vanilla heals her too)
 	if talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
 		local radius = 10
 		local nearby_player_units = FrameTable.alloc_table()
@@ -756,18 +740,12 @@ mod_api.insert_text("sienna_unchained_reduced_damage_taken_after_venting_desc_2"
 --[[
 	Enfeebling Flames
 ]]
--- Weak burn (defined above) on every attack, only during the Unchained state.
+-- Weak burn on every attack, the same one Chain Reaction spreads (tb_apply_weak_burn, defined above).
 -- on_hit procs on the server for every attack type; the talent buffer is "server"
 mod_api.insert_proc_function("tb_sienna_unchained_enfeebling_burn_on_hit", function (owner_unit, buff, params)
 	local hit_unit = params[1]
 
 	if not Managers.state.network.is_server or not ALIVE[owner_unit] or not HEALTH_ALIVE[hit_unit] or not Managers.state.side:is_enemy(owner_unit, hit_unit) then
-		return
-	end
-
-	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-
-	if not buff_extension:has_buff_type(UNCHAINED_STATE_BUFF) then
 		return
 	end
 
@@ -790,10 +768,10 @@ mod_api.update_talent("bw_unchained", 5, 1, {
 		"tb_sienna_unchained_enfeebling_burn_push",
 	},
 })
-mod_api.insert_text("sienna_unchained_burning_enemies_reduced_damage_desc", "Burning enemies deal 30% less damage. Pushes ignite enemies. During the Unchained state, all of Sienna's attacks apply a weak burn lasting 10 seconds.")
+mod_api.insert_text("sienna_unchained_burning_enemies_reduced_damage_desc", "Burning enemies deal 30% less damage. Pushes ignite enemies. All of Sienna's attacks apply a weak burn lasting 10 seconds.")
 
 --[[
-	Row 5 col 2 (health to ult)
+	Abandon
 ]]
 -- Vanilla effect (health to cooldown at high overcharge) removed; the talent now changes the Unchained state
 -- (see tb_unchained_has_health_to_ult in the passive section)
@@ -801,7 +779,7 @@ mod_api.update_talent("bw_unchained", 5, 2, {
 	description_values = {},
 	buffs = {},
 })
-mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("The Unchained state lasts %d seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", HEALTH_TO_ULT_DURATION, HEALTH_TO_ULT_MAX_HEALTH_COST * 100, HEALTH_TO_ULT_COOLDOWN * 100, HEALTH_TO_ULT_TICKS_PER_SECOND))
+mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("The Unchained state lasts %g seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", HEALTH_TO_ULT_DURATION, HEALTH_TO_ULT_MAX_HEALTH_COST * 100, HEALTH_TO_ULT_COOLDOWN * 100, HEALTH_TO_ULT_TICKS_PER_SECOND))
 
 --[[
 	Natural Talent
@@ -810,7 +788,7 @@ mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("The Un
 mod_api.update_talent("bw_unchained", 5, 3, {
 	description_values = {},
 })
-mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During the Unchained state, Sienna gains %d%% attack speed, %d%% melee power and %d%% critical strike chance.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_MELEE_POWER * 100, NATURAL_TALENT_CRIT_CHANCE * 100))
+mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During the Unchained state, Sienna gains %d%% attack speed and %d%% increased healing received.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_HEALING_RECEIVED * 100))
 
 --[[
 	Fuel for the Fire
@@ -830,111 +808,10 @@ mod_api.update_talent("bw_unchained", 6, 1, {
 mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_desc", "Each enemy hit by Living Bomb increases power by 5% for 15 seconds. Stacking up to 5 times. Blood Magic generates no overcharge for the duration. Living Bomb no longer clears overcharge.")
 
 --[[
-	Wildfire
-]]
--- Total aura burn on an enemy standing in it the whole time = 4 Warrior Priest Bubble explosion burns.
--- One Bubble burn (victor_priest_nuke_dot, see 16_wh_priest.lua): burning_dot (0.07) every 3.5s for 25s = 7 ticks at
--- career power, 4 of them = 28 ticks.
--- Aura: 10s + 2s lingering burn, ticking every 0.7s = ~17 ticks, so each tick is 0.07 * 28 / 17 = ~0.115.
--- Replaces vanilla burning_dot_unchained_pulse (burning_dot every 2s at 200 power)
-local WILDFIRE_BURN_BUFF = "tb_sienna_unchained_wildfire_burn"
-
-NewDamageProfileTemplates.tb_sienna_unchained_wildfire_burn = table.clone(DamageProfileTemplates.burning_dot)
-NewDamageProfileTemplates.tb_sienna_unchained_wildfire_burn.default_target.power_distribution = {
-	attack = 0.05, -- ~2 WP double bubble , 4 WP bubble ~ .115, -- 0.07 (vanilla burning_dot)
-	impact = 0.05, -- 0.05, unchanged (burning_dot has no_stagger)
-}
-
-mod_api.insert_buff_template(WILDFIRE_BURN_BUFF, {
-	apply_buff_func = "start_dot_damage",
-	damage_profile = "tb_sienna_unchained_wildfire_burn", -- "burning_dot"
-	damage_type = "burninating",
-	duration = 2, -- 2, unchanged (refreshed by each 0.5s pulse)
-	max_stacks = 1,
-	refresh_durations = true,
-	time_between_dot_damages = 0.7, -- 2
-	update_func = "apply_dot_damage",
-	update_start_delay = 0.7, -- 2
-	perks = {
-		buff_perks.burning,
-	},
-})
-
-local wildfire_broadphase_results = {}
-
--- Vanilla sienna_unchained_activated_ability_pulse_update, with the burn above
-mod_api.insert_buff_function("tb_sienna_unchained_activated_ability_pulse_update", function (unit, buff, params)
-	local template = buff.template
-	local t = params.t
-	local position = POSITION_LOOKUP[unit]
-	local pulse_frequency = template.pulse_frequency
-	local buff_extension = ScriptUnit.extension(unit, "buff_system")
-
-	if not buff_extension then
-		return
-	end
-
-	if not buff.targeting_effect_id then
-		local world = Managers.world:world("level_world")
-		local first_person_effect_name = "fx/unchained_aura_talent_1p"
-		local third_person_effect_name = "fx/unchained_aura_talent_3p"
-
-		buff.targeting_effect_id = World.create_particles(world, third_person_effect_name, Vector3.zero())
-		buff.targeting_variable_id = World.find_particles_variable(world, third_person_effect_name, "charge_radius")
-
-		World.set_particles_variable(world, buff.targeting_effect_id, buff.targeting_variable_id, Vector3(12, 12, 0.2))
-
-		local first_person_extension = ScriptUnit.has_extension(unit, "first_person_system")
-
-		if first_person_extension then
-			buff.screenspace_effect_id = first_person_extension:create_screen_particles(first_person_effect_name)
-		end
-	end
-
-	if buff.targeting_effect_id then
-		local world = Managers.world:world("level_world")
-
-		World.move_particles(world, buff.targeting_effect_id, position)
-	end
-
-	if not buff.timer or t > buff.timer then
-		if not Managers.state.network.is_server then
-			return
-		end
-
-		local ai_broadphase = Managers.state.entity:system("ai_system").broadphase
-		local buff_system = Managers.state.entity:system("buff_system")
-		local career_extension = ScriptUnit.has_extension(unit, "career_system")
-		local power_level = career_extension and career_extension:get_career_power_level() or 200 -- 200, fixed
-		local range = 6 -- 6, unchanged
-
-		table.clear(wildfire_broadphase_results)
-
-		local num_nearby_enemies = Broadphase.query(ai_broadphase, position, range, wildfire_broadphase_results)
-
-		for i = 1, num_nearby_enemies do
-			local enemy_unit = wildfire_broadphase_results[i]
-
-			if HEALTH_ALIVE[enemy_unit] then
-				buff_system:add_buff(enemy_unit, WILDFIRE_BURN_BUFF, unit, false, power_level, unit) -- "burning_dot_unchained_pulse"
-				-- Flat 2 damage per 0.5s pulse, unchanged
-				DamageUtils.add_damage_network(enemy_unit, enemy_unit, 2, "torso", "burn_shotgun", nil, Vector3(0, 0, 0), nil, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
-			end
-		end
-
-		buff.timer = t + pulse_frequency
-	end
-end)
-mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_activated_ability_pulse", {
-	update_func = "tb_sienna_unchained_activated_ability_pulse_update",
-})
-mod_api.insert_text("sienna_unchained_activated_ability_fire_aura_desc", "Living Bomb grants Sienna a scorching aura that ignites nearby enemies for 10 seconds, causing damage over time.")
-
---[[
 	Bomb Balm
 ]]
 -- Allies only, see _run_ability above
 mod_api.update_talent("bw_unchained", 6, 3, {
 	description_values = {},
 })
-mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb also grants 30 temporary health to nearby allies.")
+mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb grants 30 temporary health to nearby allies (not Sienna).")

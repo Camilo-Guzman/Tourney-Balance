@@ -387,10 +387,13 @@ local function tb_no_escape_removes_movement_penalty(unit)
 	return not not (inventory_extension and TB_NO_ESCAPE_WEAPON_SLOTS[inventory_extension:get_wielded_slot_name()])
 end
 
-for _, buff_name in ipairs(TB_NO_ESCAPE_MOVEMENT_PENALTY_BUFFS) do
-	mod:add_buff_apply_condition(buff_name, function (unit, template, params)
-		return mod:is_action_movement_speed_up(params) or not tb_no_escape_removes_movement_penalty(unit)
-	end)
-end
+-- Done after all mods load so a later rewrite of these templates can't drop the condition
+mod:add_all_mods_loaded_function(function ()
+	for _, buff_name in ipairs(TB_NO_ESCAPE_MOVEMENT_PENALTY_BUFFS) do
+		mod:add_buff_apply_condition(buff_name, function (unit, template, params)
+			return mod:is_action_movement_speed_up(params) or not tb_no_escape_removes_movement_penalty(unit)
+		end)
+	end
+end)
 mod_api.insert_text("bardin_slayer_activated_ability_movement_desc_2", "Leap increases movement speed by %g%% and removes movement slowdown from weapons for 10 seconds.")
 
