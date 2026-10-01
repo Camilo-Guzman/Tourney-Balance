@@ -13,9 +13,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Grants Sienna 30 temporary health (Bomb Balm's self heal, now baseline).
 
 		### Passives
-		**Unstable Strength**
-		- Added: All attacks apply a weak, long lasting burn above 50% overcharge.
-
 		**Aqshy's Blaze (new)**
 		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 10 seconds.
 		- Weapons can be swapped during the explosion.
@@ -87,8 +84,10 @@ mod_api.insert_buff_template(WEAK_BURN_BUFF, {
 	},
 })
 
--- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives
+-- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives.
+-- Disabled for now; the threshold is still used by Chain Reaction
 local UNSTABLE_STRENGTH_BURN_OVERCHARGE = 0.5
+--[[
 local weak_burn_params = {}
 
 mod_api.insert_proc_function("tb_sienna_unchained_unstable_strength_burn", function (owner_unit, buff, params)
@@ -121,6 +120,7 @@ mod_api.insert_career_passives("bw_3", {
 	"tb_sienna_unchained_unstable_strength_burn",
 })
 mod_api.insert_text("career_passive_desc_bw_3c", string.format("Increased melee power on high Overcharge by up to 60%%. All attacks apply a weak burn while above %d%% Overcharge.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
+]]
 
 --[[
 	Aqshy's Blaze
@@ -597,7 +597,7 @@ local CHAIN_REACTION_RADIUS = 0.25
 local chain_reaction_broadphase_results = {}
 
 -- Replaces vanilla's 40% chance on death: specials explode when headshot, elites when killed by a headshot, while Sienna is
--- above Unstable Strength's burn threshold (that hit burns them). Server only (talent buffer "server"); the server reads
+-- above Unstable Strength's burn threshold. Server only (talent buffer "server"); the server reads
 -- remote players' overcharge from the husk overcharge extension
 local function tb_is_headshot(hit_zone)
 	return hit_zone == "head" or hit_zone == "neck"
@@ -662,7 +662,7 @@ mod_api.update_talent("bw_unchained", 2, 3, {
 		"tb_sienna_unchained_chain_reaction",
 	},
 })
-mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("Above %d%% Overcharge, headshotting a special or killing an elite with a headshot makes it explode.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
+mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("While above %d%% Overcharge, headshots on specials and headshot kills on elites cause them to explode, dealing %d damage and staggering nearby enemies.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100, CHAIN_REACTION_DAMAGE))
 
 --[[
 	Dissipate
