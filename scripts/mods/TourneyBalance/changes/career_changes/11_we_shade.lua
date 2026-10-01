@@ -47,7 +47,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Ruthless Precision** (new, replaces Gladerunner)
 		- Melee headshots count as backstabs.
-		- Critical headshots instantly slay man-sized enemies (same as Witch Hunter Captain's Killing Shot).
+		- Critical melee headshots instantly slay man-sized enemies (melee-only version of Witch Hunter Captain's Killing Shot).
 
 		**Shimmer Strike**
 		- Limited extending stealth to 4 times.
@@ -493,11 +493,14 @@ mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Count
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)
 ]]
--- Headshots count as backstabs, and critical headshots instantly slay man-sized enemies
+-- Melee headshots count as backstabs, and critical melee headshots instantly slay man-sized enemies (a melee-only
+-- version of WHC's Killing Shot perk, crit_headshot_killing_blow). Both are read in the calculate_damage override
+-- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both".
+-- Khaine's Counter's guaranteed_backstab is melee-only by nature (only ActionSweep reads it)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
 	perks = {
 		"tb_headshot_counts_as_backstab",
-		"crit_headshot_killing_blow",
+		"tb_melee_crit_headshot_killing_blow",
 	},
 })
 mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision", {
@@ -507,7 +510,7 @@ mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision",
 		"tb_kerillian_shade_ruthless_precision_headshot_backstab",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs. Critical headshots instantly slay man-sized enemies.")
+mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs. Critical melee headshots instantly slay man-sized enemies.")
 
 --[[
 	Shimmer Strike
