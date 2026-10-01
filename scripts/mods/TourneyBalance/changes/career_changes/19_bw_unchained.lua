@@ -158,7 +158,7 @@ mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
 	},
 })
 mod_api.insert_text(UNCHAINED_STATE_BUFF, "Aqshy's Blaze")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal, only while she has the health to spare). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
+mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
 -- Natural Talent's stat buffs, entered together with the state (defined here, used by the overcharge hook below)
