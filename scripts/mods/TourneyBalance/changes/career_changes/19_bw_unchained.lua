@@ -68,7 +68,7 @@ local WEAK_BURN_BUFF = "tb_sienna_unchained_weak_burn"
 
 NewDamageProfileTemplates.tb_sienna_unchained_weak_burn = table.clone(DamageProfileTemplates.burning_dot)
 NewDamageProfileTemplates.tb_sienna_unchained_weak_burn.default_target.power_distribution = {
-	attack = 0.03, -- 0.07 (burning_dot)
+	attack = 0.01, -- 0.07 (burning_dot) -- 0.75 dmg x 10 ticks
 	impact = 0, -- 0.05 (burning_dot has no_stagger)
 }
 
@@ -120,7 +120,7 @@ mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_unstab
 mod_api.insert_career_passives("bw_3", {
 	"tb_sienna_unchained_unstable_strength_burn",
 })
-mod_api.insert_text("career_passive_desc_bw_3b", string.format("Increased melee power on high Overcharge by up to 60%%. All attacks apply a weak burn above %d%% Overcharge.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
+mod_api.insert_text("career_passive_desc_bw_3c", string.format("Increased melee power on high Overcharge by up to 60%%. All attacks apply a weak burn while above %d%% Overcharge.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
 
 --[[
 	Aqshy's Blaze
