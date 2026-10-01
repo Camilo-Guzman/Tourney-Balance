@@ -30,8 +30,8 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Added: After a charged attack, the next push also costs half stamina.
 
 		**Chain Reaction**
-		- Reworked: Burning specials explode when headshot, burning elites when killed by a headshot (from 40% chance for any burning enemy on death).
-		- Explosion now uses the overcharge explosion's damage, scaled by Sienna's power (no friendly fire).
+		- Reworked: Above 50% overcharge, specials explode when headshot and elites when killed by a headshot (from 40% chance for any burning enemy on death).
+		- Explosion now deals a fixed 50 damage, ignoring armor.
 
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
@@ -68,7 +68,7 @@ local WEAK_BURN_BUFF = "tb_sienna_unchained_weak_burn"
 
 NewDamageProfileTemplates.tb_sienna_unchained_weak_burn = table.clone(DamageProfileTemplates.burning_dot)
 NewDamageProfileTemplates.tb_sienna_unchained_weak_burn.default_target.power_distribution = {
-	attack = 0.01, -- 0.07 (burning_dot) -- 0.75 dmg x 10 ticks
+	attack = 0.00375, -- 0.07 (burning_dot) -- 0.75 dmg x 10 ticks
 	impact = 0, -- 0.05 (burning_dot has no_stagger)
 }
 
@@ -590,41 +590,45 @@ end)
 --[[
 	Chain Reaction
 ]]
--- Explosion: clone of the overcharge explosion (overcharge_explosion_brw) at career power, replacing vanilla's stagger only one
-NewDamageProfileTemplates.tb_sienna_unchained_chain_reaction_explosion = table.clone(DamageProfileTemplates.overcharge_explosion)
+-- Vanilla explosion (sienna_unchained_burning_enemies_explosion: visual, sound, stagger, no damage) plus fixed damage,
+-- ignoring armor, to enemies within CHAIN_REACTION_RADIUS
+local CHAIN_REACTION_DAMAGE = 50
+local CHAIN_REACTION_RADIUS = 0.25
+local chain_reaction_broadphase_results = {}
 
-local chain_reaction_explosion = table.clone(ExplosionTemplates.overcharge_explosion_brw)
-local vanilla_chain_reaction_explosion = ExplosionTemplates.sienna_unchained_burning_enemies_explosion.explosion
-
-chain_reaction_explosion.name = "sienna_unchained_burning_enemies_explosion"
-chain_reaction_explosion.explosion.effect_name = vanilla_chain_reaction_explosion.effect_name -- vanilla Chain Reaction visual and sound
-chain_reaction_explosion.explosion.sound_event_name = vanilla_chain_reaction_explosion.sound_event_name
-chain_reaction_explosion.explosion.damage_profile = "tb_sienna_unchained_chain_reaction_explosion"
-chain_reaction_explosion.explosion.damage_profile_glance = "tb_sienna_unchained_chain_reaction_explosion" -- vanilla glance is identical
-chain_reaction_explosion.explosion.no_friendly_fire = true
-chain_reaction_explosion.explosion.power_level = nil -- 500
-chain_reaction_explosion.explosion.use_attacker_power_level = true -- career power, passed by tb_chain_reaction_explode
-chain_reaction_explosion.explosion.radius = 0.25 -- 5
-chain_reaction_explosion.explosion.max_damage_radius = 0.25 -- 4
-ExplosionTemplates.sienna_unchained_burning_enemies_explosion = chain_reaction_explosion
-
--- Replaces vanilla's 40% chance on death: burning specials explode when headshot, burning elites when killed by a headshot.
--- Server only (talent buffer "server")
+-- Replaces vanilla's 40% chance on death: specials explode when headshot, elites when killed by a headshot, while Sienna is
+-- above Unstable Strength's burn threshold (that hit burns them). Server only (talent buffer "server"); the server reads
+-- remote players' overcharge from the husk overcharge extension
 local function tb_is_headshot(hit_zone)
 	return hit_zone == "head" or hit_zone == "neck"
 end
 
 local function tb_chain_reaction_explode(owner_unit, unit)
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+	local overcharge_extension = ALIVE[owner_unit] and ScriptUnit.has_extension(owner_unit, "overcharge_system")
+	local max_overcharge = overcharge_extension and overcharge_extension:get_max_value()
 
-	if not ALIVE[owner_unit] or not buff_extension then
+	if not max_overcharge or max_overcharge <= 0 or overcharge_extension:get_overcharge_value() / max_overcharge <= UNSTABLE_STRENGTH_BURN_OVERCHARGE then
 		return
 	end
 
-	if buff_extension:has_buff_perk(buff_perks.burning) or buff_extension:has_buff_perk(buff_perks.burning_balefire) or buff_extension:has_buff_perk(buff_perks.burning_elven_magic) then
-		local career_power_level = ScriptUnit.extension(owner_unit, "career_system"):get_career_power_level()
+	local position = POSITION_LOOKUP[unit]
+	local career_power_level = ScriptUnit.extension(owner_unit, "career_system"):get_career_power_level()
 
-		Managers.state.entity:system("area_damage_system"):create_explosion(owner_unit, POSITION_LOOKUP[unit], Quaternion.identity(), "sienna_unchained_burning_enemies_explosion", 1, "buff", career_power_level, false)
+	Managers.state.entity:system("area_damage_system"):create_explosion(owner_unit, position, Quaternion.identity(), "sienna_unchained_burning_enemies_explosion", 1, "buff", career_power_level, false)
+
+	local side_manager = Managers.state.side
+	local ai_broadphase = Managers.state.entity:system("ai_system").broadphase
+
+	table.clear(chain_reaction_broadphase_results)
+
+	local num_enemies = Broadphase.query(ai_broadphase, position, CHAIN_REACTION_RADIUS, chain_reaction_broadphase_results)
+
+	for i = 1, num_enemies do
+		local enemy_unit = chain_reaction_broadphase_results[i]
+
+		if HEALTH_ALIVE[enemy_unit] and side_manager:is_enemy(owner_unit, enemy_unit) then
+			DamageUtils.add_damage_network(enemy_unit, owner_unit, CHAIN_REACTION_DAMAGE, "torso", "burn_shotgun", nil, Vector3(0, 0, 0), "buff", nil, owner_unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+		end
 	end
 end
 
@@ -658,7 +662,7 @@ mod_api.update_talent("bw_unchained", 2, 3, {
 		"tb_sienna_unchained_chain_reaction",
 	},
 })
-mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", "Headshotting a burning special or killing a burning elite with a headshot makes it explode.")
+mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("Above %d%% Overcharge, headshotting a special or killing an elite with a headshot makes it explode.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
 
 --[[
 	Dissipate
