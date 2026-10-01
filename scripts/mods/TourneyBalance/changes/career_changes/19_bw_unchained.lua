@@ -12,7 +12,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
 
 		### Passives
-		**Unchained (new)**
+		**Aqshy's Blaze (new)**
 		- No longer explodes from overcharge, and enters the Unchained state instead for 10 seconds.
 		- Can't attack with the ranged weapon for the duration.
 		- Loses 10% of maximum health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
@@ -157,8 +157,8 @@ mod_api.insert_talent_buff_template("bright_wizard", UNCHAINED_STATE_BUFF, {
 		buff_perks.no_overcharge_explosion,
 	},
 })
-mod_api.insert_text(UNCHAINED_STATE_BUFF, "Unchained")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Unchained", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal, only while she has the health to spare). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
+mod_api.insert_text(UNCHAINED_STATE_BUFF, "Aqshy's Blaze")
+mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Instead of exploding from overcharge, Sienna can't attack with her ranged weapon for %d seconds, while converting %d%% of maximum health into %d%% ult cooldown per second (non-lethal, only while she has the health to spare). Using Living Bomb ends this state.", UNCHAINED_DURATION, UNCHAINED_MAX_HEALTH_COST * 100, UNCHAINED_COOLDOWN_PER_SECOND * 100))
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
 -- Natural Talent's stat buffs, entered together with the state (defined here, used by the overcharge hook below)

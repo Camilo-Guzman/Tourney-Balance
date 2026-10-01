@@ -14,6 +14,9 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Cooldown Regeneration reward increased to 20% (from 10%), and 30% with improved rewards (from 15%).
 
 		### Talents
+		**Virtue of the Ideal**
+		- Increased power per stack to 10% (from 8%).
+
 		**Virtue of Knightly Temper**
 		- Reduced instant slay damage multiplier for non-Lords-and-Bosses to 3 (from 4).
 		
@@ -252,6 +255,28 @@ end)
 	Talents
 
 ]]
+--[[
+	Virtue of the Ideal
+]]
+-- 10% power per stack (from 8%)
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_kills_buff_power_stacking_buff", {
+	multiplier = 0.1 --0.08
+})
+mod_api.update_talent("es_questingknight", 2, 1, {
+	description_values = { -- update description
+		{
+			value_type = "percent",
+			value = 0.1, -- buff_tweak_data.markus_questing_knight_kills_buff_power_stacking_buff.multiplier
+		},
+		{
+			value = 10, -- duration
+		},
+		{
+			value = 3, -- max_stacks
+		},
+	},
+})
+
 --[[
 	Virtue of Knightly Temper
 ]]

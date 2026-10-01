@@ -17,6 +17,7 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 		### Passives
 		**Ariel's Benison**
 		- Added effect: Knocked down allies within her aura take 80% reduced damage.
+		- Added effect: Allies revived by her take 80% reduced damage for 2 seconds.
 
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
@@ -345,7 +346,24 @@ end)
     Ariel's Benison
 ]]
 -- Replace the vanilla Ariel's Benison perk text (career_passive_name_we_2c) instead of adding a second entry
-mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage taken by knocked down allies by 80%. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health.")
+mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage taken by knocked down allies by 80%. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health and they take 80% less damage for 2 seconds.")
+
+-- Revived allies take 80% less damage for 2s. Added to the revived unit by the vanilla buff_defence_on_revived_target
+-- proc next to the 20 health heal; the server adds it locally and syncs it to the revived player, who sees the icon/timer.
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_maidenguard_revive_protection", {
+	stat_buff = "damage_taken",
+	multiplier = -0.8,
+	duration = 2,
+	max_stacks = 1,
+	refresh_durations = true,
+	icon = "kerillian_maidenguard_passive",
+})
+mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_ress_time", {
+	buff_to_add = {
+		"kerillian_maidenguard_insta_ress_buff",
+		"tb_kerillian_maidenguard_revive_protection",
+	},
+})
 
 -- Knocked down allies inside the Renewal aura of a standing Handmaiden take 80% less damage (including bleed-out).
 -- Reduces the incoming damage before the rest of the chain, so e.g. Zealot's overhealth pool only absorbs the reduced amount.
