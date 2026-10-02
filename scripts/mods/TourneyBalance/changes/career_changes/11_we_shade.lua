@@ -14,7 +14,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Increased movement speed by 10%.
 
 		**Grim Fortune** (new, replaces Blur)
-		- Increases critical strike chance by 10%.
+		- Increases critical strike chance by 5%.
 		- Parrying an attack makes the next attack within 3s a guaranteed critical strike (melee or ranged).
 		- Blur moved to the talent tree (see Talents).
 
@@ -135,7 +135,7 @@ mod_api.remove_career_perk_description("we_1", "career_passive_name_we_1d") -- v
 --[[
 	Grim Fortune
 ]]
--- 10% crit chance (vanilla kerillian_shade_passive_crit, 5% but never added to the passive in vanilla)
+-- 5% crit chance (vanilla kerillian_shade_passive_crit, never added to the passive in vanilla)
 -- A guaranteed crit (melee or ranged) for 3 seconds after a (long) parry, used up by the next attack that hits.
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_parry", {
 	buff_func = "add_buff_local",
@@ -162,15 +162,12 @@ mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune
 		},
 	},
 })
-mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
-	bonus = 0.1 -- 0.05
-})
 mod_api.insert_career_passives("we_1", {
 	"kerillian_shade_passive_crit",
 	"tb_kerillian_shade_grim_fortune_parry",
 	"tb_kerillian_shade_grim_fortune_crit_consumer",
 })
-mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
+mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 5%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
 mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 
 --[[
@@ -211,7 +208,8 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_increased_damag
 		"kerillian_shade_increased_damage_on_poisoned_or_bleeding_enemy",
 	},
 })
--- Every hit applies Flense bleed (weapon_bleed_dot_whc)
+-- Every hit applies this talent's own copy of the Flense bleed (weapon_bleed_dot_whc), alongside the weapon's own dot.
+-- The talent is server-buffered in vanilla, and clients relay their hits to the server (buff_on_attack)
 mod_api.insert_buff_template("tb_kerillian_shade_exploit_weakness_bleed_dot", {
 	apply_buff_func = "start_dot_damage",
 	damage_profile = "bleed",
@@ -271,7 +269,7 @@ mod_api.update_talent("we_shade", 2, 2, {
 mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_enemy_desc", "Increases damage by 20.0% for each type of status effect (poison, bleed, burn) afflicting the enemy. All attacks apply bleed.")
 
 --[[
-	Row 4 (Chain Killer, Focused Slaying, Bloodfletcher): headshots also trigger each talent's backstab effect
+	Row 4 (Chain Killer, Focused Slaying, Bloodfletcher): melee headshots also trigger each talent's backstab effect
 ]]
 -- Same headshot check as Ruthless Precision (01_damage_calc_changes.lua): the breed's hit zone type, which covers
 -- head and neck
@@ -282,7 +280,7 @@ end
 --[[
 	Chain Killer
 ]]
--- Copy of vanilla kerillian_shade_buff_on_charged_backstab: a charged (heavy) backstab OR any headshot adds a stack.
+-- Copy of vanilla kerillian_shade_buff_on_charged_backstab: a charged (heavy) backstab OR any melee headshot adds a stack.
 -- Unlike vanilla, other hits no longer clear the stacks; they just expire
 mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", function (owner_unit, buff, params)
 	local hit_unit = params[1]
@@ -416,7 +414,8 @@ mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Di
 --[[
 	Blur (moved from the passive, replaces Blood Drinker, whose effect it keeps as a secondary effect)
 ]]
--- Vanilla Blur: parry, then dodge shortly after, to go invisible
+-- Vanilla Blur: parry, then dodge shortly after, to go invisible. Plus vanilla Blood Drinker's crit damage reduction.
+-- Buffer "both": Blood Drinker's damage_taken is applied on the server, while Blur's parry trigger only fires on the owner
 mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
 	buffer = "both",
 	icon = "kerillian_shade_perk_blur",
@@ -430,7 +429,9 @@ mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attac
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
 ]]
--- Guaranteed backstabs after a parry: 5 seconds within the normal 0.5s parry window scaling down linearly to 3 seconds at longer 0.75s window.
+-- Guaranteed backstabs after a parry: 6 seconds within the normal 0.5s parry window, scaling down linearly to 3 seconds
+-- at the end of the longer 0.75s window. guaranteed_backstab is melee-only by nature (only ActionSweep reads it), and
+-- on_timed_block_long only fires on the owning client
 local tb_khaines_counter_params = {}
 mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owner_unit, buff, params)
 	if not ALIVE[owner_unit] then
@@ -495,8 +496,7 @@ mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Count
 ]]
 -- Melee headshots count as backstabs, and critical melee headshots instantly slay man-sized enemies (a melee-only
 -- version of WHC's Killing Shot perk, crit_headshot_killing_blow). Both are read in the calculate_damage override
--- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both".
--- Khaine's Counter's guaranteed_backstab is melee-only by nature (only ActionSweep reads it)
+-- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both"
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
 	perks = {
 		"tb_headshot_counts_as_backstab",

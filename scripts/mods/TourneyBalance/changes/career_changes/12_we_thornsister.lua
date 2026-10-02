@@ -113,11 +113,28 @@ mod_api.update_talent("we_thornsister", 2, 3, {
 	},
 })
 -- consume 1 stack only on hit
+-- Explosions can't rely on target_number: remote clients receive every explosion hit via rpc_buff_on_attack with
+-- target_number hardcoded to 1, and the hits are spread over several frames (aoe damage ring buffer + network).
+-- So an explosion consumes one stack, then further explosion hits are ignored for a short window.
+local TB_CRIT_STACK_AOE_WINDOW = 0.5
+local tb_crit_stack_last_aoe_consume_t = setmetatable({}, { __mode = "k" })
 mod_api.insert_proc_function("tb_thorn_sister_remove_crit_stack_on_first_hit", function (owner_unit, buff, params)
+	local attack_type = params[2]
 	local target_number = params[4]
 
 	if target_number and target_number > 1 then
 		return
+	end
+
+	if attack_type == "aoe" or attack_type == "grenade" then
+		local t = Managers.time:time("game")
+		local last_consume_t = tb_crit_stack_last_aoe_consume_t[owner_unit]
+
+		if last_consume_t and t - last_consume_t < TB_CRIT_STACK_AOE_WINDOW then
+			return
+		end
+
+		tb_crit_stack_last_aoe_consume_t[owner_unit] = t
 	end
 
 	return ProcFunctions.remove_ref_buff_stack_woods(owner_unit, buff, params)
