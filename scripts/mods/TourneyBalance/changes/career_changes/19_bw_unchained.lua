@@ -27,7 +27,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Added: After a charged attack, the next push also costs half stamina.
 
 		**Chain Reaction**
-		- Reworked: Above 50% overcharge, specials explode when headshot and elites when killed by a headshot (from 40% chance for any burning enemy on death).
+		- Reworked: At high overcharge (80%+), specials explode when headshot and elites when killed by a headshot (from 40% chance for any burning enemy on death).
 		- Explosion now deals a fixed 50 damage, ignoring armor.
 
 		**Dissipate**
@@ -84,10 +84,9 @@ mod_api.insert_buff_template(WEAK_BURN_BUFF, {
 	},
 })
 
--- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives.
--- Disabled for now; the threshold is still used by Chain Reaction
-local UNSTABLE_STRENGTH_BURN_OVERCHARGE = 0.5
+-- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives. Disabled for now
 --[[
+local UNSTABLE_STRENGTH_BURN_OVERCHARGE = 0.5
 local weak_burn_params = {}
 
 mod_api.insert_proc_function("tb_sienna_unchained_unstable_strength_burn", function (owner_unit, buff, params)
@@ -594,11 +593,12 @@ end)
 -- ignoring armor, to enemies within CHAIN_REACTION_RADIUS
 local CHAIN_REACTION_DAMAGE = 50
 local CHAIN_REACTION_RADIUS = 0.25
+local CHAIN_REACTION_OVERCHARGE = 0.8 -- high overcharge (vanilla overcharge_critical_limit)
 local chain_reaction_broadphase_results = {}
 
 -- Replaces vanilla's 40% chance on death: specials explode when headshot, elites when killed by a headshot, while Sienna is
--- above Unstable Strength's burn threshold. Server only (talent buffer "server"); the server reads
--- remote players' overcharge from the husk overcharge extension
+-- at high overcharge. Server only (talent buffer "server"); the server reads remote players' overcharge from the husk
+-- overcharge extension
 local function tb_is_headshot(hit_zone)
 	return hit_zone == "head" or hit_zone == "neck"
 end
@@ -607,7 +607,7 @@ local function tb_chain_reaction_explode(owner_unit, unit)
 	local overcharge_extension = ALIVE[owner_unit] and ScriptUnit.has_extension(owner_unit, "overcharge_system")
 	local max_overcharge = overcharge_extension and overcharge_extension:get_max_value()
 
-	if not max_overcharge or max_overcharge <= 0 or overcharge_extension:get_overcharge_value() / max_overcharge <= UNSTABLE_STRENGTH_BURN_OVERCHARGE then
+	if not max_overcharge or max_overcharge <= 0 or overcharge_extension:get_overcharge_value() / max_overcharge < CHAIN_REACTION_OVERCHARGE then
 		return
 	end
 
@@ -662,7 +662,7 @@ mod_api.update_talent("bw_unchained", 2, 3, {
 		"tb_sienna_unchained_chain_reaction",
 	},
 })
-mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("While above %d%% Overcharge, headshots on specials and headshot kills on elites cause them to explode, dealing %d damage and staggering nearby enemies.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100, CHAIN_REACTION_DAMAGE))
+mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("While at %d%% Overcharge or higher, headshots on specials and headshot kills on elites cause them to explode, dealing %d damage and staggering nearby enemies.", CHAIN_REACTION_OVERCHARGE * 100, CHAIN_REACTION_DAMAGE))
 
 --[[
 	Dissipate

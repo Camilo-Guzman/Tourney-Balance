@@ -229,6 +229,6 @@ mod:add_career_update_function(function (self, unit, input, dt, context, t)
 		self:reduce_activated_ability_cooldown_percent(1)
 	end
 end)
-mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost also revives knocked down allies. Cooldown is instantly refunded when an ally is knocked down.")
+mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost also revives knocked down allies. Cooldown resets when allies are knocked down.")
 
 
