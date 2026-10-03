@@ -12,7 +12,6 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 		## Handmaiden
 		### Career Ability
 		- Increased hitbox width/depth ult to 2/3 (from 1.5/0.4).
-		- Cooldown resets when an ally becomes incapacitated or disabled.
 
 		### Passives
 		**Ariel's Benison**
@@ -31,7 +30,7 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 		### Talents
 		**Focused Spirit**
 		- Changed to 30% melee power (from 15% power).
-		- Decreased reset duration to 4s (from 10s).
+		- Decreased reset duration to 3s (from 10s).
 
 		**Oak Stance**
 		- Increased crit chance to 10% (from 5%).
@@ -42,7 +41,6 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 
 		**Dance of Blades**
 		- Increased power to 15% (from 10%) and duration to 6s (from 2s).
-		- Instant dodges (1s cooldown each), tracked separately for blocking and non-blocking dodges.
 
 		**Heart of Oak**
 		- Increased health bonus to 20% (from 15%).
@@ -72,64 +70,7 @@ mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
 
 end)
 
-mod_api.insert_text("career_active_desc_we_2_2", "Kerillian swiftly dashes forward, moving through enemies. Cooldown resets when an ally becomes incapacitated or disabled.")
-
--- Ult cooldown resets when an ally becomes incapacitated or disabled (knocked down, pounced, grabbed, ledge hanging, ...).
--- The cooldown lives on the owner, so this polls ally status on the owning peer (local player, or server for bots)
--- and fires on the not-disabled -> disabled transition. Ally status flags are synced to every peer.
--- Registered through the CareerExtension.update dispatcher in TourneyBalance.lua.
-mod:add_career_update_function(function (self, unit, input, dt, context, t)
-    if self._career_name ~= "we_maidenguard" then
-        return
-    end
-
-    local player = self.player
-
-    if not player or not (player.local_player or (self.is_server and player.bot_player)) then
-        return
-    end
-
-    local side = Managers.state.side.side_by_unit[unit]
-    local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
-
-    if not player_and_bot_units then
-        return
-    end
-
-    local ally_disabled = self._tb_ally_disabled
-
-    if not ally_disabled then
-        ally_disabled = {}
-        self._tb_ally_disabled = ally_disabled
-    end
-
-    local reset = false
-
-    for i = 1, #player_and_bot_units do
-        local ally_unit = player_and_bot_units[i]
-
-        if ally_unit ~= unit and ALIVE[ally_unit] then
-            local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
-            local disabled = ally_status_extension and ally_status_extension:is_disabled() or false
-            local was_disabled = ally_disabled[ally_unit]
-
-            -- First sighting (nil) only records the state, so joining/spawning next to a downed ally doesn't reset
-            if disabled and was_disabled == false then
-                reset = true
-            end
-
-            ally_disabled[ally_unit] = disabled
-        end
-    end
-
-    if reset then
-        self:reduce_activated_ability_cooldown_percent(1)
-    end
-end)
-
-local function tb_noop() end
-
--- General fix for the same underlying whereabouts-tracking crash the two hooks below also guard against
+-- General fix for the same underlying whereabouts-tracking crash the set_jumped hooks in 05_fun_changes.lua also guard against
 mod:hook(PlayerWhereaboutsExtension, "update", function (func, self, unit, input, dt, context, t)
     local queued_input = self._input
 
@@ -346,9 +287,9 @@ end)
     Ariel's Benison
 ]]
 -- Replace the vanilla Ariel's Benison perk text (career_passive_name_we_2c) instead of adding a second entry
-mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage taken by knocked down allies by 80%. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health and they take 80% less damage for 2 seconds.")
+mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage taken by knocked down allies by 50%. Increase Kerillian's revive speed by 50%. When Kerillian revives allies, she heals them for 20 health and they take 50% less damage for 2 seconds.")
 
--- Revived allies take 80% less damage for 2s. Added to the revived unit by the vanilla buff_defence_on_revived_target
+-- Revived allies take 50% less damage for 2s. Added to the revived unit by the vanilla buff_defence_on_revived_target
 -- proc next to the 20 health heal; the server adds it locally and syncs it to the revived player, who sees the icon/timer.
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_maidenguard_revive_protection", {
 	stat_buff = "damage_taken",
@@ -365,8 +306,8 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_ress_time
 	},
 })
 
--- Knocked down allies inside the Renewal aura of a standing Handmaiden take 80% less damage (including bleed-out).
--- Reduces the incoming damage before the rest of the chain, so e.g. Zealot's overhealth pool only absorbs the reduced amount.
+-- Knocked down allies inside the Renewal aura of a standing Handmaiden take 50% less damage (including bleed-out).
+-- Reduces the incoming damage before the rest of the apply_buffs_to_damage chain runs.
 -- Registered through the apply_buffs_to_damage dispatcher in TourneyBalance.lua (server only).
 local ARIELS_BENISON_DAMAGE_REDUCTION = 0.5
 
@@ -533,8 +474,10 @@ mod_api.update_talent("we_maidenguard", 4, 2, {
     description = "kerillian_maidenguard_versatile_dodge_desc",
     description_values = {},
 })
-mod_api.insert_text("kerillian_maidenguard_versatile_dodge_desc", "Dodging while blocking increases dodge range by 20%. Dodging while not blocking increases Kerillian's power by 15% for 6 seconds. Dodging starts instantly (1 second cooldown each).")
+mod_api.insert_text("kerillian_maidenguard_versatile_dodge_desc", "Dodging while blocking increases dodge range by 20%. Dodging while not blocking increases Kerillian's power by 15% for 6 seconds.")
 
+-- Instant dodging (disabled)
+--[==[
 local function tb_always_on_ground()
     return true
 end
@@ -618,6 +561,7 @@ for _, state_class in ipairs({ PlayerCharacterStateJumping, PlayerCharacterState
         return func(self, unit, input, dt, context, t)
     end)
 end
+]==]
 
 --[[
     Heart of Oak
@@ -686,6 +630,5 @@ mod_api.update_talent("we_maidenguard", 5, 3, {
         },
     },
 })
---mod_api.insert_text("kerillian_maidenguard_max_ammo_desc", "Increased ammunition amount by 100%.")
 
 

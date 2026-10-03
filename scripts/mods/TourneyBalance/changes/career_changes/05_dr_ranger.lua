@@ -27,8 +27,11 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		- Removed bomb drops and reduced drop chance to pseudo-random 6% (from real-random 20%) (bag size 50 with 3 winning tickets).
 		- Potions drop pseudo-random from bag size 6 with 2 of each potion (speed, strength, cooldown reduction).
 
+		**Grungni's Cunning**
+		- Excess ammo from picking up a large Survivalist pouch is converted into temporary health for Bardin (1 per ammo, max 5).
+
 		**No Dawdling**
-		- Additionally removes the movement slowdown from melee weapons, ranged weapons and career skill.
+		- Additionally removes the limit on dodging efficiently.
 
 		**Exuberance**
 		- Reduced damage reduction to 20% (from 30%).
@@ -207,55 +210,16 @@ Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8 -- 1.9
 --[[
 	No Dawdling
 ]]
-mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the movement slowdown from weapons.")
+mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently.")
 
--- Removes the move-speed penalty of every weapon
-local TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS = {
-	move_speed = true,
-	crouch_move_speed = true,
-	walk_move_speed = true,
-}
+-- Grants 99 dodge count regardless of the wielded weapon's own dodge_count value
+mod:hook(GenericStatusExtension, "get_dodge_item_data", function (func, self, ...)
+	func(self, ...)
 
-local function tb_is_action_movement_penalty_buff(buff_name, template)
-	if not (template.buffs and string.find(buff_name, "^planted_")) then
-		return false
-	end
+	local talent_extension = ScriptUnit.has_extension(self.unit, "talent_system")
 
-	for _, sub_buff in ipairs(template.buffs) do
-		local path = sub_buff.path_to_movement_setting_to_modify
-
-		-- Only the slowdown itself. "planted_return_to_normal_*" undoes every lerped slowdown (weapons, bile, crippling
-		-- blow, ...), so blocking it leaves the player stuck slowed.
-		if path and TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS[path[1]] and sub_buff.apply_buff_func == "apply_action_lerp_movement_buff" then
-			return true
-		end
-	end
-
-	return false
-end
-
-local function tb_no_dawdling_allows_buff(unit, template, params)
-	if mod:is_action_movement_speed_up(params) then
-		return true
-	end
-
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-
-	return not (talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed"))
-end
-
--- Done after all mods load so templates added by later files are covered too.
-mod:add_all_mods_loaded_function(function ()
-	local penalty_buff_names = {}
-
-	for buff_name, template in pairs(BuffTemplates) do
-		if tb_is_action_movement_penalty_buff(buff_name, template) then
-			penalty_buff_names[#penalty_buff_names + 1] = buff_name
-		end
-	end
-
-	for _, buff_name in ipairs(penalty_buff_names) do
-		mod:add_buff_apply_condition(buff_name, tb_no_dawdling_allows_buff)
+	if talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed") then
+		self.dodge_count = 99
 	end
 end)
 
@@ -273,36 +237,80 @@ mod_api.insert_text("bardin_ranger_reduced_damage_taken_headshot_desc_2", "Bardi
 
 --[[
 	Firing Fury
+	Grungni's Cunning
 ]]
+local GRUNGNIS_CUNNING_MAX_TEMP_HEALTH = 5
+
+local function tb_ranged_ammo_extension(inventory_extension)
+	local slot_data = inventory_extension._equipment.slots.slot_ranged
+
+	if not slot_data then
+		return nil
+	end
+
+	local right_unit = slot_data.right_unit_1p
+	local left_unit = slot_data.left_unit_1p
+
+	return right_unit and ScriptUnit.has_extension(right_unit, "ammo_system") or left_unit and ScriptUnit.has_extension(left_unit, "ammo_system") or nil
+end
+
+-- Grungni's Cunning: excess ammo (1 per ammo, max 5) becomes temp health. Runs on the picker's own peer, so the heal
+-- is requested from the server unless this is the server (host or bot).
+local function tb_grungnis_cunning_temp_health(owner_unit, excess_ammo)
+	local heal_amount = math.min(excess_ammo, GRUNGNIS_CUNNING_MAX_TEMP_HEALTH)
+
+	if heal_amount <= 0 then
+		return
+	end
+
+	if Managers.state.network.is_server then
+		DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
+	else
+		local network_manager = Managers.state.network
+		local unit_go_id = network_manager:unit_game_object_id(owner_unit)
+
+		if unit_go_id then
+			network_manager.network_transmit:send_rpc_server("rpc_request_heal", unit_go_id, heal_amount, NetworkLookup.heal_types.heal_from_proc)
+		end
+	end
+end
 
 mod:hook(SimpleInventoryExtension, "add_ammo_from_pickup", function (func, self, pickup_settings, ...)
-	func(self, pickup_settings, ...)
-
 	-- Only the big Survivalist pouch (30% ammo)
 	if pickup_settings.pickup_name ~= "ammo_ranger_improved" then
-		return
+		return func(self, pickup_settings, ...)
 	end
 
 	local owner_unit = self._unit
+	local talent_extension = Unit.alive(owner_unit) and ScriptUnit.has_extension(owner_unit, "talent_system")
+	local has_grungnis_cunning = talent_extension and talent_extension:has_talent("bardin_ranger_passive_improved_ammo")
+	local ammo_extension = has_grungnis_cunning and tb_ranged_ammo_extension(self)
+	local ammo_before = ammo_extension and ammo_extension:total_remaining_ammo()
 
-	if not Unit.alive(owner_unit) then
-		return
-	end
-
-	local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
+	func(self, pickup_settings, ...)
 
 	if not talent_extension then
 		return
 	end
 
-	local buff_extension
-	buff_extension = buff_extension or ScriptUnit.extension(owner_unit, "buff_system")
+	-- Grungni's Cunning
+	if ammo_before then
+		local refill_amount = math.floor(ammo_extension:max_ammo() * (pickup_settings.refill_percentage or 0))
+		local gained = ammo_extension:total_remaining_ammo() - ammo_before
 
-	if talent_extension:has_talent("bardin_ranger_reload_speed_on_multi_hit") then 			-- Firing Fury
-		buff_extension:add_buff("bardin_ranger_reload_speed_on_multi_hit_buff")
+		tb_grungnis_cunning_temp_health(owner_unit, refill_amount - gained)
+	end
+
+	-- Firing Fury
+	if talent_extension:has_talent("bardin_ranger_reload_speed_on_multi_hit") then
+		ScriptUnit.extension(owner_unit, "buff_system"):add_buff("bardin_ranger_reload_speed_on_multi_hit_buff")
 	end
 end)
 mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a large Survivalist pouch increases Bardin's reload speed by 35.0%% for 2 seconds.")
+mod_api.update_talent("dr_ranger", 4, 2, { -- update description
+	description_values = {},
+})
+mod_api.insert_text("bardin_ranger_passive_improved_ammo_desc_2", string.format("Survivalist pickups restore 30%% ammo. Excess ammo from Survivalist pouches grant up to %d temporary health for Bardin.", GRUNGNIS_CUNNING_MAX_TEMP_HEALTH))
 
 --[[
 	Parting Gift

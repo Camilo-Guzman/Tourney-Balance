@@ -518,11 +518,6 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 
 		local is_melee = damage_profile and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
 
-		-- Shade's Ruthless Precision: melee-only version of WHC's Killing Shot (crit_headshot_killing_blow)
-		if not has_crit_head_shot_killing_blow_perk and is_melee and buff_extension:has_buff_perk("tb_melee_crit_headshot_killing_blow") then
-			has_crit_head_shot_killing_blow_perk = true
-		end
-
 		-- Shade's Ruthless Precision: melee headshots count as backstabs. Done here rather than in
 		-- ActionSweep._check_backstab, which doesn't know the hit zone. Only the damage is affected; on_backstab
 		-- procs and the backstab sound still come from _check_backstab and don't fire for these hits

@@ -3,7 +3,8 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 local shared_utils = require("scripts/mods/TourneyBalance/_api/shared_utils")
 local is_local = shared_utils.is_local
 local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
-local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+-- Only used by Devotion and Calloused Without and Within (both disabled)
+-- local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 --[[
 	$BEGIN_TB
@@ -25,21 +26,10 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Now grants a guaranteed critical strike every 4 hits (from 5).
 
 		**Unbending Purpose**
-		- Increased power to 10% (from 5%).
-		- Additionally increases weapon damage by 20%.
+		- Additionally increases melee power by 15%.
 
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
-
-		**Devotion**
-		- Now removes all movement penalties like Waywatcher's Fervent Huntress (from only no slowdown when hit).
-		- Grants immunity to knockback from ranged projectiles and Warpfire.
-
-		**Redemption through Blood**
-		- Additionally increases melee damage by 5% for every missing half stamina shield.
-
-		**Calloused Without and Within**
-		- Additionally decreases Heart of Iron's cooldown to 60 seconds.
 	$END_TB
 ]]
 
@@ -62,11 +52,13 @@ end)
 
 ]]
 -- Ironheart
--- Calloused Without and Within swaps in a copy of the invulnerability whose expiry starts a shorter cooldown
--- (see Talents below)
 local IRONHEART_INVULNERABILITY_BUFF = "victor_zealot_invulnerability_on_lethal_damage_taken"
+-- Calloused Without and Within swaps in a copy of the invulnerability whose expiry starts a shorter cooldown
+-- (disabled, see Talents below)
+--[[
 local IRONHEART_TALENT_INVULNERABILITY_BUFF = "tb_victor_zealot_invulnerability_on_lethal_damage_taken_talent"
 local IRONHEART_TALENT = "victor_zealot_reduced_damage_taken"
+]]
 
 -- Fix Zealot invulnerability desync/invincibility bug: this proc runs on both client and server, and the
 -- server is always faster to evaluate the killing blow. The original code only added the buff locally via
@@ -79,7 +71,7 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
     if not Managers.state.network.is_server and ALIVE[owner_unit] then
         local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
 
-        return buff_extension:has_buff_type(IRONHEART_INVULNERABILITY_BUFF) or buff_extension:has_buff_type(IRONHEART_TALENT_INVULNERABILITY_BUFF)
+        return buff_extension:has_buff_type(IRONHEART_INVULNERABILITY_BUFF) -- or IRONHEART_TALENT_INVULNERABILITY_BUFF (Calloused, disabled)
     end
 
     if ALIVE[owner_unit] and not status_extension:is_knocked_down() then
@@ -96,11 +88,15 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
         local killing_blow = current_health <= damage
         local template = buff.template
         local buff_to_add = template.buff_to_add
+
+        -- Calloused Without and Within (disabled)
+        --[[
         local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
 
         if talent_extension and talent_extension:has_talent(IRONHEART_TALENT) then
             buff_to_add = IRONHEART_TALENT_INVULNERABILITY_BUFF
         end
+        ]]
 
         if killing_blow then
             mod_api.add_buff(owner_unit, buff_to_add)
@@ -355,15 +351,14 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_crit_count", 
 --[[
     Unbending Purpose
 ]]
--- 10% power (from 5%), plus 20% weapon damage (melee and ranged). Damage is calculated on the server, where this
--- talent's buffs live.
+-- Vanilla 5% power, plus 15% melee power. Damage is calculated on the server, where this talent's buffs live.
 mod_api.update_talent_buff_template("witch_hunter", "victor_zealot_power", {
-    multiplier = 0.1, -- 0.05
+    multiplier = 0.05, -- 0.05
 })
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_power_weapon_damage", {
     max_stacks = 1,
-    stat_buff = "increased_weapon_damage",
-    multiplier = 0.2,
+    stat_buff = "power_level_melee",
+    multiplier = 0.15,
 })
 mod_api.update_talent("wh_zealot", 2, 3, {
     description = "zealot_unbending_purpose_desc",
@@ -373,7 +368,7 @@ mod_api.update_talent("wh_zealot", 2, 3, {
         "tb_victor_zealot_power_weapon_damage",
     },
 })
-mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 10.0% and weapon damage by 20.0%.")
+mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 5.0% and melee power by 15.0%.")
 
 --[[
     Holy Fortitude
@@ -392,10 +387,20 @@ mod_api.update_talent("wh_zealot", 4, 2, {
 })
 
 --[[
-    Devotion
+    Devotion (disabled)
+    Redemption through Blood (disabled)
+    Calloused Without and Within (disabled)
 ]]
--- No movement penalties, like Waywatcher's Fervent Huntress
+-- To re-enable, also restore the buff_perks require at the top. Calloused additionally needs the IRONHEART_TALENT*
+-- constants and the buff swap in the Ironheart proc (Passives section).
+--[==[
+-- No movement penalties (same approach as Waywatcher's old Fervent Huntress change)
 -- Also immune to knockback from Warpfire and projectiles, like Grail Knight after Blessed Blade
+local DEVOTION_NO_MOVEMENT_PENALTIES_BUFF = "tb_victor_zealot_devotion_no_movement_penalties"
+
+mod_api.insert_talent_buff_template("witch_hunter", DEVOTION_NO_MOVEMENT_PENALTIES_BUFF, {
+    max_stacks = 1,
+})
 mod_api.insert_talent_buff_template("witch_hunter", "tb_victor_zealot_devotion_no_knockback", {
     max_stacks = 1,
     perks = {
@@ -407,10 +412,69 @@ mod_api.update_talent("wh_zealot", 5, 1, {
     description_values = {},
     buffs = {
         "victor_zealot_move_speed_on_damage_taken",
-        "tb_fervent_huntress_no_movement_penalties",
+        DEVOTION_NO_MOVEMENT_PENALTIES_BUFF,
         "tb_victor_zealot_devotion_no_knockback",
     },
 })
+
+-- Attacking, aiming and slowing debuffs (bile, plague, fire, etc.) all slow the player through buffs that scale the
+-- movement settings. Those buffs are simply never added while Saltzpyre has Devotion. Weapon actions also use them to
+-- speed the player up (movetech, external multiplier above 1), those are kept.
+local DEVOTION_MOVEMENT_SPEED_SETTINGS = {
+    move_speed = true,
+    crouch_move_speed = true,
+    walk_move_speed = true,
+}
+
+local function tb_devotion_is_movement_penalty_buff(buff_name, template)
+    -- Never gate these: they undo every lerped slowdown, so blocking them leaves the player stuck slowed
+    if not template.buffs or string.find(buff_name, "^planted_return_to_normal") then
+        return false
+    end
+
+    for _, sub_buff in ipairs(template.buffs) do
+        local path = sub_buff.path_to_movement_setting_to_modify
+        local multiplier = sub_buff.multiplier
+
+        if path and DEVOTION_MOVEMENT_SPEED_SETTINGS[path[1]] then
+            -- actions (melee swings, aiming) and debuffs use the lerped variant, the multiplier of actions is passed in externally
+            local is_lerp_penalty = sub_buff.apply_buff_func == "apply_action_lerp_movement_buff" and not sub_buff.bonus and (type(multiplier) ~= "number" or multiplier <= 1)
+            local is_static_penalty = sub_buff.apply_buff_func == "apply_movement_buff" and type(multiplier) == "number" and multiplier < 1
+
+            if is_lerp_penalty or is_static_penalty then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function tb_devotion_allows_buff(unit, template, params)
+    if mod:is_action_movement_speed_up(params) then
+        return true
+    end
+
+    local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+
+    return not (buff_extension and buff_extension:has_buff_type(DEVOTION_NO_MOVEMENT_PENALTIES_BUFF))
+end
+
+-- Penalty buffs are gated once through apply_condition, so the check only runs when one of them is added.
+-- Done after all mods load so templates added by later files are covered too.
+mod:add_all_mods_loaded_function(function ()
+    local penalty_buff_names = {}
+
+    for buff_name, template in pairs(BuffTemplates) do
+        if tb_devotion_is_movement_penalty_buff(buff_name, template) then
+            penalty_buff_names[#penalty_buff_names + 1] = buff_name
+        end
+    end
+
+    for _, buff_name in ipairs(penalty_buff_names) do
+        mod:add_buff_apply_condition(buff_name, tb_devotion_allows_buff)
+    end
+end)
 mod_api.insert_text("tb_victor_zealot_move_speed_on_damage_taken_desc", "Taking damage increases movement speed by 30% for 2 seconds. Saltzpyre is no longer affected by movement penalties and immune to knockback from ranged projectiles and Warpfire.")
 
 --[[
@@ -512,14 +576,14 @@ mod_api.insert_text("tb_victor_zealot_max_stamina_on_damage_taken_desc", "Taking
 --[[
     Calloused Without and Within
 ]]
--- Heart of Iron's cooldown is 60 seconds (from 120). The Ironheart proc above grants this copy of the vanilla
+-- Heart of Iron's cooldown is 90 seconds (from 120). The Ironheart proc above grants this copy of the vanilla
 -- invulnerability while the talent is taken; its expiry starts the shorter cooldown, which then re-grants the
 -- regular Ironheart proc buff like vanilla's cooldown does.
 local IRONHEART_TALENT_COOLDOWN_BUFF = "tb_victor_zealot_invulnerability_cooldown_talent"
 
 mod_api.insert_talent_buff_template("witch_hunter", IRONHEART_TALENT_COOLDOWN_BUFF, {
     buff_to_add = "victor_zealot_gain_invulnerability_on_lethal_damage_taken",
-    duration = 60,
+    duration = 90,
     duration_end_func = "add_buff_local",
     icon = "victor_zealot_passive_invulnerability",
     is_cooldown = true,
@@ -551,7 +615,8 @@ mod_api.update_talent("wh_zealot", 5, 3, {
     description = "tb_victor_zealot_reduced_damage_taken_desc",
     description_values = {},
 })
-mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damage taken by 10%. Heart of Iron's cooldown is reduced to 60 seconds.")
+mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damage taken by 10%. Heart of Iron's cooldown is reduced to 90 seconds.")
+]==]
 
 
 

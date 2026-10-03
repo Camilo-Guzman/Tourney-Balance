@@ -21,8 +21,8 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 		**Strike Together**
 		- Changed to Paced Strikes activates on hitting 1 enemy.
 
-		**Stand Clear**
-		- Additionally removes the movement slowdown from melee weapons.
+		**Blade Barrier**
+		- Lowered damage reduction to 10% (from 25%).
 
 		**On Yer Feet, Mates!**
 		- Ultimate cooldown is instantly refunded when an ally is knocked down.
@@ -136,37 +136,19 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_crit_cou
 })
 
 --[[
-	Stand Clear
+	Blade Barrier
 ]]
--- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
--- while a melee weapon is wielded. Same approach as Virtue of the Joust (04_es_questingknight.lua).
-local TB_STAND_CLEAR_MOVEMENT_PENALTY_BUFFS = {
-	"planted_decrease_movement",
-	"planted_fast_decrease_movement",
-	"planted_charging_decrease_movement",
-}
-
-local function tb_stand_clear_removes_movement_penalty(unit)
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-
-	if not (talent_extension and talent_extension:has_talent("markus_mercenary_dodge_range")) then
-		return false
-	end
-
-	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
-
-	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
-end
-
--- Done after all mods load so a later rewrite of these templates can't drop the condition
-mod:add_all_mods_loaded_function(function ()
-	for _, buff_name in ipairs(TB_STAND_CLEAR_MOVEMENT_PENALTY_BUFFS) do
-		mod:add_buff_apply_condition(buff_name, function (unit, template, params)
-			return mod:is_action_movement_speed_up(params) or not tb_stand_clear_removes_movement_penalty(unit)
-		end)
-	end
-end)
-mod_api.insert_text("markus_mercenary_dodge_range_desc", "Increases dodge distance and dodge speed by 20%%. Removes the movement slowdown from melee weapons.")
+mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_passive_defence", {
+	multiplier = -0.1, -- -0.25
+})
+mod_api.update_talent("es_mercenary", 5, 2, { -- update description
+	description_values = {
+		{
+			value_type = "percent",
+			value = -0.1, -- buff_tweak_data.markus_mercenary_passive_defence.multiplier
+		},
+	},
+})
 
 --[[
 	On Yer Feet, Mates!

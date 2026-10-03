@@ -9,14 +9,13 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Reduced Infiltrate stealth duration to 3s (from 5s).
 
 		### Passives
-		**Assassin's Blade**
-		- Added Gladerunner to the passive.
-		- Increased movement speed by 10%.
+		**Gladerunner** (replaces Murderous Prowess)
+		- Increases movement speed by 10%.
 
 		**Grim Fortune** (new, replaces Blur)
-		- Increases critical strike chance by 5%.
+		- Increases critical strike chance by 10%.
 		- Parrying an attack makes the next attack within 3s a guaranteed critical strike (melee or ranged).
-		- Blur moved to the talent tree (see Talents).
+		- Blur and Murderous Prowess moved to the Blur talent (see Talents).
 
 		### Talents
 		**Cruelty**
@@ -40,14 +39,13 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Blur** (moved from the passive, replaces Blood Drinker)
 		- Parrying an attack and quickly dodging grants Kerillian stealth for a short period.
 		- Increased parry window to 0.75s (from 0.5s).
-		- Also keeps Blood Drinker's effect: critical hits reduce damage taken by 20% for 5s.
+		- Murderous Prowess moved here from the passive: charged critical backstabs instantly slay man-sized enemies.
 
 		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
 		- Parrying an attack makes all melee attacks count as backstabs for 6s within the normal 0.5s parry window, scaling down to 3s at the end of Shade's extended 0.75s window.
 
 		**Ruthless Precision** (new, replaces Gladerunner)
 		- Melee headshots count as backstabs.
-		- Critical melee headshots instantly slay man-sized enemies (melee-only version of Witch Hunter Captain's Killing Shot).
 
 		**Shimmer Strike**
 		- Limited extending stealth to 4 times.
@@ -129,13 +127,17 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth
 })
 mod_api.remove_career_passives("we_1", {
 	"kerillian_shade_passive_stealth_parry",
+	"kerillian_shade_passive_backstab_killing_blow", -- Murderous Prowess, moved to Blur too
 })
 mod_api.remove_career_perk_description("we_1", "career_passive_name_we_1d") -- vanilla Blur perk entry
 
 --[[
 	Grim Fortune
 ]]
--- 5% crit chance (vanilla kerillian_shade_passive_crit, never added to the passive in vanilla)
+-- 10% crit chance (vanilla kerillian_shade_passive_crit at 5%, never added to the passive in vanilla)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
+	bonus = 0.1, -- 0.05
+})
 -- A guaranteed crit (melee or ranged) for 3 seconds after a (long) parry, used up by the next attack that hits.
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_parry", {
 	buff_func = "add_buff_local",
@@ -167,17 +169,19 @@ mod_api.insert_career_passives("we_1", {
 	"tb_kerillian_shade_grim_fortune_parry",
 	"tb_kerillian_shade_grim_fortune_crit_consumer",
 })
-mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 5%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
+mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
 mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 
 --[[
 	Gladerunner
 ]]
--- Gladerunner (flat movement speed) moves onto the base passive
+-- Gladerunner (flat movement speed) moves onto the base passive. It takes over the perk slot left by
+-- Murderous Prowess (vanilla 3rd perk entry, career_passive_name_we_1), which moved to the Blur talent.
 mod_api.insert_career_passives("we_1", {
 	"kerillian_shade_movement_speed",
 })
-mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Increase movement speed by 10%.")
+mod_api.insert_text("career_passive_name_we_1", "Gladerunner")
+mod_api.insert_text("career_passive_desc_we_1a_3", "Increases movement speed by 10%.")
 
 --[[
 
@@ -412,19 +416,20 @@ mod_api.update_talent("we_shade", 4, 3, {
 mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Direct backstabs and melee headshots return 5% of maximum ammunition. 2 second cooldown.")
 
 --[[
-	Blur (moved from the passive, replaces Blood Drinker, whose effect it keeps as a secondary effect)
+	Blur (moved from the passive, replaces Blood Drinker)
+	Murderous Prowess (moved from the passive)
 ]]
--- Vanilla Blur: parry, then dodge shortly after, to go invisible. Plus vanilla Blood Drinker's crit damage reduction.
--- Buffer "both": Blood Drinker's damage_taken is applied on the server, while Blur's parry trigger only fires on the owner
+-- Vanilla Blur: parry, then dodge shortly after, to go invisible. Blur's parry trigger only fires on the owner.
+-- Vanilla Murderous Prowess: crit_backstab_killing_blow perk, read in the server-side damage calculation, so buffer "both".
 mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
 	buffer = "both",
 	icon = "kerillian_shade_perk_blur",
 	buffs = {
 		"kerillian_shade_passive_stealth_parry",
-		"kerillian_shade_damage_reduction_on_critical_hit",
+		"kerillian_shade_passive_backstab_killing_blow",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Critical hits reduce damage taken by 20% for 5 seconds.")
+mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Charged critical backstabs instantly slay man-sized enemies.")
 
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
@@ -494,13 +499,11 @@ mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Count
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)
 ]]
--- Melee headshots count as backstabs, and critical melee headshots instantly slay man-sized enemies (a melee-only
--- version of WHC's Killing Shot perk, crit_headshot_killing_blow). Both are read in the calculate_damage override
+-- Melee headshots count as backstabs. Read in the calculate_damage override
 -- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both"
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
 	perks = {
 		"tb_headshot_counts_as_backstab",
-		"tb_melee_crit_headshot_killing_blow",
 	},
 })
 mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision", {
@@ -510,7 +513,7 @@ mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision",
 		"tb_kerillian_shade_ruthless_precision_headshot_backstab",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs. Critical melee headshots instantly slay man-sized enemies.")
+mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs.")
 
 --[[
 	Shimmer Strike

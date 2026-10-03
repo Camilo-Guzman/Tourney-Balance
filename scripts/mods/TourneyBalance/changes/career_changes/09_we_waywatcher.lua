@@ -21,17 +21,13 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Increased duration to 10s (from 5s).
 
 		**Isha's Embrace**
-		- Increased health regen bonus to 100% (from 50%) and health regen cap to 100% max health.
-		- Amaranthe only regenerates 1 ammo per tick (from 2).
+		- Increased health regen cap to 75% max health (from 50%).
 
 		**Spirit Arrows**
 		- Increased cooldown reduction to 10% (from 5%).
 
-		**Fervent Huntress**
-		- No longer affected by movement penalties: no slowdown from attacking, blocking, aiming, being hit or slowing debuffs.
-
 		**Ricochet**
-		- Fully charging for 0.5 second grants ricochet projectiles true-flight.
+		- Holding a shot for 1 second (counted from the start of the draw) grants ricochet projectiles true-flight.
 		- Applying true-flight costs 10% ult cooldown drained over 10 seconds and disables your ultimate.
 		- Fixed ricocheting after enemy cleave.
 
@@ -138,7 +134,8 @@ DamageProfileTemplates.arrow_sniper_trueflight = {
 	max_friendly_damage = 0 -- Added
 }
 
--- Add Conservative Shooter to Trueshot Volley/Piercing Shot
+-- Add Conservative Shooter to Trueshot Volley/Piercing Shot (disabled: its call in the Ricochet hit_enemy hook is commented out)
+--[==[
 local TB_CONSERVATIVE_SHOOTER_ULT_ITEMS = {
 	kerillian_waywatcher_career_skill_weapon = true,
 	kerillian_waywatcher_career_skill_weapon_piercing_shot = true,
@@ -190,6 +187,7 @@ local function tb_conservative_shooter_grant_ult_ammo(self, owner_unit, hit_unit
 
 	self._tb_conservative_shooter_ammo_granted = true
 end
+]==]
 
 --[[
 
@@ -203,16 +201,13 @@ end
 	Rejuvenating Locus
 ]]
 mod_api.insert_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health when below 50.0% health and 2 ammo every 10 seconds. This does not replace temp health.")
-mod_api.insert_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 50%%. Health regeneration caps at 50%%.")
+mod_api.insert_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 50%%. Health regeneration caps at 75%%.")
 mod_api.insert_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe reduces the cooldown of Trueflight Volley by 10.0%%. No longer restores health.")
 mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit, buff, params)
     local t = params.t
     local buff_template = buff.template
     local next_heal_tick = buff.next_heal_tick or 0
     local regen_cap = 0.5
-    local network_manager = Managers.state.network
-    local network_transmit = network_manager.network_transmit
-    local heal_type_id = NetworkLookup.heal_types.career_skill
     local time_between_heals = buff_template.time_between_heals
 
     if next_heal_tick < t and Unit.alive(unit) then
@@ -315,112 +310,9 @@ mod_api.update_talent("we_waywatcher", 2, 3, {
 })
 
 --[[
-	Fervent Huntress
-]]
---[[
-local apply_movement_buff = BuffFunctionTemplates.functions.apply_movement_buff
-local remove_movement_buff = BuffFunctionTemplates.functions.remove_movement_buff
-mod_api.insert_buff_function("tb_apply_movement_buff_and_noclip", function (unit, buff, params)
-	apply_movement_buff(unit, buff, params)
-
-	if ALIVE[unit] then
-		local status_extension = ScriptUnit.extension(unit, "status_system")
-
-		status_extension:set_noclip(true, "tb_movement_buff_and_noclip") -- set id for later removing noclip
-	end
-end)
-mod_api.insert_buff_function("tb_remove_movement_buff_and_noclip", function (unit, buff, params)
-	remove_movement_buff(unit, buff, params)
-
-	if ALIVE[unit] then
-		local status_extension = ScriptUnit.extension(unit, "status_system")
-
-		status_extension:set_noclip(false, "tb_movement_buff_and_noclip") -- id used for removing noclip
-	end
-end)
-mod_api.update_talent_buff_template("wood_elf", "kerillian_waywatcher_movement_speed_on_special_kill_buff", {
-	apply_buff_func = "tb_apply_movement_buff_and_noclip",
-	remove_buff_func = "tb_remove_movement_buff_and_noclip",
-})
---]]
-
--- Fervent Huntress passively removes all movement penalties.
-mod_api.insert_talent_buff_template("wood_elf", "tb_fervent_huntress_no_movement_penalties", {
-	max_stacks = 1,
-	perks = {
-		buff_perks.no_moveslow_on_hit, -- same perk as Saltzpyre Zealot's talent, getting hit no longer slows movement
-	},
-})
-mod_api.update_talent("we_waywatcher", 5, 1, {
-	buffs = {
-		"kerillian_waywatcher_movement_speed_on_special_kill",
-		"tb_fervent_huntress_no_movement_penalties",
-	},
-})
-mod_api.insert_text("kerillian_waywatcher_movement_speed_on_special_kill_desc", "Killing a special or elite enemy increases movement speed by 15.0%% for 10 seconds. Kerillian is no longer affect by movement penalties.")
-
--- Attacking, aiming and slowing debuffs (bile, plague, fire, etc.) all slow the player through buffs that scale the movement settings.
--- Those buffs are simply never added while the player has Fervent Huntress.
--- Weapon actions also use them to speed the player up (movetech, external multiplier above 1), those are kept.
-local TB_MOVEMENT_SPEED_SETTINGS = {
-	move_speed = true,
-	crouch_move_speed = true,
-	walk_move_speed = true,
-}
-local function tb_is_movement_penalty_buff(template)
-	if not template.buffs then
-		return false
-	end
-
-	for _, sub_buff in ipairs(template.buffs) do
-		local path = sub_buff.path_to_movement_setting_to_modify
-		local multiplier = sub_buff.multiplier
-
-		if path and TB_MOVEMENT_SPEED_SETTINGS[path[1]] then
-			-- actions (melee swings, aiming) and debuffs use the lerped variant, the multiplier of actions is passed in externally
-			local is_lerp_penalty = sub_buff.apply_buff_func == "apply_action_lerp_movement_buff" and not sub_buff.bonus and (type(multiplier) ~= "number" or multiplier <= 1)
-			local is_static_penalty = sub_buff.apply_buff_func == "apply_movement_buff" and type(multiplier) == "number" and multiplier < 1
-
-			if is_lerp_penalty or is_static_penalty then
-				return true
-			end
-		end
-	end
-
-	return false
-end
-
-local function tb_fervent_huntress_allows_buff(unit, template, params)
-	if mod:is_action_movement_speed_up(params) then
-		return true
-	end
-
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-
-	return not (buff_extension and buff_extension:has_buff_type("tb_fervent_huntress_no_movement_penalties"))
-end
-
--- Penalty buffs are gated once through apply_condition, so the check only runs when one of them is added.
--- Done after all mods load so templates added by later files are covered too.
-mod:add_all_mods_loaded_function(function ()
-	local penalty_buff_names = {}
-
-	for buff_name, template in pairs(BuffTemplates) do
-		if tb_is_movement_penalty_buff(template) then
-			penalty_buff_names[#penalty_buff_names + 1] = buff_name
-		end
-	end
-
-	for _, buff_name in ipairs(penalty_buff_names) do
-		mod:add_buff_apply_condition(buff_name, tb_fervent_huntress_allows_buff)
-	end
-end)
-
-
---[[
 	Richochet
 ]]
-mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Charging a shot for additional 0.5 seconds causes ricochets seek out enemies consumes 10% ability bar.")
+mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Charging a shot for 1 second causes ricochets to seek out enemies consuming 10% ability bar.")
 
 -- while this debuff is up the ultimate can't be activated at all
 mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
@@ -436,7 +328,7 @@ mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
 })
 
 -- Ricochet conversion additionally requires the shot to have been held (charged) for >= 0.5 real second before firing.
-local TB_RICOCHET_HOLD_TIME_REQUIRED = 0.5
+local TB_RICOCHET_HOLD_TIME_REQUIRED = 1
 local tb_ricochet_pending_held_1s = false
 
 -- Center-screen popup + persistent icon while trueflight is imbued
@@ -773,7 +665,7 @@ mod_api.insert_proc_function("kerillian_waywatcher_reduce_activated_ability_cool
         local hit_zone = params[3]
         local buff_type = params[5]
 
-        -- Prevent ricochete refunding Piercing Shot.
+        -- Prevent ricochet-converted arrows refunding Piercing Shot.
         if buff_type == "RANGED_ABILITY" and (hit_zone == "head" or hit_zone == "neck" or hit_zone == "weakspot") and not tb_ricochet_last_hit_was_converted then
             local career_extension = ScriptUnit.extension(owner_unit, "career_system")
 

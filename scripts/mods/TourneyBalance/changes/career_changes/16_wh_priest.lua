@@ -69,7 +69,7 @@ local spell_params_improved = {
 	external_optional_duration = 7, -- 10
 }
 local spell_params_self_cast = {
-	external_optional_duration = 3, -- 5
+	external_optional_duration = 5, -- 5
 }
 local spell_buffs = {
 	"victor_priest_activated_ability_invincibility",

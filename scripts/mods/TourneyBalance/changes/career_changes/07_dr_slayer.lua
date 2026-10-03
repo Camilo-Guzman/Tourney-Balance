@@ -27,20 +27,19 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Adrenaline Surge**
 		- Changed to 67% cooldown reduction per Trophy Hunter stack (300% only at max stacks).
 
-		**Oblivious to Pain**
-		- Each Trophy Hunter stack additionally reduces damage taken by 3%.
+		**Grimnir's Focus**
+		- Reduced damage reduction to 30% (from 40%).
 
 		**Barge**
 		- Stagger strength on dodge increased to medium_push (from light_push).
 		- Stagger radius on dodge increased to 3 (from 1.5).
-		- Now increases healing received by 50%.
-		- Now converts 50% of damage taken into a non-lethal bleed lasting 10 seconds.
 
 		**Dawi Drop**
 		- Additionally grants max Trophy Hunter stacks (up to 4, with High Tally) when Leap starts.
 
 		**No Escape**
 		- Melee and ranged attacks no longer slow movement while Leap is active.
+	$END_TB
 ]]
 
 --[[
@@ -111,13 +110,6 @@ local function tb_slayer_trophy_hunter_buff_names(owner_unit)
 
 	if talent_extension:has_talent("bardin_slayer_passive_cooldown_reduction_on_max_stacks", "dwarf_ranger", true) then
 		buff_names[#buff_names + 1] = "bardin_slayer_passive_cooldown_reduction_on_max_stacks"
-	end
-
-	-- Oblivious to Pain is in a different row, so it combines with High Tally
-	if talent_extension:has_talent("bardin_slayer_damage_taken_capped", "dwarf_ranger", true) then
-		local has_high_tally = buff_names[1] == "bardin_slayer_passive_increased_max_stacks"
-
-		buff_names[#buff_names + 1] = has_high_tally and "tb_bardin_slayer_oblivious_damage_reduction_high_tally" or "tb_bardin_slayer_oblivious_damage_reduction"
 	end
 
 	return buff_names
@@ -195,7 +187,8 @@ mod_api.insert_text("bardin_slayer_passive_cooldown_reduction_on_max_stacks_desc
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.damage_profile = "medium_push" -- light_push
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.radius = 3 -- 1.5
 ExplosionTemplates.bardin_slayer_push_on_dodge.explosion.max_damage_radius = 3 -- 1.5
--- Also increases healing received and converts damage taken into a bleed (add_damage hook below)
+-- Also increases healing received and converts damage taken into a bleed (add_damage hook below) (disabled)
+--[==[
 mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_barge_healing_received", {
 	stat_buff = "healing_received",
 	multiplier = 0.5,
@@ -283,39 +276,25 @@ mod:hook(PlayerUnitHealthExtension, "add_damage", function (func, self, attacker
 
 	return func(self, attacker_unit, damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
 end)
+]==]
 
 --[[
-	Oblivious to Pain
+	Grimnir's Focus
 ]]
--- Keeps the vanilla boss/elite damage cap, which is read server side
-mod_api.update_talent("dr_slayer", 5, 1, {
-	description = "bardin_slayer_damage_taken_capped_desc_2",
-	description_values = {},
-	buffer = "server",
-	buffs = {
-		"bardin_slayer_damage_taken_capped",
+mod_api.update_talent_buff_template("dwarf_ranger", "bardin_slayer_damage_reduction_on_melee_charge_action_buff", {
+	multiplier = -0.3, -- -0.4
+})
+mod_api.update_talent("dr_slayer", 5, 2, { -- update description
+	description_values = {
+		{
+			value_type = "percent",
+			value = -0.3, -- buff_tweak_data.bardin_slayer_damage_reduction_on_melee_charge_action_buff.multiplier
+		},
+		{
+			value = 5, -- buff_tweak_data.bardin_slayer_damage_reduction_on_melee_charge_action_buff.duration
+		},
 	},
 })
--- 3% damage reduction per Trophy Hunter stack, granted with each stack (tb_slayer_trophy_hunter_buff_names).
--- Separate High Tally template since max_stacks lives on the sub-buff
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction", {
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	stat_buff = "damage_taken",
-	multiplier = -0.03,
-	max_stacks = 3,
-	duration = 2,
-	refresh_durations = true,
-	duration_modifier_func = tb_slayer_trophy_hunter_duration,
-})
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_bardin_slayer_oblivious_damage_reduction_high_tally", {
-	icon = "bardin_slayer_passive_stacking_damage_buff_grants_defence",
-	stat_buff = "damage_taken",
-	multiplier = -0.03,
-	max_stacks = 4, -- High Tally
-	duration = 2,
-	refresh_durations = true,
-})
-mod_api.insert_text("bardin_slayer_damage_taken_capped_desc_2", "Damage taken from Bosses and Elites is reduced by half, down to a minimum of 10 damage. Each stack of Trophy Hunter reduces damage taken by 3%.")
 
 --[[
 	Dawi Drop

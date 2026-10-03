@@ -92,7 +92,7 @@ mod_api.update_talent("we_thornsister", 2, 1, {
 		"kerillian_thorn_sister_attack_speed_on_full",
 	},
 })
-mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 5%. Gain additional 10% attack speed, while above 70% health.")
+mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 15% while above 70% health.")
 
 --[[
 	Atharti's Delight
@@ -109,7 +109,7 @@ end)
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
 	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
 })
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned enemies inflict a heavy bleed for 5 seconds. Stacks up to 3 times.")
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned enemies inflict bleed.")
 
 
 --[[
