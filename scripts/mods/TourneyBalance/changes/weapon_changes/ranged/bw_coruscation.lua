@@ -16,6 +16,7 @@ ExplosionTemplates.magma.aoe.damage_interval = 1
 PlayerUnitStatusSettings.overcharge_values.magma_charged_2 = 10
 PlayerUnitStatusSettings.overcharge_values.magma_charged = 14
 mod_api.insert_buff_template("burning_magma_dot", {
+	duration = 3,
 	name = "burning_magma_dot",
 	end_flow_event = "smoke",
 	start_flow_event = "burn",
