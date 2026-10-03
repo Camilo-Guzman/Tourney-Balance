@@ -11,25 +11,18 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Living Bomb**
 		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
 		- Grants Sienna 30 temporary health (Bomb Balm's self heal, now baseline).
+		- Never deals friendly fire.
 
 		### Passives
 		**Aqshy's Blaze (new)**
 		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 10 seconds.
+		- The overcharge explosion deals no friendly fire.
 		- Weapons can be swapped during the explosion.
 		- Can't attack with the ranged weapon for the duration.
 		- Loses 10% of maximum health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
 		- Using Living Bomb immediately ends Aqshy's Blaze.
 
 		### Talents
-		**Outburst**
-		- Push ignite now applies a weak, long lasting burn.
-		- Added: Increases stagger power by 20%.
-		- Added: After a charged attack, the next push also costs half stamina.
-
-		**Chain Reaction**
-		- Reworked: At high overcharge (80%+), specials explode when headshot and elites when killed by a headshot (from 40% chance for any burning enemy on death).
-		- Explosion now deals a fixed 50 damage, ignoring armor.
-
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
 
@@ -38,13 +31,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Abandon**
 		- Reworked: Aqshy's Blaze lasts 2.5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
-
-		**Natural Talent**
-		- Added: Grants 40% attack speed and 40% increased healing received during Aqshy's Blaze.
-
-		**Fuel for the Fire**
-		- Added: Blood Magic generates no overcharge for 15 seconds after using Living Bomb.
-		- Living Bomb no longer clears overcharge (still ends Aqshy's Blaze).
 
 		**Bomb Balm**
 		- Sienna's own temporary health is now baseline on Living Bomb, so Bomb Balm only adds the heal for nearby allies.
@@ -222,7 +208,8 @@ mod_api.insert_text(AQSHYS_BLAZE_BUFF, "Aqshy's Blaze")
 mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Overcharging causes Sienna to immediately explode and lose the ability to cast spells for %d seconds. During this time, she drains %d%% health every second to restore %d%% ability cooldown (non-lethal). Using Living Bomb ends this state.", AQSHYS_BLAZE_DURATION, AQSHYS_BLAZE_MAX_HEALTH_COST * 100, AQSHYS_BLAZE_COOLDOWN * 100))
 mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
 
--- Natural Talent (row 5 col 3), added with the state
+-- Natural Talent (row 5 col 3), added with the state (disabled)
+--[==[
 local NATURAL_TALENT_TALENT = "sienna_unchained_reduced_overcharge"
 local NATURAL_TALENT_STATE_BUFF = "tb_sienna_unchained_natural_talent_state"
 local NATURAL_TALENT_ATTACK_SPEED = 0.4
@@ -248,6 +235,7 @@ mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, 
 		multiplier = NATURAL_TALENT_HEALING_RECEIVED,
 	},
 })
+]==]
 
 -- Overcharge explosion: vanilla state, shortened for Unchained, then enters Aqshy's Blaze instead of damaging her
 local AQSHYS_BLAZE_EXPLOSION_TIME = 0.1 -- 3
@@ -293,16 +281,52 @@ mod:hook(PlayerCharacterStateOverchargeExploding, "explode", function (func, sel
 	overcharge_extension.is_exploding = false
 
 	local buff_system = Managers.state.entity:system("buff_system")
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
 
 	buff_system:add_buff_synced(unit, AQSHYS_BLAZE_BUFF, BuffSyncType.LocalAndServer)
+
+	-- Natural Talent (disabled)
+	--[[
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
 
 	if talent_extension and talent_extension:has_talent(NATURAL_TALENT_TALENT) then
 		buff_system:add_buff_synced(unit, NATURAL_TALENT_STATE_BUFF, BuffSyncType.LocalAndServer)
 	end
+	]]
 
 	-- Just below max, like a vent
 	overcharge_extension:remove_charge(1)
+end)
+
+-- No friendly fire from Unchained's overcharge explosion or Living Bomb (incl. its stagger).
+-- The overcharge templates are shared with other careers' staves, and the server receives explosions by template name,
+-- so the flag is forced where every peer resolves the template: a cached copy with no_friendly_fire is passed instead.
+-- Registered through the dispatcher in TourneyBalance.lua.
+local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
+	overcharge = true,
+	career_ability = true,
+}
+local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
+
+mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
+	local explosion_data = explosion_template and explosion_template.explosion
+
+	if explosion_data and not explosion_data.no_friendly_fire and TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES[damage_source] and ALIVE[attacker_unit] then
+		local career_extension = ScriptUnit.has_extension(attacker_unit, "career_system")
+
+		if career_extension and career_extension:career_name() == "bw_unchained" then
+			local no_friendly_fire_template = tb_no_friendly_fire_templates[explosion_template]
+
+			if not no_friendly_fire_template then
+				no_friendly_fire_template = table.clone(explosion_template)
+				no_friendly_fire_template.explosion.no_friendly_fire = true
+				tb_no_friendly_fire_templates[explosion_template] = no_friendly_fire_template
+			end
+
+			explosion_template = no_friendly_fire_template
+		end
+	end
+
+	return func(world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 end)
 
 -- Only wielding is allowed while overcharge is exploding, and on the ranged weapon during Aqshy's Blaze
@@ -339,7 +363,6 @@ end)
 ]]
 -- Witch Hunter Captain's shout
 local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
-local FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF = "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic"
 
 mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies, and gains 30 temporary health.")
 
@@ -364,7 +387,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
 end
 
--- Vanilla _run_ability, plus WHC shout, baseline self heal, Bomb Balm allies only, Fuel for the Fire changes
+-- Vanilla _run_ability, plus WHC shout, baseline self heal, Bomb Balm allies only
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -385,12 +408,9 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	})
 
 	if is_server and bot_player or local_player then
-		-- Fuel for the Fire keeps overcharge
-		if not talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
-			local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
+		local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
 
-			overcharge_extension:reset()
-		end
+		overcharge_extension:reset()
 
 		career_extension:set_state("sienna_activate_unchained")
 	end
@@ -469,9 +489,6 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	end
 
 	if talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
-		-- Fuel for the Fire: no Blood Magic overcharge
-		Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF, BuffSyncType.LocalAndServer)
-
 		local attack_type_id = NetworkLookup.buff_attack_types.ability
 		local attacker_unit_id = network_manager:unit_game_object_id(owner_unit)
 		local buff_weapon_type_id = NetworkLookup.buff_weapon_types["n/a"]
@@ -529,8 +546,9 @@ end)
 
 ]]
 --[[
-	Outburst
+	Outburst (disabled)
 ]]
+--[==[
 local OUTBURST_HALF_PUSH_BUFF = "tb_sienna_unchained_outburst_half_push"
 local OUTBURST_PUSH_COST_MULTIPLIER = 0.5
 
@@ -585,10 +603,12 @@ mod:hook(ActionPushStagger, "client_owner_start_action", function (func, self, .
 
 	return result
 end)
+]==]
 
 --[[
-	Chain Reaction
+	Chain Reaction (disabled)
 ]]
+--[==[
 -- Vanilla explosion (sienna_unchained_burning_enemies_explosion: visual, sound, stagger, no damage) plus fixed damage,
 -- ignoring armor, to enemies within CHAIN_REACTION_RADIUS
 local CHAIN_REACTION_DAMAGE = 50
@@ -663,11 +683,12 @@ mod_api.update_talent("bw_unchained", 2, 3, {
 	},
 })
 mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("While at %d%% Overcharge or higher, headshots on specials and headshot kills on elites cause them to explode, dealing %d damage and staggering nearby enemies.", CHAIN_REACTION_OVERCHARGE * 100, CHAIN_REACTION_DAMAGE))
+]==]
 
 --[[
 	Dissipate
 ]]
--- Vanilla add_fatigue_points, plus Dissipate 50% vent and Outburst half stamina push
+-- Vanilla add_fatigue_points, plus Dissipate 50% vent (Outburst half stamina push disabled)
 local block_breaking_fatigue_types = {
 	blocked_attack = true,
 	blocked_attack_2 = true,
@@ -710,7 +731,8 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 	local max_fatigue_points = self.max_fatigue_points
 	local fatigue_cost = amount * (max_fatigue / max_fatigue_points) * (fatigue_point_costs_multiplier or 1)
 
-	-- Outburst
+	-- Outburst (disabled)
+	--[[
 	if tb_outburst_pushing_unit == self.unit and not blocking_weapon_unit then
 		local half_push_buff = buff_extension:get_buff_type(OUTBURST_HALF_PUSH_BUFF)
 
@@ -720,6 +742,7 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 			buff_extension:remove_buff(half_push_buff.id)
 		end
 	end
+	]]
 
 	if is_timed_block then
 		fatigue_cost = buff_extension:apply_buffs_to_value(fatigue_cost, "timed_block_cost")
@@ -808,29 +831,14 @@ mod_api.update_talent("bw_unchained", 5, 2, {
 mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("Aqshy's Blaze lasts %g seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", ABANDON_DURATION, ABANDON_MAX_HEALTH_COST * 100, ABANDON_COOLDOWN * 100, ABANDON_TICKS_PER_SECOND))
 
 --[[
-	Natural Talent
+	Natural Talent (disabled)
 ]]
+--[==[
 mod_api.update_talent("bw_unchained", 5, 3, {
 	description_values = {},
 })
 mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During Aqshy's Blaze, Sienna gains %d%% attack speed and %d%% increased healing received.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_HEALING_RECEIVED * 100))
-
---[[
-	Fuel for the Fire
-]]
--- Added on Living Bomb, clamped at 0 in apply_buffs_to_damage
-mod_api.insert_talent_buff_template("bright_wizard", FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_BUFF, {
-	icon = "sienna_unchained_reduced_overcharge",
-	duration = 15,
-	max_stacks = 1,
-	refresh_durations = true,
-	stat_buff = "reduced_overcharge_from_passive",
-	multiplier = -1,
-})
-mod_api.update_talent("bw_unchained", 6, 1, {
-	description_values = {},
-})
-mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_desc", "Each enemy hit by Living Bomb increases power by 5% for 15 seconds. Stacking up to 5 times. Blood Magic generates no overcharge for the duration. Living Bomb no longer clears overcharge.")
+]==]
 
 --[[
 	Bomb Balm

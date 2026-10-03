@@ -70,7 +70,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 	Quests (Adventure only - Weave, Versus and Chaos Wastes keep their own vanilla quest pools)
 ]]
 local QUEST_HEALTH_GOAL = 3000
-local QUEST_HEADSHOT_GOAL = 600
+local QUEST_HEADSHOT_GOAL = 500
 local QUEST_TEAM_ULTIMATES_GOAL = 30
 
 local function flat_amount(amount)

@@ -18,10 +18,10 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		### Talents
 		**Surge of Malice**
 		- Now grants 5% Attack Speed passively.
-		- Lowered required health threshold to 70% (from 90%), now grants 10% Attack Speed (from 15%) while above it.
+		- Lowered required health threshold to 70% (from 90%).
 
 		**Atharti's Delight**
-		- Now only active for 2s after landing a melee headshot (refreshed on each headshot).
+		- Bleed is now only applied by melee headshots against poisoned enemies (from any melee hit).
 
 		**Briar's Malice**
 		- Crit stacks granted increased to 3 (from 2)
@@ -83,21 +83,34 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_attack_s
 	health_threshold = 0.7, -- 0.9
 })
 mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_attack_speed_on_full_buff", {
-	multiplier = 0.10, -- 0.15
-})
-mod_api.insert_talent_buff_template("wood_elf", "tb_surge_of_malice_passive", {
-	stat_buff = "attack_speed",
-	multiplier = 0.5,
+	multiplier = 0.15, -- 0.15
 })
 mod_api.update_talent("we_thornsister", 2, 1, {
 	description = "kerillian_thorn_sister_attack_speed_on_full_desc",
 	description_values = {},
 	buffs = {
 		"kerillian_thorn_sister_attack_speed_on_full",
-		"tb_surge_of_malice_passive",
 	},
 })
 mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increases attack speed by 5%. Gain additional 10% attack speed, while above 70% health.")
+
+--[[
+	Atharti's Delight
+]]
+-- Only melee headshots against poisoned enemies inflict the bleed (vanilla: any melee hit on a poisoned enemy).
+-- params: hit_unit, attack_type, hit_zone_name, ...
+mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
+	local hit_zone_name = params[3]
+
+	if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
+		return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
+	end
+end)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
+	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
+})
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned enemies inflict a heavy bleed for 5 seconds. Stacks up to 3 times.")
+
 
 --[[
 	Briar's Malice
@@ -165,38 +178,6 @@ mod_api.insert_talent_buff_template("wood_elf", "kerillian_thorn_sister_crit_on_
 		max_stacks = 1,
 	},
 })
-
---[[
-	Atharti's Delight
-]]
--- Melee headshots grant the original effect (melee hits on poisoned enemies cause bleed) for 2s, refreshable.
-mod_api.insert_talent_buff_template("wood_elf", "tb_atharti_delight_active", {
-	icon = "kerillian_thornsister_crit_big_bleed",
-	duration = 2,
-	max_stacks = 1,
-	refresh_durations = true,
-})
-mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
-	local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
-
-	if not buff_extension then
-		return
-	end
-
-	local hit_zone_name = params[3]
-
-	if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
-		buff_extension:add_buff("tb_atharti_delight_active")
-	end
-
-	if buff_extension:has_buff_type("tb_atharti_delight_active") then
-		return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
-	end
-end)
-mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
-	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
-})
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots cause melee hits against poisoned enemies to inflict bleed for 2 seconds.")
 
 --[[
 	Bonded Spirit

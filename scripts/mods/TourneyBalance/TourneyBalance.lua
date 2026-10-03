@@ -157,6 +157,41 @@ mod:hook(PlayerUnitHealthExtension, "add_heal", function (func, ...)
     return _player_add_heal_chain(...)
 end)
 
+--- DamageUtils.create_explosion dispatcher
+-- Same hook-collision problem as IngameHud above: 13_wh_captain.lua (ISJYA marks) and 19_bw_unchained.lua (no friendly
+-- fire) both need it. Register through mod:add_create_explosion_wrapper(fn) instead of calling
+-- mod:hook/hook_safe(DamageUtils, "create_explosion", ...) directly. fn(func, ...) is shaped like a mod:hook
+-- callback (func = next wrapper in line, ending at the original create_explosion).
+-- Wrappers run in registration order, outermost first.
+local _create_explosion_wrappers = {}
+local _create_explosion_chain = nil -- composed lazily, rebuilt when a wrapper is added or the original changes
+local _create_explosion_chain_base = nil
+
+function mod.add_create_explosion_wrapper(self, wrapper)
+    _create_explosion_wrappers[#_create_explosion_wrappers + 1] = wrapper
+    _create_explosion_chain = nil
+end
+
+mod:hook(DamageUtils, "create_explosion", function (func, ...)
+    if not _create_explosion_chain or _create_explosion_chain_base ~= func then
+        local chain = func
+
+        for i = #_create_explosion_wrappers, 1, -1 do
+            local wrapper = _create_explosion_wrappers[i]
+            local inner = chain
+
+            chain = function (...)
+                return wrapper(inner, ...)
+            end
+        end
+
+        _create_explosion_chain = chain
+        _create_explosion_chain_base = func
+    end
+
+    return _create_explosion_chain(...)
+end)
+
 --- ActionMeleeStart.client_owner_post_update dispatcher
 -- Same hook-collision problem as IngameHud above: 02_career_changes.lua (Timed Block Long) and 09_we_waywatcher.lua
 -- (Ricochet charged popup) both need to run after it. Register through mod:add_melee_start_post_update_function(fn)

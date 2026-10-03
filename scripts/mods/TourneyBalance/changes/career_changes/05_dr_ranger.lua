@@ -7,9 +7,6 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		---
 		## Ranger Veteran
 		### Passives
-		**Survivalist**
-		- Added pseudeo-random 5% chance to drop engineer bombs with every survivalist drop (bag size 100 with 5 winning tickets).
-		
 		**Fast Hands**
 		- Added double effective range for ranged weapons.
 		- Added 10% increased ranged power.
@@ -31,14 +28,13 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		- Potions drop pseudo-random from bag size 6 with 2 of each potion (speed, strength, cooldown reduction).
 
 		**No Dawdling**
-		- Additionally removes the limit on dodging efficiently.
 		- Additionally removes the movement slowdown from melee weapons, ranged weapons and career skill.
 
 		**Exuberance**
 		- Reduced damage reduction to 20% (from 30%).
 
 		**Firing Fury**
-		- Also procs on picking up Survivalist pouches.
+		- Also procs on picking up large Survivalist pouches (30% ammo).
 
 		**Exhilarating Vapours**
 		- Fixed a bug where repeatedly stepping in and out of the smoke cloud granted extra temp health.
@@ -48,7 +44,7 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 
 		**Ranger's Parting Gift**
 		- Free bomb only applies to engineer bombs.
-		- Added 25% ranged power for 10s after using Disengage.
+		- Added pseudo-random 5% chance to drop engineer bombs with every Survivalist drop (bag size 100 with 5 winning tickets).
 	$END_TB
 ]]
 
@@ -92,8 +88,8 @@ mod_api.insert_proc_function("bardin_ranger_scavenge_proc", function (owner_unit
 			local raycast_down = true
 			local pickup_system = Managers.state.entity:system("pickup_system")
 
-			-- 5% chance for engineer bomb
-			if random_utils.roll_virtual_bag(bomb_bag_state, 100, 5) then
+			-- Ranger's Parting Gift: 5% chance for engineer bomb
+			if talent_extension:has_talent("bardin_ranger_ability_free_grenade") and random_utils.roll_virtual_bag(bomb_bag_state, 100, 5) then
 				pickup_system:buff_spawn_pickup("engineer_grenade_t1", player_pos + offset_position_3, raycast_down)
 			end
 
@@ -123,7 +119,6 @@ end)
 -- AllPickups holds the same table reference, so the interaction prompt picks this up
 Pickups.grenades.engineer_grenade_t1.hud_description = "tb_engineer_grenade_pickup"
 mod_api.insert_text("tb_engineer_grenade_pickup", "Engineer Bomb")
-mod_api.insert_text("career_passive_desc_dr_3a_2","Whenever a special is killed, Bardin will drop an ammo pickup, with a 5% chance also an engineer bomb. This pickup restores 10% of the player's max ammunition, rounded down.")
 mod_api.insert_text("bardin_ranger_passive_spawn_potions_or_bombs_desc", "Killing a special has a 6%% chance to drop a potion instead of a Survivalist cache.")
 
 
@@ -212,18 +207,7 @@ Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8 -- 1.9
 --[[
 	No Dawdling
 ]]
-mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently and the movement slowdown from weapons.")
-
--- Grants 99 dodge count regardless of the wielded weapon's own dodge_count value
-mod:hook(GenericStatusExtension, "get_dodge_item_data", function (func, self, ...)
-	func(self, ...)
-
-	local talent_extension = ScriptUnit.has_extension(self.unit, "talent_system")
-
-	if talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed") then
-		self.dodge_count = 99
-	end
-end)
+mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the movement slowdown from weapons.")
 
 -- Removes the move-speed penalty of every weapon
 local TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS = {
@@ -294,7 +278,8 @@ mod_api.insert_text("bardin_ranger_reduced_damage_taken_headshot_desc_2", "Bardi
 mod:hook(SimpleInventoryExtension, "add_ammo_from_pickup", function (func, self, pickup_settings, ...)
 	func(self, pickup_settings, ...)
 
-	if not pickup_settings.ranger_ammo then
+	-- Only the big Survivalist pouch (30% ammo)
+	if pickup_settings.pickup_name ~= "ammo_ranger_improved" then
 		return
 	end
 
@@ -317,7 +302,7 @@ mod:hook(SimpleInventoryExtension, "add_ammo_from_pickup", function (func, self,
 		buff_extension:add_buff("bardin_ranger_reload_speed_on_multi_hit_buff")
 	end
 end)
-mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a Survivalist pouch increases Bardin's reload speed by 35.0%% for 2 seconds.")
+mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a large Survivalist pouch increases Bardin's reload speed by 35.0%% for 2 seconds.")
 
 --[[
 	Parting Gift
@@ -363,28 +348,8 @@ mod:hook(ActionChargedProjectileUtility, "fire_charged_projectile", function (fu
 
 	return result
 end)
--- 25% ranged power for 10s after using Disengage
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_parting_gift_ranged_power", {
-	stat_buff = "power_level_ranged",
-	multiplier = 0.25,
-	duration = 10,
-	max_stacks = 1,
-	refresh_durations = true,
-	icon = "bardin_ranger_ability_free_grenade"
-})
--- Applied on career skill use (the talent lives on the owner's client, where on_ability_activated procs).
--- The networked add_buff proc puts it on the server as well as the owner.
-mod_api.insert_talent_buff_template("dwarf_ranger", "tb_parting_gift_ranged_power_on_ability", {
-	buff_func = "add_buff",
-	buff_to_add = "tb_parting_gift_ranged_power",
-	event = "on_ability_activated",
-	max_stacks = 1
-})
--- Appended to the talent's existing buffs so the vanilla free grenade buff is kept
-local parting_gift_talent = Talents.dwarf_ranger[TalentIDLookup.bardin_ranger_ability_free_grenade.talent_id]
-parting_gift_talent.buffs = parting_gift_talent.buffs or {}
-table.insert(parting_gift_talent.buffs, "tb_parting_gift_ranged_power_on_ability")
-mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed and grants 25%% ranged power for 10 seconds. Free bomb does not stack.")
+-- 5% engineer bomb drop on Survivalist drops: see bardin_ranger_scavenge_proc above
+mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Does not stack. Survivalist gains a 5%% chance to drop an engineer bomb.")
 
 --[[
 	Exhilarating Vapours

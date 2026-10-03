@@ -7,7 +7,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		## Warrior Priest
 		### Career Ability
 		- Reworded tooltip.
-		- Shield explosion burn now lasts 1s (from 5s), dealing 1 tick of damage instead of 7.
+		- Shield explosion damage reduced to 0.1 (from 0.25). Burn now deals 1 tick of damage instead of 7.
 
 		### Talents
 		**Prayer of Flight**
@@ -31,8 +31,8 @@ mod_api.insert_text("career_active_desc_wh_priest", "Saltzpyre imbues himself or
 
 -- Shield explosion burn cut to a single tick (from 7).
 local nuke_dot = BuffTemplates.victor_priest_nuke_dot.buffs[1]
-nuke_dot.duration = 10 -- 5, how long the enemy counts as burning
-nuke_dot.time_between_dot_damages = 10 -- 0.7, second tick lands after the burn ends
+nuke_dot.duration = 5 -- 5, how long the enemy counts as burning
+nuke_dot.time_between_dot_damages = 5 -- 0.7, second tick lands after the burn ends
 -- Initial explosion damage
 DamageProfileTemplates.victor_priest_activated_ability_nuke_explosion.default_target.power_distribution.attack = 0.1 -- 0.25
 

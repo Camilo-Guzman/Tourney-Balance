@@ -22,6 +22,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Isha's Embrace**
 		- Increased health regen bonus to 100% (from 50%) and health regen cap to 100% max health.
+		- Amaranthe only regenerates 1 ammo per tick (from 2).
 
 		**Spirit Arrows**
 		- Increased cooldown reduction to 10% (from 5%).
@@ -33,6 +34,9 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Fully charging for 0.5 second grants ricochet projectiles true-flight.
 		- Applying true-flight costs 10% ult cooldown drained over 10 seconds and disables your ultimate.
 		- Fixed ricocheting after enemy cleave.
+
+		**Asrai Focus**
+		- Now grants 20% cooldown regeneration rate (from 20% cooldown reduction).
 
 		**Piercing Shot**
 		- Cooldown refund when headshotting enemy works when piercing through team mate first.
@@ -199,7 +203,7 @@ end
 	Rejuvenating Locus
 ]]
 mod_api.insert_text("career_passive_desc_we_3a_2", "Kerillian regenerates 3 health when below 50.0% health and 2 ammo every 10 seconds. This does not replace temp health.")
-mod_api.insert_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 100%%. Health regeneration caps at 100%%.")
+mod_api.insert_text("kerillian_waywatcher_improved_regen_desc_2", "Increases Kerillian's health regenerated from Amaranthe by 50%%. Health regeneration caps at 50%%.")
 mod_api.insert_text("kerillian_waywatcher_passive_cooldown_restore_desc", "Amaranthe reduces the cooldown of Trueflight Volley by 10.0%%. No longer restores health.")
 mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit, buff, params)
     local t = params.t
@@ -234,7 +238,7 @@ mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit
 			local left_hand_ammo_extension = ScriptUnit.has_extension(left_unit_1p, "ammo_system")
 			local ammo_extension = right_hand_ammo_extension or left_hand_ammo_extension
 
-			if ammo_extension then -- and ammo_extension:total_ammo_fraction() < regen_cap then
+			if ammo_extension then
 				local ammo_amount = 2
 				ammo_extension:add_ammo_to_reserve(ammo_amount)
 			end
@@ -247,8 +251,8 @@ mod_api.insert_buff_function("update_kerillian_waywatcher_regen", function (unit
             local heal_amount = buff_template.heal_amount
 
             if talent_extension:has_talent("kerillian_waywatcher_improved_regen", "wood_elf", true) then
-                regen_cap = regen_cap * 2
-                heal_amount = heal_amount * 2
+                regen_cap = regen_cap * 1.5
+                heal_amount = heal_amount * 1.5
             end
 
             if health_extension:is_alive() and not status_extension:is_knocked_down() and not status_extension:is_assisted_respawning() then
@@ -416,7 +420,7 @@ end)
 --[[
 	Richochet
 ]]
-mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Staying at full charge for 0.5 second gives trueflight to ricochets. Requires 10.0%% cooldown and disables career ability for 10 seconds.")
+mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Charging a shot for additional 0.5 seconds causes ricochets seek out enemies consumes 10% ability bar.")
 
 -- while this debuff is up the ultimate can't be activated at all
 mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {
@@ -746,6 +750,19 @@ mod:hook(PlayerProjectileUnitExtension, "hit_level_unit", function (func, self, 
 		mod:echo("[TourneyBalance] Ricochet true-flight spawn failed: " .. tostring(err))
 	end
 end)
+
+--[[
+	Asrai Focus
+]]
+-- 20% cooldown regeneration rate instead of 20% cooldown reduction
+mod_api.update_talent_buff_template("wood_elf", "kerillian_waywatcher_activated_ability_cooldown", {
+	stat_buff = "cooldown_regen", -- activated_cooldown
+	multiplier = 0.2, -- -0.2
+})
+mod_api.update_talent("we_waywatcher", 5, 3, {
+	description_values = {},
+})
+mod_api.insert_text("kerillian_waywatcher_activated_ability_cooldown_desc", "Increases the cooldown regeneration rate of Trueflight Volley by 20%.")
 
 --[[
 	Piercing Shot

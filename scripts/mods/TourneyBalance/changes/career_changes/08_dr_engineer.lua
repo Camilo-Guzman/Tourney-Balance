@@ -14,6 +14,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Linked Compression Chamber**
 		- Full starting fire rate is now baseline (see above).
 		- Still increases the Crank Gun's maximum fire rate by 30%.
+		- Reduces the Crank Gun's spin-up time before firing to 0.2s (from 0.5s).
 	$END_TB
 ]]
 
@@ -52,8 +53,10 @@ Weapons.bardin_engineer_career_skill_weapon_special.dodge_count = 3 -- 1
 --[[
 	Linked Compression Chamber
 ]]
--- skip the 0.5s spin-up, so the spin action can chain into fire immediately.
--- The spin -> fire chain's start_time is static template data, so it's bypassed here instead.
+-- Reduce the 0.5s spin-up to 0.1s, so the spin action chains into fire sooner.
+local TB_LINKED_COMPRESSION_SPIN_UP = 0.2 -- 0.5
+local reduced_spin_up_chain_actions = setmetatable({}, { __mode = "k" })
+
 mod:hook(WeaponUnitExtension, "is_chain_action_available", function (func, self, next_chain_action, t, time_offset)
 	local current_action_settings = self.current_action_settings
 
@@ -62,14 +65,22 @@ mod:hook(WeaponUnitExtension, "is_chain_action_available", function (func, self,
 		local talent_extension = self._talent_extension
 
 		if lookup_data and lookup_data.sub_action_name == "spin" and talent_extension and talent_extension:has_talent("bardin_engineer_reduced_ability_fire_slowdown") then
-			return true
+			local reduced_chain_action = reduced_spin_up_chain_actions[next_chain_action]
+
+			if not reduced_chain_action then
+				reduced_chain_action = table.shallow_copy(next_chain_action)
+				reduced_chain_action.start_time = math.min(next_chain_action.start_time or TB_LINKED_COMPRESSION_SPIN_UP, TB_LINKED_COMPRESSION_SPIN_UP)
+				reduced_spin_up_chain_actions[next_chain_action] = reduced_chain_action
+			end
+
+			next_chain_action = reduced_chain_action
 		end
 	end
 
 	return func(self, next_chain_action, t, time_offset)
 end)
 
-mod_api.insert_text("bardin_engineer_reduced_ability_fire_slowdown_desc_2", "Increases the Crank Gun's maximum fire rate by 30%%.")
+mod_api.insert_text("bardin_engineer_reduced_ability_fire_slowdown_desc_2", "Increases the Crank Gun's maximum fire rate by 30%% and reduces its spin-up time before firing to 0.2 seconds.")
 
 
 --[[

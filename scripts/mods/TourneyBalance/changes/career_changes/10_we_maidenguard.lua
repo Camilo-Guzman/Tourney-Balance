@@ -16,8 +16,8 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 
 		### Passives
 		**Ariel's Benison**
-		- Added effect: Knocked down allies within her aura take 80% reduced damage.
-		- Added effect: Allies revived by her take 80% reduced damage for 2 seconds.
+		- Added effect: Knocked down allies within her aura take 50% reduced damage.
+		- Added effect: Allies revived by her take 50% reduced damage for 2 seconds.
 
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
@@ -352,7 +352,7 @@ mod_api.insert_text("career_passive_desc_we_2c_2", " Aura that reduces damage ta
 -- proc next to the 20 health heal; the server adds it locally and syncs it to the revived player, who sees the icon/timer.
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_maidenguard_revive_protection", {
 	stat_buff = "damage_taken",
-	multiplier = -0.8,
+	multiplier = -0.5,
 	duration = 2,
 	max_stacks = 1,
 	refresh_durations = true,
@@ -368,7 +368,7 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_ress_time
 -- Knocked down allies inside the Renewal aura of a standing Handmaiden take 80% less damage (including bleed-out).
 -- Reduces the incoming damage before the rest of the chain, so e.g. Zealot's overhealth pool only absorbs the reduced amount.
 -- Registered through the apply_buffs_to_damage dispatcher in TourneyBalance.lua (server only).
-local ARIELS_BENISON_DAMAGE_REDUCTION = 0.8
+local ARIELS_BENISON_DAMAGE_REDUCTION = 0.5
 
 local function is_protected_by_ariels_benison(attacked_unit)
     local side = Managers.state.side.side_by_unit[attacked_unit]

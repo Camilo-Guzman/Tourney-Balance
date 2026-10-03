@@ -19,7 +19,7 @@ local is_local = shared_utils.is_local
 
 		**I Shall Judge You All**
 		- Apply Witch Hunt and mark all enemies within Animosity's range.
-		- Headshotting Witch-Hunted enemies extends the duration by 1s.
+		- Headshotting Witch-Hunted enemies extends the duration by 2s.
 
 		**Fervency**
 		- Increased duration to 10s (from 6s).
@@ -151,7 +151,7 @@ mod_api.insert_proc_function("tb_isjya_refresh_animosity_on_headshot", function 
 		local remaining = math.max(0, aura_buff.start_time + aura_buff.duration - t)
 
 		aura_buff.start_time = t
-		aura_buff.duration = remaining + 1 -- duration extension
+		aura_buff.duration = remaining + 2 -- DURATION EXTENSION
 	end
 end)
 
@@ -165,7 +165,7 @@ mod_api.update_talent("wh_captain", 6, 1, {
 		"tb_isjya_refresh_animosity_on_headshot",
 	},
 })
-mod_api.insert_text("victor_captain_activated_ability_stagger_ping_debuff_desc", "Animosity grants an aura applying Witch Hunt and marking all enemies. Headshotting Witch-Hunted enemies extends the aura duration by 2 seconds.")
+mod_api.insert_text("victor_captain_activated_ability_stagger_ping_debuff_desc", "Animosity also grants an aura applying Witch Hunt and marking all enemies. Headshotting Witch-Hunted enemies extends the aura duration by 2 seconds.")
 
 --[[ Ping Specials within ult radius on WHC ISJYA ULT ]]
 local PING_DURATION = 15
@@ -347,7 +347,7 @@ mod_api.insert_talent_buff_template("witch_hunter", "tb_isjya_aura", {
 })
 
 -- Register outline colors
-mod:hook_safe(DamageUtils, "create_explosion", function (world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, is_server, is_husk, damaging_unit, attacker_power_level, is_critical_strike, source_attacker_unit)
+local function tb_isjya_on_create_explosion(world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, is_server, is_husk, damaging_unit, attacker_power_level, is_critical_strike, source_attacker_unit)
 	if damage_source ~= "career_ability" or not ALIVE[attacker_unit] then
 		return
 	end
@@ -383,6 +383,15 @@ mod:hook_safe(DamageUtils, "create_explosion", function (world, attacker_unit, i
 			mod_api.add_buff(attacker_unit, "tb_isjya_aura")
 		end
 	end
+end
+
+-- Runs after the original, like a hook_safe. Registered through the dispatcher in TourneyBalance.lua.
+mod:add_create_explosion_wrapper(function (func, ...)
+	local result = func(...)
+
+	tb_isjya_on_create_explosion(...)
+
+	return result
 end)
 
 -- Clean up expired outlines

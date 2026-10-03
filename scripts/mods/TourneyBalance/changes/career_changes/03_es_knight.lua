@@ -6,7 +6,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		---
 		## Foot Knight
 		### Career Ability
-		- Ult blast radius buffed to 5 (from 3) for all ults.
+		- Ult blast radius buffed to 4 (from 3) for all ults.
 
 		### Passives
 		**Protective Presence**
@@ -44,12 +44,15 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		
 		**Inspiring Blow**
 		- Now only affects the Foot Knight himself (no longer nearby allies).
-		- Increased cooldown regeneration duration to 1.0s (from 0.5s).
+		- Lowered cooldown regeneration to 100% (from 200%)
 		- Also procs when Mainstay marks an elite with a stagger count, even if the hit doesn't actually stagger it.
-		- Mainstay grants effect at 10% cooldown regeneration for 1.0s
+		- Mainstay grants effect at 50% cooldown regeneration for 0.5s
 
 		**Numb to Pain**
 		- Invulnerability duration on ult increased to 6s (from 3s).
+
+		**Battering Ram**
+		- Battering Ram charge width reduced to 4 (from 5).
 
 		**Bull of Ostland**
 		- Attack speed buff from ult hits lasts 15s (from 10s).
@@ -74,7 +77,13 @@ mod:hook(CareerAbilityESKnight, "_run_ability", function (func, self, ...)
 
 	local lunge_damage = self._status_extension.do_lunge.damage
 
-	lunge_damage.on_interrupt_blast.radius = 5 -- 3
+	lunge_damage.on_interrupt_blast.radius = 4 -- 3
+
+	local talent_extension = ScriptUnit.extension(self._owner_unit, "talent_system")
+
+	if talent_extension:has_talent("markus_knight_wide_charge", "empire_soldier", true) then
+		lunge_damage.width = 4 -- 5
+	end
 end)
 
 --[[
@@ -453,8 +462,12 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_take
 	remove_buff_func = "remove_party_buff_stacks"
 })
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
-	multiplier = -0.0333
+	multiplier = -0.0333 -- -0.05
 })
+mod_api.update_talent("es_knight", 4, 2, { -- update description
+	description_values = {},
+})
+mod_api.insert_text("markus_knight_damage_taken_ally_proximity_desc_2", "Reduces damage taken by 3.33% for each nearby ally within 20 meters, up to 3 allies.")
 
 --[[
 	Unlisted: Ult CD on Taking Damage
@@ -557,6 +570,48 @@ mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, bu
 end)
 mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "Resets cooldown on Valiant Charge when an ally is incapacitated. 15 second cooldown.")
 
+-- 10x cooldown regeneration until Valiant Charge is ready, instead of an instant reset (disabled)
+--[==[
+mod_api.insert_buff_template("tb_markus_knight_hero_time_regen_buff", {
+	icon = "markus_knight_movement_speed_on_incapacitated_allies",
+	max_stacks = 1,
+	stat_buff = "cooldown_regen",
+	multiplier = 9, -- 1 + 9 = 10x regen speed
+	update_func = "tb_markus_hero_time_regen_update",
+})
+mod_api.insert_buff_function("tb_markus_hero_time_regen_update", function (player_unit, buff, params)
+	local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
+
+	if not career_extension or career_extension:current_ability_cooldown(1) == 0 then
+		local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
+
+		if buff_extension then
+			buff_extension:queue_remove_buff(buff.id)
+		end
+	end
+end)
+mod_api.insert_buff_function("markus_hero_time_reset", function (player_unit, buff, params)
+	if not Unit.alive(player_unit) then
+		return
+	end
+
+	local buff_extension = ScriptUnit.has_extension(player_unit, "buff_system")
+
+	if not buff_extension or buff_extension:has_buff_type("tb_markus_knight_hero_time_regen_buff") then
+	 	return
+	end
+
+	local career_extension = ScriptUnit.has_extension(player_unit, "career_system")
+
+	if not career_extension or career_extension:current_ability_cooldown(1) == 0 then
+		return
+	end
+
+	buff_extension:add_buff("tb_markus_knight_hero_time_regen_buff")
+end)
+mod_api.insert_text("markus_knight_charge_reset_on_incapacitated_allies_desc", "When an ally is incapacitated, Valiant Charge recharges 10 times faster until ready.")
+]==]
+
 -- Fix Hero Time not proccing if ally already disabled
 mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", function (owner_unit, buff, params)
 	if not Managers.state.network.is_server then
@@ -602,7 +657,7 @@ mod_api.insert_buff_function("markus_knight_movespeed_on_incapacitated_ally", fu
 
 	buff.disabled_allies = disabled_allies
 
-	-- It's Hero Time: show the "ready" icon (disabled along with the ICD)
+	-- It's Hero Time: show the "ready" icon
 	if not buff_extension:has_buff_type("tb_markus_knight_hero_time_ready_buff") and not buff_extension:has_buff_type("tb_markus_knight_hero_time_cooldown_buff") then
 	 	buff_system:add_buff(owner_unit, "tb_markus_knight_hero_time_ready_buff", owner_unit, true)
 	end
@@ -640,12 +695,12 @@ mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
 ]]
 -- Invulnerability on ult duration increased to 6s
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_ability_invulnerability_buff", {
-	duration = 6 -- 3
+	duration = 5 -- 3
 })
 mod_api.update_talent("es_knight", 6, 1, {
 	description_values = {
 		{
-			value = 6 -- 3
+			value = 5 -- 3
 		}
 	},
 })

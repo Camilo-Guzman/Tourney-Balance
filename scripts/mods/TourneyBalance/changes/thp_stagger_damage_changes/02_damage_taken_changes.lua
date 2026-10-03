@@ -133,8 +133,7 @@ mod:set_apply_buffs_to_damage(function(current_damage, attacked_unit, attacker_u
 
 					if new_damage < original_damage then
 						local damage_to_overcharge = original_damage - new_damage
-						-- Clamped: stacked reductions (Numb to Pain + Fuel for the Fire) can go below -100%
-						damage_to_overcharge = math.max(buff_extension:apply_buffs_to_value(damage_to_overcharge, "reduced_overcharge_from_passive"), 0)
+						damage_to_overcharge = buff_extension:apply_buffs_to_value(damage_to_overcharge, "reduced_overcharge_from_passive")
 						damage_to_overcharge = DamageUtils.networkify_damage(damage_to_overcharge)
 
 						if attacked_player.remote then

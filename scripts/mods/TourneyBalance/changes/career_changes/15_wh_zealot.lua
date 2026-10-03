@@ -13,11 +13,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Turn green hp into white hp on ult.
 
 		### Passives
-		**Fiery Faith**
-		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
-		- Damage taken by his allies is absorbed by Overhealth first.
-		- Can hit trade with it.
-
 		**Ironheart**
 		- Fixed invincibility not proccing on client.
 
@@ -116,8 +111,9 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
 end)
 
 --[[
-    Fiery Faith - Overhealth
+    Fiery Faith - Overhealth (disabled)
 ]]
+--[==[
 -- Damage Zealot takes is stored in a team-wide overhealth pool (max 100). Damage taken by his teammates is
 -- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
@@ -302,6 +298,7 @@ mod:hook_safe(BuffUI, "_sync_buffs", function (self)
         self._dirty = true
     end
 end)
+]==]
 
 --[[
     Chasten - listed
