@@ -197,6 +197,8 @@ end)
 -- check only costs anything when that template is added, not on every add_buff of every unit.
 -- condition(unit, sub_buff_template, params) returns false to block the sub-buff. Conditions chain, so
 -- several features can gate the same template (09_we_waywatcher.lua, 07_dr_slayer.lua, 05_dr_ranger.lua).
+-- Never gate "planted_return_to_normal_*": lerped slowdowns are undone by adding those on removal, so blocking them
+-- leaves the movement setting permanently scaled down.
 function mod.add_buff_apply_condition(self, buff_template_name, condition)
     local buff_template = BuffTemplates[buff_template_name]
 

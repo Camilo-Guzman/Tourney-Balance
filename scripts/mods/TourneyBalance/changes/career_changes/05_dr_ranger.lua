@@ -240,7 +240,9 @@ local function tb_is_action_movement_penalty_buff(buff_name, template)
 	for _, sub_buff in ipairs(template.buffs) do
 		local path = sub_buff.path_to_movement_setting_to_modify
 
-		if path and TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS[path[1]] then
+		-- Only the slowdown itself. "planted_return_to_normal_*" undoes every lerped slowdown (weapons, bile, crippling
+		-- blow, ...), so blocking it leaves the player stuck slowed.
+		if path and TB_NO_DAWDLING_MOVEMENT_SPEED_SETTINGS[path[1]] and sub_buff.apply_buff_func == "apply_action_lerp_movement_buff" then
 			return true
 		end
 	end
