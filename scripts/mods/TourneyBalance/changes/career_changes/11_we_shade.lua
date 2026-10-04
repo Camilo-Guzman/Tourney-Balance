@@ -27,10 +27,11 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Chain Killer**
 		- Melee headshots also grant the backstab damage bonus.
+		- Charged backstabs from Khaine's Counter also grant the bonus.
 		- Other attacks no longer remove the bonus.
 
 		**Focused Slaying**
-		- Melee headshot kills also grant the cooldown regeneration bonus.
+		- Only real backstabs from behind count (not Khaine's Counter or Ruthless Precision backstabs).
 
 		**Bloodfetcher**
 		- Changed ammo refund to 5% (from 1 ammo).
@@ -273,7 +274,8 @@ mod_api.update_talent("we_shade", 2, 2, {
 mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_enemy_desc", "Increases damage by 20.0% for each type of status effect (poison, bleed, burn) afflicting the enemy. All attacks apply bleed.")
 
 --[[
-	Row 4 (Chain Killer, Focused Slaying, Bloodfletcher): melee headshots also trigger each talent's backstab effect
+	Row 4: melee headshots also trigger Chain Killer's and Bloodfletcher's backstab effects.
+	Focused Slaying only triggers on real backstabs from behind.
 ]]
 -- Same headshot check as Ruthless Precision (01_damage_calc_changes.lua): the breed's hit zone type, which covers
 -- head and neck
@@ -281,10 +283,22 @@ local function tb_shade_is_melee_headshot(breed, hit_zone_name, attack_type)
 	return (attack_type == "light_attack" or attack_type == "heavy_attack") and breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
 end
 
+-- Positional backstab: same angle check as vanilla ActionSweep._check_backstab, without its guaranteed_backstab perk
+-- (Khaine's Counter), so it only reports a real hit from behind
+local function tb_shade_is_behind_target(owner_unit, target_unit)
+	local owner_to_target_dir = Vector3.normalize(POSITION_LOOKUP[target_unit] - POSITION_LOOKUP[owner_unit])
+	local target_direction = Quaternion.forward(Unit.local_rotation(target_unit, 0))
+	local hit_angle = Vector3.dot(target_direction, owner_to_target_dir)
+
+	return hit_angle >= 0.55 and hit_angle <= 1
+end
+
 --[[
 	Chain Killer
 ]]
 -- Copy of vanilla kerillian_shade_buff_on_charged_backstab: a charged (heavy) backstab OR any melee headshot adds a stack.
+-- Backstabs include Khaine's Counter's guaranteed backstabs (its buff is synced to the server, so both proc copies see
+-- it); melee headshots already cover Ruthless Precision's.
 -- Unlike vanilla, other hits no longer clear the stacks; they just expire
 mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", function (owner_unit, buff, params)
 	local hit_unit = params[1]
@@ -293,17 +307,12 @@ mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", fu
 		return
 	end
 
-	local player_unit_pos = POSITION_LOOKUP[owner_unit]
-	local hit_unit_pos = POSITION_LOOKUP[hit_unit]
-	local owner_to_hit_dir = Vector3.normalize(hit_unit_pos - player_unit_pos)
-	local hit_unit_direction = Quaternion.forward(Unit.local_rotation(hit_unit, 0))
-	local hit_angle = Vector3.dot(hit_unit_direction, owner_to_hit_dir)
-	local behind_target = hit_angle >= 0.55 and hit_angle <= 1
+	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+	local backstab = tb_shade_is_behind_target(owner_unit, hit_unit) or buff_extension:has_buff_perk("guaranteed_backstab")
 	local headshot = tb_shade_is_melee_headshot(Unit.get_data(hit_unit, "breed"), params[3], params[2])
 	local attack_type = params[2]
-	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
 
-	if (behind_target and attack_type == "heavy_attack" or headshot) and not buff_extension:has_buff_type("kerillian_shade_passive_improved_crit_blocker") then
+	if (backstab and attack_type == "heavy_attack" or headshot) and not buff_extension:has_buff_type("kerillian_shade_passive_improved_crit_blocker") then
 		buff_extension:add_buff(buff.template.buff_to_add)
 		buff_extension:add_buff("kerillian_shade_passive_improved_crit_blocker")
 	end
@@ -315,37 +324,37 @@ mod_api.update_talent("we_shade", 4, 1, {
 	description = "kerillian_shade_charged_backstabs_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged direct backstabs and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
+mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs (including those from Khaine's Counter) and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
 
 --[[
 	Focused Slaying
 ]]
--- Copy of vanilla kerillian_shade_cooldown_regen_on_backstab_kill: also triggers on melee headshot kills
-mod_api.insert_proc_function("tb_shade_cooldown_regen_on_backstab_or_headshot_kill", function (owner_unit, buff, params)
+-- Copy of vanilla kerillian_shade_cooldown_regen_on_backstab_kill, limited to real backstabs: the kill must be a backstab
+-- made from behind the target, so Khaine's Counter's guaranteed backstabs and Ruthless Precision's headshot backstabs
+-- don't count. params: killing_blow, breed_killed, killed_unit
+mod_api.insert_proc_function("tb_shade_cooldown_regen_on_real_backstab_kill", function (owner_unit, buff, params)
 	local player = Managers.player:owner(owner_unit)
+	local killed_unit = params[3]
 
-	if not player or not ALIVE[owner_unit] then
+	if not player or not ALIVE[owner_unit] or not ALIVE[killed_unit] then
 		return
 	end
 
-	local killing_blow_table = params[1]
-	local breed_killed = params[2]
-	local backstab_multiplier = killing_blow_table[DamageDataIndex.BACKSTAB_MULTIPLIER]
-	local backstab = backstab_multiplier and backstab_multiplier > 1
-	local headshot = tb_shade_is_melee_headshot(breed_killed, killing_blow_table[DamageDataIndex.HIT_ZONE], killing_blow_table[DamageDataIndex.ATTACK_TYPE])
+	local backstab_multiplier = params[1][DamageDataIndex.BACKSTAB_MULTIPLIER]
+	local backstab = backstab_multiplier and backstab_multiplier > 1 and tb_shade_is_behind_target(owner_unit, killed_unit)
 
-	if (backstab or headshot) and (player.local_player or Managers.state.network.is_server and player.bot_player) then
+	if backstab and (player.local_player or Managers.state.network.is_server and player.bot_player) then
 		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(buff.template.buff_to_add)
 	end
 end)
 mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_backstabs_cooldown_regeneration", {
-	buff_func = "tb_shade_cooldown_regen_on_backstab_or_headshot_kill", -- "kerillian_shade_cooldown_regen_on_backstab_kill"
+	buff_func = "tb_shade_cooldown_regen_on_real_backstab_kill", -- "kerillian_shade_cooldown_regen_on_backstab_kill"
 })
 mod_api.update_talent("we_shade", 4, 2, {
 	description = "kerillian_shade_backstabs_cooldown_regeneration_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a direct backstab or a melee headshot increases cooldown regeneration by 100% for 3 seconds.")
+mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a backstab from behind increases cooldown regeneration by 100% for 3 seconds. Backstabs from Khaine's Counter and Ruthless Precision don't count.")
 
 --[[
 	Bloodfletcher
@@ -436,7 +445,8 @@ mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attac
 ]]
 -- Guaranteed backstabs after a parry: 6 seconds within the normal 0.5s parry window, scaling down linearly to 3 seconds
 -- at the end of the longer 0.75s window. guaranteed_backstab is melee-only by nature (only ActionSweep reads it), and
--- on_timed_block_long only fires on the owning client
+-- on_timed_block_long only fires on the owning client. The buff is synced to the server as well (with its per-parry
+-- duration), so server-side checks like Chain Killer's proc copy also see it
 local tb_khaines_counter_params = {}
 mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owner_unit, buff, params)
 	if not ALIVE[owner_unit] then
@@ -469,7 +479,7 @@ mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owne
 
 	tb_khaines_counter_params.external_optional_duration = duration
 
-	buff_extension:add_buff(template.buff_to_add, tb_khaines_counter_params)
+	Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, template.buff_to_add, BuffSyncType.LocalAndServer, tb_khaines_counter_params)
 end)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_counter_parry", {
 	buff_func = "tb_shade_khaines_counter_on_parry",
