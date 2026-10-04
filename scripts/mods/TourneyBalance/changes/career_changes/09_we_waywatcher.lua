@@ -312,7 +312,7 @@ mod_api.update_talent("we_waywatcher", 2, 3, {
 --[[
 	Richochet
 ]]
-mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Charging a shot for 1 second causes ricochets to seek out enemies consuming 10% ability bar.")
+mod_api.insert_text("kerillian_waywatcher_projectile_ricochet_desc", "Projectiles can ricochet up to 3 times before hitting an enemy. Charging a shot for 1 second causes ricochets to seek out enemies consuming 10%% ability bar.")
 
 -- while this debuff is up the ultimate can't be activated at all
 mod_api.insert_buff_template("tb_ricochet_true_flight_cooldown_debuff", {

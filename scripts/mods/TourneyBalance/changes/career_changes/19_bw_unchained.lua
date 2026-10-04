@@ -37,7 +37,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Bomb Balm**
 		- Sienna's own temporary health is now baseline on Living Bomb, so Bomb Balm only adds the heal for nearby allies.
-
 	$END_TB
 ]]
 
@@ -50,6 +49,8 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 	Unstable Strength
 ]]
 -- Weak burn, like Sister of the Thorn's poison. Comments: vanilla push ignite (burning_dot_unchained_push) values
+-- Disabled: only used by the Unstable Strength burn and Outburst, both disabled. Re-enable with either of them.
+--[[
 local WEAK_BURN_BUFF = "tb_sienna_unchained_weak_burn"
 
 NewDamageProfileTemplates.tb_sienna_unchained_weak_burn = table.clone(DamageProfileTemplates.burning_dot)
@@ -72,6 +73,7 @@ mod_api.insert_buff_template(WEAK_BURN_BUFF, {
 		buff_perks.burning,
 	},
 })
+]]
 
 -- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives. Disabled for now
 --[[

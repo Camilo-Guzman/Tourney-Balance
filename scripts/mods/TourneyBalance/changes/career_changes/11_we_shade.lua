@@ -1,3 +1,4 @@
+local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 --[[
@@ -176,8 +177,7 @@ mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 --[[
 	Gladerunner
 ]]
--- Gladerunner (flat movement speed) moves onto the base passive. It takes over the perk slot left by
--- Murderous Prowess (vanilla 3rd perk entry, career_passive_name_we_1), which moved to the Blur talent.
+-- Gladerunner moves onto the passive, in Murderous Prowess's old perk slot (career_passive_name_we_1)
 mod_api.insert_career_passives("we_1", {
 	"kerillian_shade_movement_speed",
 })
@@ -283,8 +283,7 @@ local function tb_shade_is_melee_headshot(breed, hit_zone_name, attack_type)
 	return (attack_type == "light_attack" or attack_type == "heavy_attack") and breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
 end
 
--- Positional backstab: same angle check as vanilla ActionSweep._check_backstab, without its guaranteed_backstab perk
--- (Khaine's Counter), so it only reports a real hit from behind
+-- Real backstab from behind (vanilla _check_backstab angle, ignoring guaranteed_backstab)
 local function tb_shade_is_behind_target(owner_unit, target_unit)
 	local owner_to_target_dir = Vector3.normalize(POSITION_LOOKUP[target_unit] - POSITION_LOOKUP[owner_unit])
 	local target_direction = Quaternion.forward(Unit.local_rotation(target_unit, 0))
@@ -296,10 +295,7 @@ end
 --[[
 	Chain Killer
 ]]
--- Copy of vanilla kerillian_shade_buff_on_charged_backstab: a charged (heavy) backstab OR any melee headshot adds a stack.
--- Backstabs include Khaine's Counter's guaranteed backstabs (its buff is synced to the server, so both proc copies see
--- it); melee headshots already cover Ruthless Precision's.
--- Unlike vanilla, other hits no longer clear the stacks; they just expire
+-- Charged backstab (incl. Khaine's Counter) or melee headshot adds a stack; other hits no longer clear them
 mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", function (owner_unit, buff, params)
 	local hit_unit = params[1]
 
@@ -329,9 +325,7 @@ mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charge
 --[[
 	Focused Slaying
 ]]
--- Copy of vanilla kerillian_shade_cooldown_regen_on_backstab_kill, limited to real backstabs: the kill must be a backstab
--- made from behind the target, so Khaine's Counter's guaranteed backstabs and Ruthless Precision's headshot backstabs
--- don't count. params: killing_blow, breed_killed, killed_unit
+-- Only real backstab kills from behind (not Khaine's Counter / Ruthless Precision). params: killing_blow, breed, killed_unit
 mod_api.insert_proc_function("tb_shade_cooldown_regen_on_real_backstab_kill", function (owner_unit, buff, params)
 	local player = Managers.player:owner(owner_unit)
 	local killed_unit = params[3]
@@ -428,8 +422,7 @@ mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Ba
 	Blur (moved from the passive, replaces Blood Drinker)
 	Murderous Prowess (moved from the passive)
 ]]
--- Vanilla Blur: parry, then dodge shortly after, to go invisible. Blur's parry trigger only fires on the owner.
--- Vanilla Murderous Prowess: crit_backstab_killing_blow perk, read in the server-side damage calculation, so buffer "both".
+-- Vanilla Blur + Murderous Prowess (perk read server side, hence buffer "both")
 mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
 	buffer = "both",
 	icon = "kerillian_shade_perk_blur",
@@ -443,10 +436,8 @@ mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attac
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
 ]]
--- Guaranteed backstabs after a parry: 6 seconds within the normal 0.5s parry window, scaling down linearly to 3 seconds
--- at the end of the longer 0.75s window. guaranteed_backstab is melee-only by nature (only ActionSweep reads it), and
--- on_timed_block_long only fires on the owning client. The buff is synced to the server as well (with its per-parry
--- duration), so server-side checks like Chain Killer's proc copy also see it
+-- Guaranteed backstabs after a parry: 6s in the 0.5s window, down to 3s at the end of the 0.75s window.
+-- The parry event is owner-only; the buff is synced to the server so Chain Killer's server copy sees it.
 local tb_khaines_counter_params = {}
 mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owner_unit, buff, params)
 	if not ALIVE[owner_unit] then
@@ -509,39 +500,38 @@ mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Count
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)
 ]]
--- Melee headshots count as backstabs. Read in the calculate_damage override
--- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both"
--- The conversion happens in the damage calculation, so vanilla's backstab sound (ActionSweep._check_backstab) never plays
--- for these hits; this proc plays it on the owner for the same hits the damage calc converts (melee headshots that
--- aren't already backstabs)
-mod_api.insert_proc_function("tb_shade_ruthless_precision_backstab_sound", function (owner_unit, buff, params)
-	local hit_unit = params[1]
-	local player = Managers.player:owner(owner_unit)
+-- Melee headshots count as backstabs (perk read in 01_damage_calc_changes.lua, hence buffer "both").
+-- Backstab feedback for converted headshots, as in ActionSweep._check_backstab (on_backstab plays Shade's backstab sound)
+mod:hook(ActionSweep, "_play_character_impact", function (func, self, is_server, attacker_unit, hit_unit, breed, hit_position, hit_zone_name, current_action, damage_profile, target_index, power_level, attack_direction, blocking, boost_curve_multiplier, is_critical_strike, backstab_multiplier, ...)
+	if not blocking and (not backstab_multiplier or backstab_multiplier <= 1) and damage_profile and HEALTH_ALIVE[hit_unit]
+		and tb_shade_is_melee_headshot(breed, hit_zone_name, damage_profile.charge_value) then
+		local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
 
-	if not player or not player.local_player or not ALIVE[owner_unit] or not HEALTH_ALIVE[hit_unit] then
-		return
+		if buff_extension and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and buff_extension:apply_buffs_to_value(1, "backstab_multiplier") > 1 then
+			local first_person_extension = ScriptUnit.has_extension(attacker_unit, "first_person_system")
+
+			if first_person_extension then
+				first_person_extension:play_hud_sound_event("hud_player_buff_backstab")
+			end
+
+			local side = Managers.state.side.side_by_unit[attacker_unit]
+			local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+
+			if player_and_bot_units then
+				for i = 1, #player_and_bot_units do
+					local friendly_buff_extension = ScriptUnit.has_extension(player_and_bot_units[i], "buff_system")
+
+					if friendly_buff_extension then
+						friendly_buff_extension:trigger_procs("on_backstab", hit_unit)
+					end
+				end
+			end
+		end
 	end
 
-	if not tb_shade_is_melee_headshot(Unit.get_data(hit_unit, "breed"), params[3], params[2]) then
-		return
-	end
-
-	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-
-	-- Real and Khaine's Counter backstabs already played the sound in ActionSweep
-	if tb_shade_is_behind_target(owner_unit, hit_unit) or buff_extension:has_buff_perk("guaranteed_backstab") then
-		return
-	end
-
-	local first_person_extension = ScriptUnit.has_extension(owner_unit, "first_person_system")
-
-	if first_person_extension and buff_extension:apply_buffs_to_value(1, "backstab_multiplier") > 1 then
-		first_person_extension:play_hud_sound_event("hud_player_buff_backstab")
-	end
+	return func(self, is_server, attacker_unit, hit_unit, breed, hit_position, hit_zone_name, current_action, damage_profile, target_index, power_level, attack_direction, blocking, boost_curve_multiplier, is_critical_strike, backstab_multiplier, ...)
 end)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
-	buff_func = "tb_shade_ruthless_precision_backstab_sound",
-	event = "on_hit",
 	perks = {
 		"tb_headshot_counts_as_backstab",
 	},

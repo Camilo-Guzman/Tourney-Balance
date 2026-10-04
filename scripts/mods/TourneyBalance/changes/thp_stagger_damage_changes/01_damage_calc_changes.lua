@@ -518,10 +518,8 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 
 		local is_melee = damage_profile and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
 
-		-- Shade's Ruthless Precision: melee headshots count as backstabs. Done here rather than in
-		-- ActionSweep._check_backstab, which doesn't know the hit zone. on_backstab procs still come from
-		-- _check_backstab and don't fire for these hits; the backstab sound is played by Ruthless Precision's own
-		-- on_hit proc (11_we_shade.lua)
+		-- Shade's Ruthless Precision: melee headshots count as backstabs (_check_backstab doesn't know the hit zone).
+		-- Sound and on_backstab procs: 11_we_shade.lua
 		if breed and (not backstab_multiplier or backstab_multiplier <= 1) and is_melee and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot" then
 			backstab_multiplier = buff_extension:apply_buffs_to_value(1, "backstab_multiplier")
 		end
