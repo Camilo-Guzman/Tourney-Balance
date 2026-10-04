@@ -324,7 +324,7 @@ mod_api.update_talent("we_shade", 4, 1, {
 	description = "kerillian_shade_charged_backstabs_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs (including those from Khaine's Counter) and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
+mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
 
 --[[
 	Focused Slaying
@@ -354,7 +354,7 @@ mod_api.update_talent("we_shade", 4, 2, {
 	description = "kerillian_shade_backstabs_cooldown_regeneration_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a backstab from behind increases cooldown regeneration by 100% for 3 seconds. Backstabs from Khaine's Counter and Ruthless Precision don't count.")
+mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a direct backstab from behind increases cooldown regeneration by 100% for 3 seconds.")
 
 --[[
 	Bloodfletcher
@@ -422,7 +422,7 @@ mod_api.update_talent("we_shade", 4, 3, {
 		"tb_kerillian_shade_headshots_replenishes_ammunition",
 	},
 })
-mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Direct backstabs and melee headshots return 5% of maximum ammunition. 2 second cooldown.")
+mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Backstabs and melee headshots return 5% of maximum ammunition. 2 second cooldown.")
 
 --[[
 	Blur (moved from the passive, replaces Blood Drinker)
