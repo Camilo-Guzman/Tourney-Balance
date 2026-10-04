@@ -511,7 +511,37 @@ mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Count
 ]]
 -- Melee headshots count as backstabs. Read in the calculate_damage override
 -- (thp_stagger_damage_changes/01_damage_calc_changes.lua) on the server and for client prediction, hence buffer "both"
+-- The conversion happens in the damage calculation, so vanilla's backstab sound (ActionSweep._check_backstab) never plays
+-- for these hits; this proc plays it on the owner for the same hits the damage calc converts (melee headshots that
+-- aren't already backstabs)
+mod_api.insert_proc_function("tb_shade_ruthless_precision_backstab_sound", function (owner_unit, buff, params)
+	local hit_unit = params[1]
+	local player = Managers.player:owner(owner_unit)
+
+	if not player or not player.local_player or not ALIVE[owner_unit] or not HEALTH_ALIVE[hit_unit] then
+		return
+	end
+
+	if not tb_shade_is_melee_headshot(Unit.get_data(hit_unit, "breed"), params[3], params[2]) then
+		return
+	end
+
+	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+
+	-- Real and Khaine's Counter backstabs already played the sound in ActionSweep
+	if tb_shade_is_behind_target(owner_unit, hit_unit) or buff_extension:has_buff_perk("guaranteed_backstab") then
+		return
+	end
+
+	local first_person_extension = ScriptUnit.has_extension(owner_unit, "first_person_system")
+
+	if first_person_extension and buff_extension:apply_buffs_to_value(1, "backstab_multiplier") > 1 then
+		first_person_extension:play_hud_sound_event("hud_player_buff_backstab")
+	end
+end)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
+	buff_func = "tb_shade_ruthless_precision_backstab_sound",
+	event = "on_hit",
 	perks = {
 		"tb_headshot_counts_as_backstab",
 	},
