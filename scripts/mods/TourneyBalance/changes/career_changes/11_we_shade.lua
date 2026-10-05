@@ -1,3 +1,4 @@
+local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 --[[
@@ -17,7 +18,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Entering stealth (Infiltrate or Blur) removes it.
 
 		**Murderous Prowess**
-		- Charged critical backstabs only instantly slay the first 3 man-sized enemies an attack hits.
+		- Charged critical backstabs only instantly slay the first 2 man-sized enemies an attack hits.
 
 		### Talents
 		**Cruelty**

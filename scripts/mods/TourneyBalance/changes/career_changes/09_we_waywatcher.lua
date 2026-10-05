@@ -654,7 +654,7 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_waywatcher_activated_
 mod_api.update_talent("we_waywatcher", 5, 3, {
 	description_values = {},
 })
-mod_api.insert_text("kerillian_waywatcher_activated_ability_cooldown_desc", "Increases the cooldown regeneration rate of Trueflight Volley by 20%.")
+mod_api.insert_text("kerillian_waywatcher_activated_ability_cooldown_desc", "20% cooldown regeneration")
 
 --[[
 	Piercing Shot
