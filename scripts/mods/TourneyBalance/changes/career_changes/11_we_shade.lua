@@ -196,7 +196,7 @@ mod_api.insert_text("career_passive_desc_we_1d", "Parrying an attack and quickly
 -- The limit is applied where the perk is read, in the calculate_damage override
 -- (thp_stagger_damage_changes/01_damage_calc_changes.lua)
 -- Vanilla perk order: Dagger in the Dark (we_1a_2), Blur (we_1d), Murderous Prowess (we_1a_3)
-mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay up to 3 man-sized enemies hit.")
+mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay up to 2 man-sized enemies hit.")
 
 --[[
 
