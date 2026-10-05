@@ -29,6 +29,7 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 
 		**No Dawdling**
 		- Additionally removes the limit on dodging efficiently.
+		- Additionally removes the movement slowdown from melee weapons.
 
 		**Exuberance**
 		- Reduced damage reduction to 20% (from 30%).
@@ -204,7 +205,36 @@ Weapons.bardin_survival_ale.actions.action_one.default.total_time = 0.8 -- 1.9
 --[[
 	No Dawdling
 ]]
-mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently.")
+mod_api.insert_text("bardin_ranger_movement_speed_desc", "Increases movement speed by 10%%. Removes the limit on dodging efficiently and the movement slowdown from melee weapons.")
+
+-- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
+-- while a melee weapon is wielded. Same approach as Virtue of the Joust (04_es_questingknight.lua)
+local TB_NO_DAWDLING_MOVEMENT_PENALTY_BUFFS = {
+	"planted_decrease_movement",
+	"planted_fast_decrease_movement",
+	"planted_charging_decrease_movement",
+}
+
+local function tb_no_dawdling_removes_movement_penalty(unit)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	if not (talent_extension and talent_extension:has_talent("bardin_ranger_movement_speed")) then
+		return false
+	end
+
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+
+	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+end
+
+-- Done after all mods load so a later rewrite of these templates can't drop the condition
+mod:add_all_mods_loaded_function(function ()
+	for _, buff_name in ipairs(TB_NO_DAWDLING_MOVEMENT_PENALTY_BUFFS) do
+		mod:add_buff_apply_condition(buff_name, function (unit, template, params)
+			return mod:is_action_movement_speed_up(params) or not tb_no_dawdling_removes_movement_penalty(unit)
+		end)
+	end
+end)
 
 -- Grants 99 dodge count regardless of the wielded weapon's own dodge_count value
 mod:hook(GenericStatusExtension, "get_dodge_item_data", function (func, self, ...)

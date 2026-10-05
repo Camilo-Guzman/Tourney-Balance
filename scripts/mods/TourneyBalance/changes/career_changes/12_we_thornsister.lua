@@ -20,7 +20,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Lowered required health threshold to 70% (from 90%).
 
 		**Atharti's Delight**
-		- Bleed is limited to 2 stack (from 3).
+		- Bleed is now only applied by melee headshots against poisoned enemies (from any melee hit).
 
 		**Briar's Malice**
 		- Crit stacks granted increased to 3 (from 2)
@@ -89,9 +89,19 @@ mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increas
 --[[
 	Atharti's Delight
 ]]
--- Vanilla proc (any melee hit on a poisoned enemy), but the bleed only stacks once
-BuffTemplates.thorn_sister_big_bleed.buffs[1].max_stacks = 1 -- 3
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee attacks against poisoned enemies inflict bleed.")
+-- Only melee headshots against poisoned enemies inflict the bleed (vanilla: any melee hit on a poisoned enemy).
+-- params: hit_unit, attack_type, hit_zone_name, ...
+mod_api.insert_proc_function("tb_thorn_sister_add_bleed_on_headshot", function (owner_unit, buff, params)
+	local hit_zone_name = params[3]
+
+	if hit_zone_name == "head" or hit_zone_name == "neck" or hit_zone_name == "weakspot" then
+		return ProcFunctions.thorn_sister_add_bleed_on_hit(owner_unit, buff, params)
+	end
+end)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_thorn_sister_big_bleed", {
+	buff_func = "tb_thorn_sister_add_bleed_on_headshot", -- thorn_sister_add_bleed_on_hit
+})
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee headshots against poisoned enemies inflict bleed.")
 
 
 --[[

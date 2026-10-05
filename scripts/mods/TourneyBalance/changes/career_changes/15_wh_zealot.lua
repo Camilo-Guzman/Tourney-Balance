@@ -3,8 +3,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 local shared_utils = require("scripts/mods/TourneyBalance/_api/shared_utils")
 local is_local = shared_utils.is_local
 local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
--- Only used by Devotion and Calloused Without and Within (both disabled)
--- local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 --[[
 	$BEGIN_TB
@@ -14,6 +13,11 @@ local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
 		- Turn green hp into white hp on ult.
 
 		### Passives
+		**Fiery Faith**
+		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
+		- Damage taken by his allies is absorbed by Overhealth first.
+		- Can hit trade with it.
+
 		**Ironheart**
 		- Fixed invincibility not proccing on client.
 
@@ -30,6 +34,16 @@ local reduce_cooldown_on_owner = shared_utils.reduce_cooldown_on_owner
 
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
+
+		**Devotion**
+		- Now removes all movement penalties (attacking, aiming, slowing debuffs) instead of only the slowdown when hit.
+		- Grants immunity to knockback from ranged projectiles and Warpfire.
+
+		**Redemption through Blood**
+		- Additionally increases melee damage by 5% for every missing half stamina shield.
+
+		**Calloused Without and Within**
+		- Additionally decreases Heart of Iron's cooldown to 90 seconds (from 120).
 	$END_TB
 ]]
 
@@ -54,11 +68,9 @@ end)
 -- Ironheart
 local IRONHEART_INVULNERABILITY_BUFF = "victor_zealot_invulnerability_on_lethal_damage_taken"
 -- Calloused Without and Within swaps in a copy of the invulnerability whose expiry starts a shorter cooldown
--- (disabled, see Talents below)
---[[
+-- (see Talents below)
 local IRONHEART_TALENT_INVULNERABILITY_BUFF = "tb_victor_zealot_invulnerability_on_lethal_damage_taken_talent"
 local IRONHEART_TALENT = "victor_zealot_reduced_damage_taken"
-]]
 
 -- Fix Zealot invulnerability desync/invincibility bug: this proc runs on both client and server, and the
 -- server is always faster to evaluate the killing blow. The original code only added the buff locally via
@@ -71,7 +83,7 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
     if not Managers.state.network.is_server and ALIVE[owner_unit] then
         local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
 
-        return buff_extension:has_buff_type(IRONHEART_INVULNERABILITY_BUFF) -- or IRONHEART_TALENT_INVULNERABILITY_BUFF (Calloused, disabled)
+        return buff_extension:has_buff_type(IRONHEART_INVULNERABILITY_BUFF) or buff_extension:has_buff_type(IRONHEART_TALENT_INVULNERABILITY_BUFF)
     end
 
     if ALIVE[owner_unit] and not status_extension:is_knocked_down() then
@@ -89,14 +101,12 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
         local template = buff.template
         local buff_to_add = template.buff_to_add
 
-        -- Calloused Without and Within (disabled)
-        --[[
+        -- Calloused Without and Within
         local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
 
         if talent_extension and talent_extension:has_talent(IRONHEART_TALENT) then
             buff_to_add = IRONHEART_TALENT_INVULNERABILITY_BUFF
         end
-        ]]
 
         if killing_blow then
             mod_api.add_buff(owner_unit, buff_to_add)
@@ -107,9 +117,8 @@ mod_api.insert_proc_function("victor_zealot_gain_invulnerability", function (own
 end)
 
 --[[
-    Fiery Faith - Overhealth (disabled)
+    Fiery Faith - Overhealth
 ]]
---[==[
 -- Damage Zealot takes is stored in a team-wide overhealth pool (max 100). Damage taken by his teammates is
 -- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
@@ -213,7 +222,7 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
         return damage
     end
 
-    -- Hits that won't land neither fill nor consume the pool (Numb to Pain's wrapper zeroes damage outside this one)
+    -- Hits that won't land neither fill nor consume the pool
     if buff_extension:has_buff_perk("invulnerable") or buff_extension:has_buff_type(NUMB_TO_PAIN_BUFF) then
         return damage
     end
@@ -294,7 +303,6 @@ mod:hook_safe(BuffUI, "_sync_buffs", function (self)
         self._dirty = true
     end
 end)
-]==]
 
 --[[
     Chasten - listed
@@ -387,14 +395,9 @@ mod_api.update_talent("wh_zealot", 4, 2, {
 })
 
 --[[
-    Devotion (disabled)
-    Redemption through Blood (disabled)
-    Calloused Without and Within (disabled)
+    Devotion
 ]]
--- To re-enable, also restore the buff_perks require at the top. Calloused additionally needs the IRONHEART_TALENT*
--- constants and the buff swap in the Ironheart proc (Passives section).
---[==[
--- No movement penalties (same approach as Waywatcher's old Fervent Huntress change)
+-- No movement penalties at all (attacking, aiming, slowing debuffs)
 -- Also immune to knockback from Warpfire and projectiles, like Grail Knight after Blessed Blade
 local DEVOTION_NO_MOVEMENT_PENALTIES_BUFF = "tb_victor_zealot_devotion_no_movement_penalties"
 
@@ -616,7 +619,6 @@ mod_api.update_talent("wh_zealot", 5, 3, {
     description_values = {},
 })
 mod_api.insert_text("tb_victor_zealot_reduced_damage_taken_desc", "Reduces damage taken by 10%. Heart of Iron's cooldown is reduced to 90 seconds.")
-]==]
 
 
 

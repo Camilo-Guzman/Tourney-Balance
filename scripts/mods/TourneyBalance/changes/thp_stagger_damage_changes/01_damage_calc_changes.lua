@@ -465,7 +465,7 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
-local MURDEROUS_PROWESS_MAX_TARGETS = 1
+local MURDEROUS_PROWESS_MAX_TARGETS = 2
 
 mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 	local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()

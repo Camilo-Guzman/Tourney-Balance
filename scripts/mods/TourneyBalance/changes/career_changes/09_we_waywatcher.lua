@@ -26,6 +26,9 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Spirit Arrows**
 		- Increased cooldown reduction to 10% (from 5%).
 
+		**Fervent Huntress**
+		- Additionally removes the movement slowdown from melee weapons.
+
 		**Ricochet**
 		- Holding a shot for 1 second (counted from the start of the draw) grants ricochet projectiles true-flight.
 		- Applying true-flight costs 10% ult cooldown drained over 10 seconds and disables your ultimate.
@@ -308,6 +311,43 @@ mod_api.update_talent("we_waywatcher", 2, 3, {
         }
     }
 })
+
+--[[
+	Fervent Huntress
+]]
+-- Passively removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
+-- while a melee weapon is wielded. Same approach as Virtue of the Joust (04_es_questingknight.lua)
+local TB_FERVENT_HUNTRESS_MOVEMENT_PENALTY_BUFFS = {
+	"planted_decrease_movement",
+	"planted_fast_decrease_movement",
+	"planted_charging_decrease_movement",
+}
+
+local function tb_fervent_huntress_removes_movement_penalty(unit)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	if not (talent_extension and talent_extension:has_talent("kerillian_waywatcher_movement_speed_on_special_kill")) then
+		return false
+	end
+
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+
+	return not not (inventory_extension and inventory_extension:get_wielded_slot_name() == "slot_melee")
+end
+
+-- Done after all mods load so a later rewrite of these templates can't drop the condition
+mod:add_all_mods_loaded_function(function ()
+	for _, buff_name in ipairs(TB_FERVENT_HUNTRESS_MOVEMENT_PENALTY_BUFFS) do
+		mod:add_buff_apply_condition(buff_name, function (unit, template, params)
+			return mod:is_action_movement_speed_up(params) or not tb_fervent_huntress_removes_movement_penalty(unit)
+		end)
+	end
+end)
+mod_api.update_talent("we_waywatcher", 5, 1, {
+	description = "kerillian_waywatcher_movement_speed_on_special_kill_desc",
+	description_values = {},
+})
+mod_api.insert_text("kerillian_waywatcher_movement_speed_on_special_kill_desc", "Killing an elite or special enemy increases movement speed by 15% for 10 seconds. Removes the movement slowdown from melee weapons.")
 
 --[[
 	Richochet

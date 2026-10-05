@@ -19,7 +19,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Blur moved to the Blur talent (see Talents).
 
 		**Murderous Prowess**
-		- Charged critical backstabs only instantly slay the first 1 man-sized enemies an attack hits.
+		- Charged critical backstabs only instantly slay upt to 2 man-sized enemies an attack hits.
 
 		### Talents
 		**Cruelty**
@@ -191,7 +191,7 @@ mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking
 -- Vanilla instakill (kerillian_shade_passive_backstab_killing_blow), limited to the first 2 enemies each attack hits.
 -- The limit is applied where the perk is read, in the calculate_damage override
 -- (thp_stagger_damage_changes/01_damage_calc_changes.lua)
-mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay 1 man-sized enemy.")
+mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slays up to 2 man-sized enemies.")
 
 --[[
 
