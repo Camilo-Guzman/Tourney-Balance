@@ -123,8 +123,8 @@ mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function (...)
 end)
 
 --- PlayerUnitHealthExtension.add_heal dispatcher
--- Same hook-collision problem as IngameHud above: 04_es_questingknight.lua and 10_we_maidenguard.lua both need to
--- wrap add_heal. Register through mod:add_player_add_heal_wrapper(fn) instead of calling
+-- Same hook-collision problem as IngameHud above: features that wrap add_heal (e.g. 04_es_questingknight.lua quests)
+-- register through mod:add_player_add_heal_wrapper(fn) instead of calling
 -- mod:hook(PlayerUnitHealthExtension, "add_heal", ...) directly. fn(func, self, ...) is shaped like a mod:hook
 -- callback (func = next wrapper in line, ending at the original add_heal).
 -- Wrappers run in registration order, outermost first.
@@ -193,8 +193,8 @@ mod:hook(DamageUtils, "create_explosion", function (func, ...)
 end)
 
 --- ActionMeleeStart.client_owner_post_update dispatcher
--- Same hook-collision problem as IngameHud above: 02_career_changes.lua (Timed Block Long), 04_es_questingknight.lua
--- and 09_we_waywatcher.lua (Ricochet charged popup) all need to run after it. Register through mod:add_melee_start_post_update_function(fn)
+-- Same hook-collision problem as IngameHud above: features that need to run after it (02_career_changes.lua,
+-- Timed Block Long) register through mod:add_melee_start_post_update_function(fn)
 -- instead of calling mod:hook/hook_safe(ActionMeleeStart, "client_owner_post_update", ...) directly.
 -- fn(self, dt, t, world) runs after the original, in registration order.
 local _melee_start_post_update_functions = {}
@@ -231,7 +231,7 @@ end)
 -- sub-buffs instead of hooking BuffExtension.add_buff: add_buff checks sub_buff.apply_condition itself, so the
 -- check only costs anything when that template is added, not on every add_buff of every unit.
 -- condition(unit, sub_buff_template, params) returns false to block the sub-buff. Conditions chain, so
--- several features can gate the same template (04_es_questingknight.lua, 07_dr_slayer.lua).
+-- several features can gate the same template (e.g. 07_dr_slayer.lua).
 -- Never gate "planted_return_to_normal_*": lerped slowdowns are undone by adding those on removal, so blocking them
 -- leaves the movement setting permanently scaled down.
 function mod.add_buff_apply_condition(self, buff_template_name, condition)

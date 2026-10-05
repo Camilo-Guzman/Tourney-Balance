@@ -27,17 +27,11 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		- Removed bomb drops and reduced drop chance to pseudo-random 6% (from real-random 20%) (bag size 50 with 3 winning tickets).
 		- Potions drop pseudo-random from bag size 6 with 2 of each potion (speed, strength, cooldown reduction).
 
-		**Grungni's Cunning**
-		- Excess ammo from picking up a large Survivalist pouch is converted into temporary health for Bardin (1 per ammo, max 5).
-
 		**No Dawdling**
 		- Additionally removes the limit on dodging efficiently.
 
 		**Exuberance**
 		- Reduced damage reduction to 20% (from 30%).
-
-		**Firing Fury**
-		- Also procs on picking up large Survivalist pouches (30% ammo).
 
 		**Exhilarating Vapours**
 		- Fixed a bug where repeatedly stepping in and out of the smoke cloud granted extra temp health.
@@ -233,84 +227,6 @@ mod_api.update_talent("dr_ranger", 5, 2, {
     description_values = {},
 })
 mod_api.insert_text("bardin_ranger_reduced_damage_taken_headshot_desc_2", "Bardin takes 20.0% less damage from behind. Whenever he scores a headshots, this bonus applies to all damage taken for 7 seconds.")
-
-
---[[
-	Firing Fury
-	Grungni's Cunning
-]]
-local GRUNGNIS_CUNNING_MAX_TEMP_HEALTH = 5
-
-local function tb_ranged_ammo_extension(inventory_extension)
-	local slot_data = inventory_extension._equipment.slots.slot_ranged
-
-	if not slot_data then
-		return nil
-	end
-
-	local right_unit = slot_data.right_unit_1p
-	local left_unit = slot_data.left_unit_1p
-
-	return right_unit and ScriptUnit.has_extension(right_unit, "ammo_system") or left_unit and ScriptUnit.has_extension(left_unit, "ammo_system") or nil
-end
-
--- Grungni's Cunning: excess ammo (1 per ammo, max 5) becomes temp health. Runs on the picker's own peer, so the heal
--- is requested from the server unless this is the server (host or bot).
-local function tb_grungnis_cunning_temp_health(owner_unit, excess_ammo)
-	local heal_amount = math.min(excess_ammo, GRUNGNIS_CUNNING_MAX_TEMP_HEALTH)
-
-	if heal_amount <= 0 then
-		return
-	end
-
-	if Managers.state.network.is_server then
-		DamageUtils.heal_network(owner_unit, owner_unit, heal_amount, "heal_from_proc")
-	else
-		local network_manager = Managers.state.network
-		local unit_go_id = network_manager:unit_game_object_id(owner_unit)
-
-		if unit_go_id then
-			network_manager.network_transmit:send_rpc_server("rpc_request_heal", unit_go_id, heal_amount, NetworkLookup.heal_types.heal_from_proc)
-		end
-	end
-end
-
-mod:hook(SimpleInventoryExtension, "add_ammo_from_pickup", function (func, self, pickup_settings, ...)
-	-- Only the big Survivalist pouch (30% ammo)
-	if pickup_settings.pickup_name ~= "ammo_ranger_improved" then
-		return func(self, pickup_settings, ...)
-	end
-
-	local owner_unit = self._unit
-	local talent_extension = Unit.alive(owner_unit) and ScriptUnit.has_extension(owner_unit, "talent_system")
-	local has_grungnis_cunning = talent_extension and talent_extension:has_talent("bardin_ranger_passive_improved_ammo")
-	local ammo_extension = has_grungnis_cunning and tb_ranged_ammo_extension(self)
-	local ammo_before = ammo_extension and ammo_extension:total_remaining_ammo()
-
-	func(self, pickup_settings, ...)
-
-	if not talent_extension then
-		return
-	end
-
-	-- Grungni's Cunning
-	if ammo_before then
-		local refill_amount = math.floor(ammo_extension:max_ammo() * (pickup_settings.refill_percentage or 0))
-		local gained = ammo_extension:total_remaining_ammo() - ammo_before
-
-		tb_grungnis_cunning_temp_health(owner_unit, refill_amount - gained)
-	end
-
-	-- Firing Fury
-	if talent_extension:has_talent("bardin_ranger_reload_speed_on_multi_hit") then
-		ScriptUnit.extension(owner_unit, "buff_system"):add_buff("bardin_ranger_reload_speed_on_multi_hit_buff")
-	end
-end)
-mod_api.insert_text("bardin_ranger_reload_speed_on_multi_hit_desc", "Hitting 2 enemies with one ranged attack or picking up a large Survivalist pouch increases Bardin's reload speed by 35.0%% for 2 seconds.")
-mod_api.update_talent("dr_ranger", 4, 2, { -- update description
-	description_values = {},
-})
-mod_api.insert_text("bardin_ranger_passive_improved_ammo_desc_2", string.format("Survivalist pickups restore 30%% ammo. Excess ammo from Survivalist pouches grant up to %d temporary health for Bardin.", GRUNGNIS_CUNNING_MAX_TEMP_HEALTH))
 
 --[[
 	Parting Gift

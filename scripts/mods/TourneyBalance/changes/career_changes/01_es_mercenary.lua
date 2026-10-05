@@ -10,6 +10,7 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 		### Passives
 		**Paced Strikes**
 		- Paced Strikes applies to the team.
+		- Paced Strikes also grants Kruber (only) 10% damage reduction for 6 seconds.
 
 		### Talents
 		**Helborg's Tutelage**
@@ -22,7 +23,10 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 		- Changed to Paced Strikes activates on hitting 1 enemy.
 
 		**Blade Barrier**
-		- Lowered damage reduction to 10% (from 25%).
+		- Lowered damage reduction to 15% (from 25%).
+
+		**Black Market Supplies**
+		- Increased ammo bonus to 50% (from 30%).
 
 		**On Yer Feet, Mates!**
 		- Ultimate cooldown is instantly refunded when an ally is knocked down.
@@ -90,16 +94,29 @@ mod_api.insert_proc_function("gain_markus_mercenary_passive_proc", function (own
 		passive_triggered = true
 	end
 
-	-- Blade Barrier correctly procs when Paced Strike is active
-	if passive_triggered and talent_extension:has_talent("markus_mercenary_passive_defence_on_proc") then
-		buff_system:add_buff(owner_unit, "markus_mercenary_passive_defence", owner_unit, false)
+	if passive_triggered then
+		-- Paced Strikes: damage reduction for Kruber only
+		buff_system:add_buff(owner_unit, "tb_markus_mercenary_passive_defence", owner_unit, false)
+
+		-- Blade Barrier correctly procs when Paced Strike is active
+		if talent_extension:has_talent("markus_mercenary_passive_defence_on_proc") then
+			buff_system:add_buff(owner_unit, "markus_mercenary_passive_defence", owner_unit, false)
+		end
 	end
 end)
+-- Same duration as Paced Strikes' attack speed (markus_mercenary_passive_proc); damage taken is resolved on the server
+mod_api.insert_talent_buff_template("empire_soldier", "tb_markus_mercenary_passive_defence", {
+	stat_buff = "damage_taken",
+	multiplier = -0.1,
+	duration = 6,
+	max_stacks = 1,
+	refresh_durations = true,
+})
 -- Enhanced Training adjustement, because Strike Together is passive
 mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_passive_improved", {
     multiplier = 0.1 -- 0.2
 })
-mod_api.insert_text("career_passive_desc_es_3a", "Hitting 3 enemies in one swing grants 10% increased attack speed for 6 seconds to the Krubersreik 5, or 4.")
+mod_api.insert_text("career_passive_desc_es_3a", "Hitting 3 enemies in one swing grants 10% increased attack speed for 6 seconds to allies. Kruber also takes 10% less damage for the duration.")
 mod_api.insert_text("markus_mercenary_passive_improved_desc", "Paced Strikes now increases attack speed by 20.0%%")
 mod_api.insert_text("markus_mercenary_passive_group_proc_desc", "Paced Strikes activates when hitting 1 enemy.")
 
@@ -139,13 +156,28 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_crit_cou
 	Blade Barrier
 ]]
 mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_passive_defence", {
-	multiplier = -0.1, -- -0.25
+	multiplier = -0.15, -- -0.25
 })
 mod_api.update_talent("es_mercenary", 5, 2, { -- update description
 	description_values = {
 		{
 			value_type = "percent",
-			value = -0.1, -- buff_tweak_data.markus_mercenary_passive_defence.multiplier
+			value = -0.15, -- buff_tweak_data.markus_mercenary_passive_defence.multiplier
+		},
+	},
+})
+
+--[[
+	Black Market Supplies
+]]
+mod_api.update_talent_buff_template("empire_soldier", "markus_mercenary_max_ammo", {
+	multiplier = 0.5, -- 0.3
+})
+mod_api.update_talent("es_mercenary", 5, 3, { -- update description
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.5, -- buff_tweak_data.markus_mercenary_max_ammo.multiplier
 		},
 	},
 })
@@ -211,6 +243,6 @@ mod:add_career_update_function(function (self, unit, input, dt, context, t)
 		self:reduce_activated_ability_cooldown_percent(1)
 	end
 end)
-mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost also revives knocked down allies. Cooldown resets when allies are knocked down.")
+mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost aslo revives knocked down allies. Resets cooldown on Moral Boost when an ally is knocked down.")
 
 

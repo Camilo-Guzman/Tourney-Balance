@@ -10,19 +10,21 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Career Ability
 		**Living Bomb**
 		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
-		- Grants Sienna 30 temporary health (Bomb Balm's self heal, now baseline).
 		- Never deals friendly fire.
 
 		### Passives
-		**Aqshy's Blaze (new)**
-		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 10 seconds.
+		**Blood Magic / Abandon**
+		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
 		- The overcharge explosion deals no friendly fire.
-		- Weapons can be swapped during the explosion.
-		- Can't attack with the ranged weapon for the duration.
-		- Loses 10% of maximum health per second (non-lethal). Each tick that can be paid in full also grants 10% ult cooldown.
-		- Using Living Bomb immediately ends Aqshy's Blaze.
 
 		### Talents
+		**Abandon (reworked)**
+		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 2.5 seconds.
+		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks grant cooldown). Replaces the passive's lethal drain.
+		- Weapons can be swapped during the explosion.
+		- Can't attack with the ranged weapon for the duration.
+		- Using Living Bomb immediately ends Aqshy's Blaze.
+
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
 
@@ -32,11 +34,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Enfeebling Flames**
 		- Reduced damage reduction against burning enemies to 10% (from 30%).
 
-		**Abandon**
-		- Reworked: Aqshy's Blaze lasts 2.5 seconds, but converts 5% of maximum health into 10% ult cooldown 4 times per second (replaces health to ult at high overcharge).
-
-		**Bomb Balm**
-		- Sienna's own temporary health is now baseline on Living Bomb, so Bomb Balm only adds the heal for nearby allies.
 	$END_TB
 ]]
 
@@ -113,44 +110,59 @@ mod_api.insert_text("career_passive_desc_bw_3c", string.format("Increased melee 
 ]]
 
 --[[
-	Aqshy's Blaze
+	Abandon (passive, vanilla talent effect)
+]]
+-- Vanilla Abandon as part of the passive: at high overcharge, drains 5% max health per 0.25s into 10% ult cooldown
+-- (lethal). Overcharging explodes as in vanilla. Replaced by the reworked Abandon talent (Aqshy's Blaze state).
+local AQSHYS_BLAZE_TALENT = "sienna_unchained_health_to_ult" -- row 5 col 2, vanilla Abandon's slot
+
+local function tb_has_aqshys_blaze(unit)
+	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
+
+	return talent_extension and talent_extension:has_talent(AQSHYS_BLAZE_TALENT) or false
+end
+
+local activate_buff_stacks_based_on_overcharge_chunks = BuffFunctionTemplates.functions.activate_buff_stacks_based_on_overcharge_chunks
+
+mod_api.insert_buff_function("tb_abandon_activate_stacks", function (unit, buff, params)
+	if not tb_has_aqshys_blaze(unit) then
+		return activate_buff_stacks_based_on_overcharge_chunks(unit, buff, params)
+	end
+
+	-- Aqshy's Blaze taken: no lethal drain, drop a stack that was already up
+	local stack_ids = buff.stack_ids
+
+	if stack_ids and #stack_ids > 0 then
+		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+
+		for i = #stack_ids, 1, -1 do
+			buff_extension:remove_buff(table.remove(stack_ids, i))
+		end
+	end
+end)
+mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to_ult", {
+	update_func = "tb_abandon_activate_stacks", -- "activate_buff_stacks_based_on_overcharge_chunks"
+})
+mod_api.insert_career_passives("bw_3", {
+	"sienna_unchained_health_to_ult",
+})
+mod_api.insert_text("career_passive_desc_bw_3a", "Blood Magic: 50% damage taken transferred to Overcharge. When overcharging, Sienna's health is drained to rapidly reduce the cooldown of Living Bomb.")
+
+--[[
+	Abandon talent (row 5 col 2): Aqshy's Blaze state
 ]]
 local AQSHYS_BLAZE_BUFF = "tb_sienna_unchained_unchained_state"
-local AQSHYS_BLAZE_DURATION = 10
-local AQSHYS_BLAZE_MAX_HEALTH_COST = 0.1 -- of max health, per second
-local AQSHYS_BLAZE_COOLDOWN = 0.1 -- of ult, per second
+local AQSHYS_BLAZE_DURATION = 2.5
+local AQSHYS_BLAZE_TICKS_PER_SECOND = 4
+local AQSHYS_BLAZE_MAX_HEALTH_COST = 0.05 -- of max health, per tick
+local AQSHYS_BLAZE_COOLDOWN = 0.1 -- of ult, per tick
 -- life_tap: no damage reduction or Blood Magic. wounded_dot: doesn't interrupt
 local AQSHYS_BLAZE_DAMAGE_SOURCE = "life_tap"
 local AQSHYS_BLAZE_DAMAGE_TYPE = "wounded_dot"
 
--- Abandon (row 5 col 2)
-local ABANDON_TALENT = "sienna_unchained_health_to_ult"
-local ABANDON_DURATION = 2.5
-local ABANDON_TICKS_PER_SECOND = 4
-local ABANDON_MAX_HEALTH_COST = 0.05 -- per tick
-local ABANDON_COOLDOWN = 0.1 -- per tick
-
-local function tb_has_abandon(unit)
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-
-	return talent_extension and talent_extension:has_talent(ABANDON_TALENT) or false
-end
-
-local function tb_aqshys_blaze_duration(unit, sub_buff_template, duration)
-	return tb_has_abandon(unit) and ABANDON_DURATION or duration
-end
-
--- Every 4th tick without Abandon. Health on the server, cooldown on the owner
+-- Health on the server, cooldown on the owner
 mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function (unit, buff, params)
 	if not Managers.state.network.is_server or not HEALTH_ALIVE[unit] then
-		return
-	end
-
-	local has_abandon = tb_has_abandon(unit)
-
-	buff.tb_tick_count = (buff.tb_tick_count or 0) + 1
-
-	if not has_abandon and buff.tb_tick_count % ABANDON_TICKS_PER_SECOND ~= 0 then
 		return
 	end
 
@@ -168,11 +180,6 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 
 	local cost = health_extension:get_max_health() * AQSHYS_BLAZE_MAX_HEALTH_COST
 	local cooldown = AQSHYS_BLAZE_COOLDOWN
-
-	if has_abandon then
-		cost = health_extension:get_max_health() * ABANDON_MAX_HEALTH_COST
-		cooldown = ABANDON_COOLDOWN
-	end
 
 	-- Non-lethal, only full ticks give cooldown
 	local damage = math.min(cost, health_extension:current_health() - 1)
@@ -197,10 +204,9 @@ end)
 mod_api.insert_talent_buff_template("bright_wizard", AQSHYS_BLAZE_BUFF, {
 	icon = "sienna_unchained_passive",
 	duration = AQSHYS_BLAZE_DURATION,
-	duration_modifier_func = tb_aqshys_blaze_duration,
 	debuff = true,
 	max_stacks = 1,
-	update_frequency = 1 / ABANDON_TICKS_PER_SECOND,
+	update_frequency = 1 / AQSHYS_BLAZE_TICKS_PER_SECOND,
 	update_func = "tb_aqshys_blaze_health_to_cooldown_tick",
 	event = "on_ability_activated",
 	buff_func = "tb_aqshys_blaze_end_on_own_ability",
@@ -210,8 +216,13 @@ mod_api.insert_talent_buff_template("bright_wizard", AQSHYS_BLAZE_BUFF, {
 	},
 })
 mod_api.insert_text(AQSHYS_BLAZE_BUFF, "Aqshy's Blaze")
-mod_api.insert_perk_text("tb_bw_3_unchained", "Aqshy's Blaze", string.format("Overcharging causes Sienna to immediately explode and lose the ability to cast spells for %d seconds. During this time, she drains %d%% health every second to restore %d%% ability cooldown (non-lethal). Using Living Bomb ends this state.", AQSHYS_BLAZE_DURATION, AQSHYS_BLAZE_MAX_HEALTH_COST * 100, AQSHYS_BLAZE_COOLDOWN * 100))
-mod_api.insert_career_perk_descriptions("bw_3", "tb_bw_3_unchained")
+-- Takes over vanilla Abandon's talent slot; its effect lives in the state buff above and the explode hook below
+mod_api.update_talent("bw_unchained", 5, 2, {
+	description_values = {},
+	buffs = {},
+})
+mod_api.insert_text(AQSHYS_BLAZE_TALENT, "Abandon")
+mod_api.insert_text("sienna_unchained_health_to_ult_desc", "Damage taken from overcharging is no longer lethal.")
 
 -- Natural Talent (row 5 col 3), added with the state (disabled)
 --[==[
@@ -223,7 +234,6 @@ local NATURAL_TALENT_HEALING_RECEIVED = 0.4
 mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, {
 	{
 		duration = AQSHYS_BLAZE_DURATION,
-		duration_modifier_func = tb_aqshys_blaze_duration,
 		max_stacks = 1,
 		stat_buff = "attack_speed",
 		multiplier = NATURAL_TALENT_ATTACK_SPEED,
@@ -234,7 +244,6 @@ mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, 
 	{
 		name = "tb_sienna_unchained_natural_talent_state_healing",
 		duration = AQSHYS_BLAZE_DURATION,
-		duration_modifier_func = tb_aqshys_blaze_duration,
 		max_stacks = 1,
 		stat_buff = "healing_received",
 		multiplier = NATURAL_TALENT_HEALING_RECEIVED,
@@ -242,7 +251,8 @@ mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, 
 })
 ]==]
 
--- Overcharge explosion: vanilla state, shortened for Unchained, then enters Aqshy's Blaze instead of damaging her
+-- Overcharge explosion with Aqshy's Blaze: vanilla state, shortened, then enters Aqshy's Blaze instead of damaging her.
+-- Without the talent the explosion is vanilla.
 local AQSHYS_BLAZE_EXPLOSION_TIME = 0.1 -- 3
 
 local function tb_keep_overcharge() end
@@ -250,7 +260,7 @@ local function tb_keep_overcharge() end
 mod:hook_safe(PlayerCharacterStateOverchargeExploding, "on_enter", function (self, unit, input, dt, context, t)
 	local career_extension = ScriptUnit.has_extension(unit, "career_system")
 
-	self.tb_aqshys_blaze = career_extension and career_extension:career_name() == "bw_unchained"
+	self.tb_aqshys_blaze = career_extension and career_extension:career_name() == "bw_unchained" and tb_has_aqshys_blaze(unit)
 
 	if self.tb_aqshys_blaze then
 		self.explosion_time = t + AQSHYS_BLAZE_EXPLOSION_TIME
@@ -369,7 +379,7 @@ end)
 -- Witch Hunter Captain's shout
 local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 
-mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies, and gains 30 temporary health.")
+mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
 
 local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
 	local owner_unit = self._owner_unit
@@ -392,7 +402,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
 end
 
--- Vanilla _run_ability, plus WHC shout, baseline self heal, Bomb Balm allies only
+-- Vanilla _run_ability, plus WHC shout
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -430,14 +440,17 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	local career_power_level = career_extension:get_career_power_level()
 	local heal_type_id = NetworkLookup.heal_types.career_skill
 	local heal_amount = TalentUtils.get_talent_attribute("sienna_unchained_activated_ability_temp_health", "heal_amount")
+
+	-- Bomb Balm's self heal, baseline (disabled)
+	--[[
 	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
 
-	-- Bomb Balm's self heal, baseline
 	if owner_unit_go_id then
 		network_transmit:send_rpc_server("rpc_request_heal", owner_unit_go_id, heal_amount, heal_type_id)
 	end
+	]]
 
-	-- Bomb Balm: allies only
+	-- Bomb Balm (vanilla: heals Sienna and nearby allies)
 	if talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
 		local radius = 10
 		local nearby_player_units = FrameTable.alloc_table()
@@ -449,7 +462,7 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 		local side_manager = Managers.state.side
 
 		for _, player_unit in pairs(nearby_player_units) do
-			if player_unit ~= owner_unit and not side_manager:is_enemy(owner_unit, player_unit) then
+			if --[[player_unit ~= owner_unit and]] not side_manager:is_enemy(owner_unit, player_unit) then -- allies-only exclusion disabled
 				local unit_go_id = network_manager:unit_game_object_id(player_unit)
 
 				if unit_go_id then
@@ -831,26 +844,16 @@ mod_api.insert_text("sienna_unchained_reduced_damage_taken_after_venting_desc_2"
 -- Burning enemies deal 10% less damage (from 30%). The multiplier is read straight from the buff template in
 -- thp_stagger_damage_changes/02_damage_taken_changes.lua
 mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_burning_enemies_reduced_damage", {
-	multiplier = -0.1, -- -0.3
+	multiplier = -0.2, -- -0.3
 })
 mod_api.update_talent("bw_unchained", 5, 1, { -- update description
 	description_values = {
 		{
 			value_type = "percent",
-			value = -0.1, -- buff_tweak_data.sienna_unchained_burning_enemies_reduced_damage.multiplier
+			value = -0.2, -- buff_tweak_data.sienna_unchained_burning_enemies_reduced_damage.multiplier
 		},
 	},
 })
-
---[[
-	Abandon
-]]
--- Effect lives in Aqshy's Blaze (ABANDON_*)
-mod_api.update_talent("bw_unchained", 5, 2, {
-	description_values = {},
-	buffs = {},
-})
-mod_api.insert_text("sienna_unchained_health_to_ult_desc", string.format("Aqshy's Blaze lasts %g seconds, but converts %d%% of maximum health into %d%% ult cooldown %d times per second instead (non-lethal, only while she has the health to spare).", ABANDON_DURATION, ABANDON_MAX_HEALTH_COST * 100, ABANDON_COOLDOWN * 100, ABANDON_TICKS_PER_SECOND))
 
 --[[
 	Natural Talent (disabled)
@@ -863,10 +866,11 @@ mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("R
 ]==]
 
 --[[
-	Bomb Balm
+	Bomb Balm (disabled, vanilla again)
 ]]
--- See _run_ability
+--[[
 mod_api.update_talent("bw_unchained", 6, 3, {
 	description_values = {},
 })
 mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb also grants 30 temporary health to nearby allies.")
+]]
