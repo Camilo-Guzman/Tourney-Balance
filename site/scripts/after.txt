@@ -1,0 +1,29 @@
+    "after": [
+      {
+        "action": "action_wield",
+        "input": "action_wield",
+        "start_time": 0.25,
+        "sub_action": "default"
+      },
+      {
+        "action": "action_two",
+        "end_time": "Infinity",
+        "input": "action_two_hold",
+        "start_time": 0.4,
+        "sub_action": "default"
+      },
+      {
+        "action": "action_one",
+        "end_time": "Infinity",
+        "input": "action_one",
+        "release_required": "action_one_hold",
+        "start_time": 0.6,
+        "sub_action": "default"
+      },
+      {
+        "action": "weapon_reload",
+        "input": "weapon_reload",
+        "start_time": 0.6,
+        "sub_action": "default"
+      }
+    ],

@@ -1,22 +1,6 @@
 local mod = get_mod("TourneyBalance")
+local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
-local function merge(dst, src)
-    for k, v in pairs(src) do
-        dst[k] = v
-    end
-    return dst
-end
-function mod.add_buff_template(self, buff_name, buff_data)
-    local new_talent_buff = {
-        buffs = {
-            merge({ name = buff_name }, buff_data),
-        },
-    }
-    BuffTemplates[buff_name] = new_talent_buff
-    local index = #NetworkLookup.buff_templates + 1
-    NetworkLookup.buff_templates[index] = buff_name
-    NetworkLookup.buff_templates[buff_name] = index
-end
 --Buffs for enemies used in Dutch Spice. Not put in Dutch Spice itself because that would be problematic if ran with a balance mod like this one.
 Managers.package:load("resource_packages/mutators/mutator_curse_bolt_of_change", "global")
 Managers.package:load("resource_packages/mutators/mutator_curse_belakor_totems", "global")
@@ -26,7 +10,7 @@ Managers.package:load("resource_packages/mutators/mutator_curse_khorne_champions
 Managers.package:load("resource_packages/mutators/mutator_curse_blood_storm", "global")
 Managers.package:load("resource_packages/dlcs/morris_ingame", "global")
 
-mod:add_buff_function("side_buff_aura", function(owner_unit, buff, params)
+mod_api.insert_buff_function("side_buff_aura", function(owner_unit, buff, params)
     local template = buff.template
 
     if template.server_only and not Managers.state.network.is_server then
@@ -104,7 +88,7 @@ mod:add_buff_function("side_buff_aura", function(owner_unit, buff, params)
 end)
 
 --Nurgle
-mod:add_buff_template("nurgle_debuff_dutch_aoe_movement", {
+mod_api.insert_buff_template("nurgle_debuff_dutch_aoe_movement", {
     name = "nurgle_debuff_dutch_aoe_movement",
     owner_as_source = true,
     player_buff_name = "nurgle_movement_debuff_dutch",
@@ -115,7 +99,7 @@ mod:add_buff_template("nurgle_debuff_dutch_aoe_movement", {
     update_frequency = 1,
     update_func = "side_buff_aura",
 })
-mod:add_buff_template("nurgle_movement_debuff_dutch", {
+mod_api.insert_buff_template("nurgle_movement_debuff_dutch", {
 	multiplier = 0.5,
     max_stacks = 1,
     remove_buff_func = "remove_movement_buff",
@@ -125,18 +109,18 @@ mod:add_buff_template("nurgle_movement_debuff_dutch", {
     },
     icon = "icon_nurgle"
 })
-mod:add_buff_template("nurgle_mass_buff_dutch", {
+mod_api.insert_buff_template("nurgle_mass_buff_dutch", {
     multiplier = 1,
     name = "nurgle_mass_buff_dutch",
     stat_buff = "hit_mass_amount",
 })
-mod:add_buff_template("ai_health_buff_dutch", {
+mod_api.insert_buff_template("ai_health_buff_dutch", {
     remove_buff_func = "remove_max_health_buff_for_ai",
     name = "ai_health_buff_dutch",
     apply_buff_func = "apply_max_health_buff_for_ai",
     multiplier = 1,
 })
-mod:add_buff_template("nurgle_debuff_dutch_fx", {
+mod_api.insert_buff_template("nurgle_debuff_dutch_fx", {
     start_sound_event_name = "Play_curse_corrupted_flesh_loop",
     name = "nurgle_fx",
     mark_particle = "fx/deus_corrupted_flesh_01",
@@ -146,7 +130,7 @@ mod:add_buff_template("nurgle_debuff_dutch_fx", {
     apply_buff_func = "apply_mark_of_nurgle",
     stop_sound_event_name = "Stop_curse_corrupted_flesh_loop"
 })
-mod:add_buff_template("gs_nurgle_decal", {
+mod_api.insert_buff_template("gs_nurgle_decal", {
 	decal = "units/decals/decal_vortex_circle_inner",
 	name = "nurgle_decal",
 	decal_scale = 6,
@@ -155,14 +139,14 @@ mod:add_buff_template("gs_nurgle_decal", {
     remove_buff_func = "remove_generic_decal",
 	apply_buff_func = "apply_generic_decal_linked",
 })
-mod:add_buff_template("gs_nurgle_decal_remover", {
+mod_api.insert_buff_template("gs_nurgle_decal_remover", {
     event = "on_death",
     remove_buff_func = "remove_deus_rally_flag",
     name = "deus_rally_flag_lifetime",
 })
 --Tzeentch
 local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
-mod:add_buff_template("tzeentchian_barier_buff", {
+mod_api.insert_buff_template("tzeentchian_barier_buff", {
     remove_buff_func = "remove_attach_particle",
     name = "tzeentch_barier_effect",
     buff_func = "remove_linked_unit",
@@ -172,7 +156,7 @@ mod:add_buff_template("tzeentchian_barier_buff", {
     max_stacks = 1,
     perks = { buff_perks.invulnerable_ranged }
 })
-mod:add_buff_template("tzeentch_debuff_dutch_aoe", {
+mod_api.insert_buff_template("tzeentch_debuff_dutch_aoe", {
     name = "tzeentch_debuff_dutch_aoe",
     owner_as_source = true,
     player_buff_name = "tzeentch_debuff_crits_dutch",
@@ -182,19 +166,19 @@ mod:add_buff_template("tzeentch_debuff_dutch_aoe", {
     update_frequency = 1,
     update_func = "side_buff_aura",
 })
-mod:add_buff_template("tzeentch_debuff_crits_dutch", {
+mod_api.insert_buff_template("tzeentch_debuff_crits_dutch", {
     icon = "icon_tzeentch",
     max_stacks = 1,
     stat_buff = "critical_strike_chance",
     bonus = -0.15
 })
-mod:add_buff_template("tzeentch_buff_dutch_fx", {
+mod_api.insert_buff_template("tzeentch_buff_dutch_fx", {
     remove_buff_func = "remove_attach_particle",
     name = "belakor_grey_wings_particle",
     apply_buff_func = "apply_attach_particle",
     particle_fx = "fx/blk_grey_wings_01"
 })
-mod:add_buff_template("tzeentch_champion_decal", {
+mod_api.insert_buff_template("tzeentch_champion_decal", {
 	decal = "units/decals/deus_decal_aoe_bluefire_02",
 	name = "nurgle_decal",
 	decal_scale = 5,
@@ -205,7 +189,7 @@ mod:add_buff_template("tzeentch_champion_decal", {
 })
 
 --Slaanesh
-mod:add_buff_template("slaanesh_debuff_dutch_aoe", {
+mod_api.insert_buff_template("slaanesh_debuff_dutch_aoe", {
     name = "slaanesh_debuff_dutch_aoe",
     owner_as_source = true,
     player_buff_name = "slaanesh_block_cost_debuff_dutch",
@@ -216,19 +200,19 @@ mod:add_buff_template("slaanesh_debuff_dutch_aoe", {
     update_frequency = 1,
     update_func = "side_buff_aura",
 })
-mod:add_buff_template("slaanesh_block_cost_debuff_dutch", {
+mod_api.insert_buff_template("slaanesh_block_cost_debuff_dutch", {
 	stat_buff = "block_cost",
 	multiplier = 1,
     max_stacks = 1,
     icon = "icon_slaanesh",
 })
-mod:add_buff_template("slaanesh_stagger_buff_dutch", {
+mod_api.insert_buff_template("slaanesh_stagger_buff_dutch", {
     multiplier = 1,
     name = "slaanesh_stagger_buff_dutch",
     stat_buff = "stagger_resistance",
     max_stacks = 1
 })
-mod:add_buff_template("belakor_buff_dutch_fx", {
+mod_api.insert_buff_template("belakor_buff_dutch_fx", {
     name = "belakor_fx",
     mark_particle = "fx/blk_grey_wings_01",
     buff_func = "remove_mark_of_nurgle",
@@ -236,7 +220,7 @@ mod:add_buff_template("belakor_buff_dutch_fx", {
     remove_buff_func = "remove_mark_of_nurgle",
     apply_buff_func = "apply_mark_of_nurgle",
 })
-mod:add_buff_template("belakor_champion_decal", {
+mod_api.insert_buff_template("belakor_champion_decal", {
 	decal = "units/decals/deus_decal_aoe_cursedchest_01",
 	name = "nurgle_decal",
 	decal_scale = 7,
@@ -246,7 +230,7 @@ mod:add_buff_template("belakor_champion_decal", {
 	apply_buff_func = "apply_generic_decal_linked",
 })
 
-mod:add_buff_function("apply_generic_decal_linked", function(unit, buff, params, world)
+mod_api.insert_buff_function("apply_generic_decal_linked", function(unit, buff, params, world)
     local z_offset = buff.template.decal_z_offset or 0
     local position = Vector3.copy(POSITION_LOOKUP[unit])
     position.z = position.z + z_offset
@@ -262,7 +246,7 @@ mod:add_buff_function("apply_generic_decal_linked", function(unit, buff, params,
 end)
 
 --Khorne
-mod:add_buff_template("khorne_debuff_dutch_aoe", {
+mod_api.insert_buff_template("khorne_debuff_dutch_aoe", {
     name = "slaanesh_debuff_dutch_aoe",
     owner_as_source = true,
     player_buff_name = "curse_khorne_champions_melee_debuff",
@@ -273,7 +257,7 @@ mod:add_buff_template("khorne_debuff_dutch_aoe", {
     update_frequency = 1,
     update_func = "side_buff_aura",
 })
-mod:add_buff_template("khorne_debuff_ranged_dutch_aoe", {
+mod_api.insert_buff_template("khorne_debuff_ranged_dutch_aoe", {
     name = "slaanesh_debuff_dutch_aoe",
     owner_as_source = true,
     player_buff_name = "curse_khorne_champions_ranged_debuff",
@@ -283,13 +267,13 @@ mod:add_buff_template("khorne_debuff_ranged_dutch_aoe", {
     update_frequency = 1,
     update_func = "side_buff_aura",
 })
-mod:add_buff_template("curse_khorne_champions_ranged_debuff", {
+mod_api.insert_buff_template("curse_khorne_champions_ranged_debuff", {
 	stat_buff = "power_level_ranged",
 	multiplier = -0.5,
     max_stacks = 1,
     icon = "icon_khorne",
 })
-mod:add_buff_template("curse_khorne_champions_melee_debuff", {
+mod_api.insert_buff_template("curse_khorne_champions_melee_debuff", {
 	stat_buff = "power_level_melee",
 	multiplier = 0.15,
     max_stacks = 1,
@@ -302,7 +286,7 @@ BuffTemplates.curse_khorne_champions_buff.buffs = {
         max_stacks = 1
     }
 }
-mod:add_buff_template("khorne_buff_dutch_fx", {
+mod_api.insert_buff_template("khorne_buff_dutch_fx", {
     name = "khorne_fx",
     mark_particle = "fx/deus_curse_khorne_champions_leader",
     buff_func = "remove_mark_of_nurgle",
@@ -310,7 +294,7 @@ mod:add_buff_template("khorne_buff_dutch_fx", {
     remove_buff_func = "remove_mark_of_nurgle",
     apply_buff_func = "apply_mark_of_nurgle",
 })
-mod:add_buff_template("khorne_champion_decal", {
+mod_api.insert_buff_template("khorne_champion_decal", {
 	decal = "units/decals/deus_decal_bloodstorm_inner",
 	name = "khorne_decal",
 	decal_scale = 10,
@@ -319,7 +303,7 @@ mod:add_buff_template("khorne_champion_decal", {
     remove_buff_func = "remove_generic_decal",
 	apply_buff_func = "apply_generic_decal_linked",
 })
-mod:add_buff_template("khorne_prop_dutch", {
+mod_api.insert_buff_template("khorne_prop_dutch", {
     unit_name = "units/props/deus_bloodgod_curse/deus_bloodgod_curse_01",
     name = "curse_khorne_champions_unit",
     buff_func = "remove_linked_unit",
@@ -337,7 +321,7 @@ mod:add_buff_template("khorne_prop_dutch", {
         skaven_storm_vermin_champion = 1.9
     }
 })
-mod:add_buff_template("random_lightning", {
+mod_api.insert_buff_template("random_lightning", {
 	update_func = "spawn_lightning_in_a_bit",
     max_stacks = 1,
     time_between_explosions = 4,
@@ -345,7 +329,7 @@ mod:add_buff_template("random_lightning", {
     number_of_lightning = 3
 })
 
-mod:add_buff_function("spawn_lightning_in_a_bit", function (unit, buff, params, world)
+mod_api.insert_buff_function("spawn_lightning_in_a_bit", function (unit, buff, params, world)
     local t = params.t
     local buff_template = buff.template
     local next_explosion = buff.next_explosion or 0
@@ -388,7 +372,7 @@ mod:add_buff_function("spawn_lightning_in_a_bit", function (unit, buff, params, 
     end
 end)
 
-mod:add_buff_template("anti_burst", {
+mod_api.insert_buff_template("anti_burst", {
 	event = "on_damage_taken",
     max_stacks = 1,
     activation_health = 0.8,
@@ -399,7 +383,7 @@ mod:add_buff_template("anti_burst", {
     buff_to_add = "damage_immune"
 })
 
-mod:add_proc_function("anti_burst_func", function (owner_unit, buff, params)
+mod_api.insert_proc_function("anti_burst_func", function (owner_unit, buff, params)
     local template = buff.template
     local buff_to_add = template.buff_to_add
     local activation_health = template.activation_health
@@ -469,7 +453,7 @@ mod:add_proc_function("anti_burst_func", function (owner_unit, buff, params)
     end
 end)
 
-mod:add_buff_template("damage_immune", {
+mod_api.insert_buff_template("damage_immune", {
 	duration = 10,
     max_stacks = 1,
     perks = { buff_perks.invulnerable },
@@ -478,7 +462,7 @@ mod:add_buff_template("damage_immune", {
     remove_buff_func = "remove_attach_particle",
     refresh_durations = true
 })
-mod:add_buff_template("degenerating", {
+mod_api.insert_buff_template("degenerating", {
     apply_buff_func = "start_dot_damage",
     damage_profile = "dot_degenerating",
     name = "mutator player dot",
@@ -486,7 +470,7 @@ mod:add_buff_template("degenerating", {
     update_func = "apply_dot_damage",
     update_start_delay = 1,
 })
-mod:add_buff_template("degenerating_times_2", {
+mod_api.insert_buff_template("degenerating_times_2", {
     apply_buff_func = "start_dot_damage",
     damage_profile = "dot_degenerating",
     name = "mutator player dot",
@@ -494,7 +478,7 @@ mod:add_buff_template("degenerating_times_2", {
     update_func = "apply_dot_damage",
     update_start_delay = 1,
 })
-mod:add_buff_template("degenerating_times_4", {
+mod_api.insert_buff_template("degenerating_times_4", {
     apply_buff_func = "start_dot_damage",
     damage_profile = "dot_degenerating",
     name = "mutator player dot",
@@ -555,21 +539,21 @@ NewDamageProfileTemplates.dot_degenerating = {
 	}
 }
 
-mod:add_buff_template("troll_reward_cog", {
+mod_api.insert_buff_template("troll_reward_cog", {
     stat_buff = "healing_received",
 	multiplier = 0.2,
 	max_stacks = 1,
     icon = "twitch_icon_bad_indigestion"
 })
 
-mod:add_buff_template("troll_reward_waterflow", {
+mod_api.insert_buff_template("troll_reward_waterflow", {
     stat_buff = "damage_taken",
 	multiplier = -0.15,
 	max_stacks = 1,
     icon = "twitch_icon_bad_indigestion"
 })
 
-mod:add_buff_template("troll_reward_waterwheel", {
+mod_api.insert_buff_template("troll_reward_waterwheel", {
     stat_buff = "attack_speed",
 	multiplier = 0.15,
 	max_stacks = 1,

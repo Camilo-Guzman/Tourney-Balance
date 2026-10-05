@@ -404,58 +404,58 @@ local localization = {
 			.. "\n이 옵션은 이벤트 중 자동으로 활성화됩니다.",
 	},
 
-	-- Accessibility
-	accessibility = {
-		en = "Accessibility",
+	-- Fun Features
+	fun_features = {
+		en = "Fun Features",
 	},
-	tb_ping_outline_color_group = {
-		en = "Ping Outline Color",
+	jump_cancel_dodges_title = {
+		en = "Jump-Cancel Dodges",
 	},
-	tb_isjya_ping_outline_color_group = {
-		en = "Ping Outline Color - I Shall Judge You All",
+	jump_cancel_dodges_description = {
+		en = "Jumping near the end of a dodge cancels it into a jump, carrying the dodge's momentum. Works for every career, not just Handmaiden.",
 	},
-	tb_ping_color_r_title = {
-		en = "Red",
+	jump_cancel_dashes_title = {
+		en = "Jump-Cancel Dashes",
 	},
-	tb_ping_color_r_description = {
-		en = "Default: 30",
-	},
-	tb_ping_color_g_title = {
-		en = "Green",
-	},
-	tb_ping_color_g_description = {
-		en = "Default: 150",
-	},
-	tb_ping_color_b_title = {
-		en = "Blue",
-	},
-	tb_ping_color_b_description = {
-		en = "Default: 255",
-	},
-	tb_special_tag_color_r_title = {
-		en = "Red",
-	},
-	tb_special_tag_color_r_description = {
-		en = "Default: 227",
-	},
-	tb_special_tag_color_g_title = {
-		en = "Green",
-	},
-	tb_special_tag_color_g_description = {
-		en = "Default: 4",
-	},
-	tb_special_tag_color_b_title = {
-		en = "Blue",
-	},
-	tb_special_tag_color_b_description = {
-		en = "Default: 4",
+	jump_cancel_dashes_description = {
+		en = "Jumping while dashing (career skills that lunge you forward, e.g. Handmaiden's Dash) cancels the dash into a jump, carrying its momentum. Works for every career with a dash-type skill.",
 	},
 
+	tb_color_preset_default_title = {
+		en = "Default",
+	},
+	tb_color_preset_red_title = {
+		en = "Red",
+	},
+	tb_color_preset_green_title = {
+		en = "Green",
+	},
+	tb_color_preset_blue_title = {
+		en = "Blue",
+	},
+	tb_color_preset_white_title = {
+		en = "White",
+	},
+	tb_color_preset_ghost_title = {
+		en = "Ghost",
+	},
+	tb_color_preset_pink_title = {
+		en = "Pink",
+	},
+	tb_color_preset_gold_title = {
+		en = "Gold",
+	},
+	tb_color_preset_custom_title = {
+		en = "Custom",
+	},
 	-- Debugging
 	debugging = {
 		en = "Debugging",
 	},
 	stagger_state_visualizer_title = {
+		en = "Stagger State Visualizer",
+	},
+	stagger_state_visualizer_group = {
 		en = "Stagger State Visualizer",
 	},
 	stagger_state_visualizer_description = {
@@ -472,7 +472,80 @@ local localization = {
 		en = "Include Mainstay Stagger Count",
 	},
 	stagger_state_visualizer_include_mainstay_description = {
-		en = "Include the Mainstay talent's marked stagger count (from the target's dummy_stagger buff) in the visualized sum.",
+		en = "Include the Mainstay talent's marked stagger count (from the target's dummy_stagger buff) in the visualized sum."
+			.. "\nOnly shown if you have Mainstay, since only Mainstay users benefit from these marks.",
+	},
+	stagger_state_visualizer_include_tank_title = {
+		en = "Include Bulwark Stagger Count",
+	},
+	stagger_state_visualizer_include_tank_description = {
+		en = "Include the Bulwark talent's marked stagger count (from the target's tb_tank_stagger_mark_buff stacks) in the visualized sum.",
+	},
+	outline_colors_stagger_state_visualizer = {
+		en = "Outline Colors",
+	},
+	tb_stagger_count_1_color_group = {
+		en = "Stagger Count 1 Outline Color",
+	},
+	tb_stagger_count_1_color_r_title = {
+		en = "Red",
+	},
+	tb_stagger_count_1_color_r_description = {
+		en = "Default: 0",
+	},
+	tb_stagger_count_1_color_g_title = {
+		en = "Green",
+	},
+	tb_stagger_count_1_color_g_description = {
+		en = "Default: 255",
+	},
+	tb_stagger_count_1_color_b_title = {
+		en = "Blue",
+	},
+	tb_stagger_count_1_color_b_description = {
+		en = "Default: 0",
+	},
+	tb_stagger_count_2_color_group = {
+		en = "Stagger Count 2 Outline Color",
+	},
+	tb_stagger_count_2_color_r_title = {
+		en = "Red",
+	},
+	tb_stagger_count_2_color_r_description = {
+		en = "Default: 255",
+	},
+	tb_stagger_count_2_color_g_title = {
+		en = "Green",
+	},
+	tb_stagger_count_2_color_g_description = {
+		en = "Default: 255",
+	},
+	tb_stagger_count_2_color_b_title = {
+		en = "Blue",
+	},
+	tb_stagger_count_2_color_b_description = {
+		en = "Default: 0",
+	},
+	tb_stagger_count_3_color_group = {
+		en = "Stagger Count 3+ Outline Color",
+	},
+	tb_stagger_count_3_color_r_title = {
+		en = "Red",
+	},
+	tb_stagger_count_3_color_r_description = {
+		en = "Default: 255",
+	},
+	tb_stagger_count_3_color_g_title = {
+		en = "Green",
+	},
+	tb_stagger_count_3_color_g_description = {
+		en = "Default: 0",
+	},
+	tb_stagger_count_3_color_b_title = {
+		en = "Blue",
+	},
+	tb_stagger_count_3_color_b_description = {
+		en = "Default: 0",
 	},
 }
 

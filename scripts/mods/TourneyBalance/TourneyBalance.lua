@@ -1,92 +1,11 @@
 local mod = get_mod("TourneyBalance")
 
--- Text Localization
-local _language_id = Application.user_setting("language_id")
-local _localization_database = {}
-mod._quick_localize = function (self, text_id)
-    local mod_localization_table = _localization_database
-    if mod_localization_table then
-        local text_translations = mod_localization_table[text_id]
-        if text_translations then
-            return text_translations[_language_id] or text_translations["en"]
-        end
-    end
-end
-function mod.add_text(self, text_id, text)
-    if type(text) == "table" then
-        _localization_database[text_id] = text
-    else
-        _localization_database[text_id] = {
-            en = text
-        }
-    end
-end
-function mod.add_talent_text(self, talent_name, name, description)
-    mod:add_text(talent_name, name)
-    mod:add_text(talent_name .. "_desc", description)
-end
-mod:hook("Localize", function(func, text_id)
-    local str = mod:_quick_localize(text_id)
-    if str then return str end
-    return func(text_id)
-end)
 NewDamageProfileTemplates = NewDamageProfileTemplates or {}
-function mod:add_buff(buff_name, buff_data)
-    local new_buff = {
-        buffs = {
-            merge({ name = buff_name }, buff_data),
-        },
-    }
-    BuffTemplates[buff_name] = new_buff
-    local index = #NetworkLookup.buff_templates + 1
-    NetworkLookup.buff_templates[index] = buff_name
-    NetworkLookup.buff_templates[buff_name] = index
-end
-local function merge(dst, src)
-		for k, v in pairs(src) do
-			dst[k] = v
-		end
-		return dst
-end
-function mod.add_buff_template(self, buff_name, buff_data, extra_data)
-    local new_buff = {
-        buffs = {
-            merge({ name = buff_name }, buff_data),
-        },
-    }
-    if extra_data then
-        new_buff = merge(new_buff, extra_data)
-	elseif type(buff_data[1]) == "table" then
-		new_buff = {
-			buffs = buff_data,
-		}
-		if new_buff.buffs[1].name == nil then
-			new_buff.buffs[1].name = buff_name
-		end	
-    end
-    BuffTemplates[buff_name] = new_buff
-    local index = #NetworkLookup.buff_templates + 1
-    NetworkLookup.buff_templates[index] = buff_name
-    NetworkLookup.buff_templates[buff_name] = index
-end
-function mod.add_explosion_template(self, explosion_name, data)
-    ExplosionTemplates[explosion_name] = merge({ name = explosion_name}, data)
-    local index = #NetworkLookup.explosion_templates + 1
-    NetworkLookup.explosion_templates[index] = explosion_name
-    NetworkLookup.explosion_templates[explosion_name] = index
-end
-mod:hook(InteractionDefinitions.pickup_object.client, "can_interact", function(func,interactor_unit, interactable_unit, data, config, world)
-    if Unit.has_data(interactable_unit, "unit_name") then
-        if Unit.get_data(interactable_unit, "unit_name") == "units/mutator/skulls_2023/pup_skull_of_fury" then
-            return false
-        end
-    end
-    return func(interactor_unit, interactable_unit, data, config, world)
-end)
 
--- mod.update is a single field VMF calls once per frame - only one file can assign it directly.
--- Any feature needing a per-frame tick should register through mod:add_update_function(fn) instead
--- of assigning mod.update itself, so multiple features can coexist without silently clobbering each other.
+--- Main update hook
+-- `mod.update` is a single field that VMF calls every frame. Only one file can assign it directly.
+-- Any feature needing per-frame tick should register through `mod:add_update_function(fn)` instead
+-- of assigning `mod.update` itself, so multiple features can coexist.
 local _update_functions = {}
 function mod.add_update_function(self, func)
     _update_functions[#_update_functions + 1] = func
@@ -97,27 +16,304 @@ mod.update = function (dt)
     end
 end
 
--- THP & Stagger Talent Functions & Changes
-mod:dofile("scripts/mods/TourneyBalance/changes/thp_stagger_changes")
+--- Settings-changed hook
+-- Same single-field-collision problem as `mod.update` above: VMF calls `mod.on_setting_changed`
+-- directly, so only one file can assign it directly, i.e. whichever file's  `dofile` runs last
+-- silently wins. Register any features through `mod:add_setting_changed_function(fn)` instead
+-- of assigning `mod.on_setting_changed` itself, so multiple features can coexist.
+local _setting_changed_functions = {}
+function mod.add_setting_changed_function(self, func)
+    _setting_changed_functions[#_setting_changed_functions + 1] = func
+end
+mod.on_setting_changed = function (...)
+    for i = 1, #_setting_changed_functions do
+        _setting_changed_functions[i](...)
+    end
+end
 
--- Talent Changes
-mod:dofile("scripts/mods/TourneyBalance/changes/talent_changes")
+--- IngameHud per-frame hook
+-- Same problem again, but for an engine hook rather than a single mod field: mod_checker.lua and
+-- 13_wh_captain.lua each used to call mod:hook_safe(IngameHud, "update", ...) independently, and
+-- having this mod hook the exact same (class, method) more than once meant only one of them
+-- actually ran. Register through mod:add_ingame_hud_update_function(fn) instead of calling
+-- mod:hook_safe(IngameHud, "update", ...) directly, so this mod only ever installs one such hook.
+local _ingame_hud_update_functions = {}
+function mod.add_ingame_hud_update_function(self, func)
+    _ingame_hud_update_functions[#_ingame_hud_update_functions + 1] = func
+end
+mod:hook_safe(IngameHud, "update", function (self)
+    for i = 1, #_ingame_hud_update_functions do
+        _ingame_hud_update_functions[i](self)
+    end
+end)
+
+--- All-mods-loaded hook
+-- Same single-field-collision problem as `mod.update`/`mod.on_setting_changed` above. This one is
+-- also the right place to do cross-mod setup (e.g. get_mod("SomeOtherMod")): calling get_mod at a
+-- file's own top-level load time is NOT safe, since VMF's mod load order between different mods is
+-- not guaranteed - a `get_mod` there can silently return nil and get cached in a local that's never
+-- refreshed, if the other mod hasn't loaded yet. By the time on_all_mods_loaded fires, every mod is
+-- guaranteed loaded regardless of order. Register through mod:add_all_mods_loaded_function(fn)
+-- instead of assigning mod.on_all_mods_loaded itself.
+local _all_mods_loaded_functions = {}
+function mod.add_all_mods_loaded_function(self, func)
+    _all_mods_loaded_functions[#_all_mods_loaded_functions + 1] = func
+end
+mod.on_all_mods_loaded = function (...)
+    for i = 1, #_all_mods_loaded_functions do
+        _all_mods_loaded_functions[i](...)
+    end
+end
+
+--- Game-state-changed hook
+-- Same single-field-collision problem again. Register through
+-- mod:add_game_state_changed_function(fn) instead of assigning mod.on_game_state_changed itself.
+local _game_state_changed_functions = {}
+function mod.add_game_state_changed_function(self, func)
+    _game_state_changed_functions[#_game_state_changed_functions + 1] = func
+end
+mod.on_game_state_changed = function (...)
+    for i = 1, #_game_state_changed_functions do
+        _game_state_changed_functions[i](...)
+    end
+end
+
+--- DamageUtils.apply_buffs_to_damage dispatcher
+-- Same hook-collision problem as IngameHud above: 02_damage_taken_changes.lua replaces this function
+-- with mod:hook_origin, so any other file calling mod:hook on it as well would not reliably run.
+-- The base implementation is set once via mod:set_apply_buffs_to_damage(fn), and features that need to
+-- wrap it register through mod:add_apply_buffs_to_damage_wrapper(fn), with fn(func, ...) shaped like a
+-- mod:hook callback (func = next wrapper in line, ending at the base implementation).
+-- Wrappers run in registration order, outermost first.
+local _apply_buffs_to_damage_wrappers = {}
+local _apply_buffs_to_damage_base = DamageUtils.apply_buffs_to_damage -- vanilla, until set_apply_buffs_to_damage replaces it
+local _apply_buffs_to_damage_chain = nil -- composed lazily, rebuilt when a wrapper is added
+
+function mod.add_apply_buffs_to_damage_wrapper(self, wrapper)
+    _apply_buffs_to_damage_wrappers[#_apply_buffs_to_damage_wrappers + 1] = wrapper
+    _apply_buffs_to_damage_chain = nil
+end
+
+function mod.set_apply_buffs_to_damage(self, base)
+    _apply_buffs_to_damage_base = base
+    _apply_buffs_to_damage_chain = nil
+end
+
+local function compose_apply_buffs_to_damage_chain()
+    local chain = _apply_buffs_to_damage_base
+
+    for i = #_apply_buffs_to_damage_wrappers, 1, -1 do
+        local wrapper = _apply_buffs_to_damage_wrappers[i]
+        local inner = chain
+
+        chain = function (...)
+            return wrapper(inner, ...)
+        end
+    end
+
+    return chain
+end
+
+mod:hook_origin(DamageUtils, "apply_buffs_to_damage", function (...)
+    if not _apply_buffs_to_damage_chain then
+        _apply_buffs_to_damage_chain = compose_apply_buffs_to_damage_chain()
+    end
+
+    return _apply_buffs_to_damage_chain(...)
+end)
+
+--- PlayerUnitHealthExtension.add_heal dispatcher
+-- Same hook-collision problem as IngameHud above: features that wrap add_heal (e.g. 04_es_questingknight.lua quests)
+-- register through mod:add_player_add_heal_wrapper(fn) instead of calling
+-- mod:hook(PlayerUnitHealthExtension, "add_heal", ...) directly. fn(func, self, ...) is shaped like a mod:hook
+-- callback (func = next wrapper in line, ending at the original add_heal).
+-- Wrappers run in registration order, outermost first.
+local _player_add_heal_wrappers = {}
+local _player_add_heal_chain = nil -- composed lazily, rebuilt when a wrapper is added or the original changes
+local _player_add_heal_chain_base = nil
+
+function mod.add_player_add_heal_wrapper(self, wrapper)
+    _player_add_heal_wrappers[#_player_add_heal_wrappers + 1] = wrapper
+    _player_add_heal_chain = nil
+end
+
+mod:hook(PlayerUnitHealthExtension, "add_heal", function (func, ...)
+    if not _player_add_heal_chain or _player_add_heal_chain_base ~= func then
+        local chain = func
+
+        for i = #_player_add_heal_wrappers, 1, -1 do
+            local wrapper = _player_add_heal_wrappers[i]
+            local inner = chain
+
+            chain = function (...)
+                return wrapper(inner, ...)
+            end
+        end
+
+        _player_add_heal_chain = chain
+        _player_add_heal_chain_base = func
+    end
+
+    return _player_add_heal_chain(...)
+end)
+
+--- DamageUtils.create_explosion dispatcher
+-- Same hook-collision problem as IngameHud above: 13_wh_captain.lua (ISJYA marks) and 19_bw_unchained.lua (no friendly
+-- fire) both need it. Register through mod:add_create_explosion_wrapper(fn) instead of calling
+-- mod:hook/hook_safe(DamageUtils, "create_explosion", ...) directly. fn(func, ...) is shaped like a mod:hook
+-- callback (func = next wrapper in line, ending at the original create_explosion).
+-- Wrappers run in registration order, outermost first.
+local _create_explosion_wrappers = {}
+local _create_explosion_chain = nil -- composed lazily, rebuilt when a wrapper is added or the original changes
+local _create_explosion_chain_base = nil
+
+function mod.add_create_explosion_wrapper(self, wrapper)
+    _create_explosion_wrappers[#_create_explosion_wrappers + 1] = wrapper
+    _create_explosion_chain = nil
+end
+
+mod:hook(DamageUtils, "create_explosion", function (func, ...)
+    if not _create_explosion_chain or _create_explosion_chain_base ~= func then
+        local chain = func
+
+        for i = #_create_explosion_wrappers, 1, -1 do
+            local wrapper = _create_explosion_wrappers[i]
+            local inner = chain
+
+            chain = function (...)
+                return wrapper(inner, ...)
+            end
+        end
+
+        _create_explosion_chain = chain
+        _create_explosion_chain_base = func
+    end
+
+    return _create_explosion_chain(...)
+end)
+
+--- ActionMeleeStart.client_owner_post_update dispatcher
+-- Same hook-collision problem as IngameHud above: features that need to run after it (02_career_changes.lua,
+-- Timed Block Long) register through mod:add_melee_start_post_update_function(fn)
+-- instead of calling mod:hook/hook_safe(ActionMeleeStart, "client_owner_post_update", ...) directly.
+-- fn(self, dt, t, world) runs after the original, in registration order.
+local _melee_start_post_update_functions = {}
+function mod.add_melee_start_post_update_function(self, func)
+    _melee_start_post_update_functions[#_melee_start_post_update_functions + 1] = func
+end
+mod:hook(ActionMeleeStart, "client_owner_post_update", function (func, self, dt, t, world)
+    func(self, dt, t, world)
+
+    for i = 1, #_melee_start_post_update_functions do
+        _melee_start_post_update_functions[i](self, dt, t, world)
+    end
+end)
+
+--- CareerExtension.update dispatcher
+-- Same hook-collision problem as IngameHud above: features needing a per-frame career tick (01_es_mercenary.lua,
+-- On Yer Feet, Mates!) register through mod:add_career_update_function(fn)
+-- instead of calling mod:hook/hook_safe(CareerExtension, "update", ...) directly.
+-- fn(self, unit, input, dt, context, t) runs after the original, in registration order.
+local _career_update_functions = {}
+function mod.add_career_update_function(self, func)
+    _career_update_functions[#_career_update_functions + 1] = func
+end
+mod:hook(CareerExtension, "update", function (func, self, unit, input, dt, context, t)
+    func(self, unit, input, dt, context, t)
+
+    for i = 1, #_career_update_functions do
+        _career_update_functions[i](self, unit, input, dt, context, t)
+    end
+end)
+
+--- Buff apply conditions
+-- To stop specific buffs from being added (e.g. movement penalties), chain a condition onto the template's
+-- sub-buffs instead of hooking BuffExtension.add_buff: add_buff checks sub_buff.apply_condition itself, so the
+-- check only costs anything when that template is added, not on every add_buff of every unit.
+-- condition(unit, sub_buff_template, params) returns false to block the sub-buff. Conditions chain, so
+-- several features can gate the same template (e.g. 07_dr_slayer.lua).
+-- Never gate "planted_return_to_normal_*": lerped slowdowns are undone by adding those on removal, so blocking them
+-- leaves the movement setting permanently scaled down.
+function mod.add_buff_apply_condition(self, buff_template_name, condition)
+    local buff_template = BuffTemplates[buff_template_name]
+
+    if not (buff_template and buff_template.buffs) then
+        return
+    end
+
+    for _, sub_buff in ipairs(buff_template.buffs) do
+        local original_condition = sub_buff.apply_condition
+
+        sub_buff.apply_condition = function (unit, template, params)
+            if not condition(unit, template, params) then
+                return false
+            end
+
+            if original_condition then
+                return original_condition(unit, template, params)
+            end
+
+            return true
+        end
+    end
+end
+
+-- Weapon actions pass their own multiplier to movement buffs, above 1 means the action speeds the player up
+function mod.is_action_movement_speed_up(self, params)
+    local external_multiplier = params and params.external_optional_multiplier
+
+    return not not (external_multiplier and external_multiplier > 1)
+end
+
+--- In-game localization
+-- Replace original strings, if _quick_localize can fetch custom strings
+local localization_api = require("scripts/mods/TourneyBalance/_api/_localization_api")
+mod:hook("Localize", function(func, text_id)
+    local str = localization_api._quick_localize(text_id)
+    if str then
+        return str
+    end
+    return func(text_id)
+end)
+
+--[[
+
+    Balance Changes
+
+]]
+-- Misc standalone fixes not tied to any other category
+mod:dofile("scripts/mods/TourneyBalance/changes/_misc_fixes")
+
+-- Enemies for Spicy
+mod:dofile("scripts/mods/TourneyBalance/changes/00_spicy_enemies")
+
+-- THP/Stagger/Damage Related Changes
+mod:dofile("scripts/mods/TourneyBalance/changes/01_thp_stagger_damage_changes")
+
+-- Career Changes (Ultimates/Passives/Talents)
+mod:dofile("scripts/mods/TourneyBalance/changes/02_career_changes")
+
+-- Trait & Property Changes
+mod:dofile("scripts/mods/TourneyBalance/changes/03_trait_and_property_changes")
+
+-- Balance diff export - snapshots Weapons/DamageProfileTemplates/etc. on load
+-- Placed here to only export weapon changes
+mod:dofile("scripts/mods/TourneyBalance/debugging/balance_diff_export")
 
 -- Weapon Changes
-mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes")
+mod:dofile("scripts/mods/TourneyBalance/changes/04_weapon_changes")
 
--- Trait Changes
-mod:dofile("scripts/mods/TourneyBalance/changes/trait_changes")
+-- Fun Features (opt-in, settings-gated movement tech)
+mod:dofile("scripts/mods/TourneyBalance/changes/05_fun_changes")
 
--- Career Changes (Passives, Ultimates, etc.)
-mod:dofile("scripts/mods/TourneyBalance/changes/career_changes")
 
---Enemies for Spicy
-mod:dofile("scripts/mods/TourneyBalance/changes/SpicyEnemies")
+--[[
 
+    Utility
+
+]]
 -- Performance Logging System
--- Disabled: its mod.update collided with stagger_state_visualizer.lua's (both claim
--- the single mod.update field). Not needed right now, so left off rather than chained.
+-- Disabled: its mod.update collided with stagger_state_visualizer.lua's
 -- mod:dofile("scripts/mods/TourneyBalance/logging_and_qol/performance_logging")
 
 -- Mod Checker
@@ -129,363 +325,18 @@ mod:dofile("scripts/mods/TourneyBalance/logging_and_qol/basic_qol")
 -- Debugging Tools
 mod:dofile("scripts/mods/TourneyBalance/debugging/stagger_state_visualizer")
 
--- on_remove_stack_down
+
 --[[
-mod:hook_origin(BuffExtension, "remove_buff", function (self, id, skip_net_sync, full_remove)
-	local buffs = self._buffs
-	local end_time = Managers.time:time("game")
-	local num_buffs_removed = 0
-	local buff_extension_function_params = buff_extension_function_params
-	local num_buffs = self._num_buffs
-	buff_extension_function_params.t = end_time
-	buff_extension_function_params.end_time = end_time
 
-	for i = 1, self._num_buffs, 1 do
-		local buff = buffs[i]
-		local template = buff.template
+    Merge Changes
 
-		if (id and buff.id == id) or (buff.parent_id and id and buff.parent_id == id) then
-			local on_remove_stack_down = template.on_remove_stack_down
-			if on_remove_stack_down and not full_remove then
-				self:_remove_sub_buff(buff, i, buff_extension_function_params)
 
-				local new_buff_count = #buffs
-				num_buffs_removed = num_buffs_removed + num_buffs - new_buff_count
-				num_buffs = new_buff_count
-				self._buffs[i].start_time = Managers.time:time("game")
-			else
-				buff_extension_function_params.bonus = buff.bonus
-				buff_extension_function_params.multiplier = buff.multiplier
-				buff_extension_function_params.value = buff.value
-				buff_extension_function_params.attacker_unit = buff.attacker_unit
-
-				self:_remove_sub_buff(buff, i, buff_extension_function_params, false)
-			end
-		end
-	end
-
-	if self._num_buffs == 0 then
-		Managers.state.entity:system("buff_system"):set_buff_ext_active(self._unit, false)
-	end
-
-	if not skip_net_sync then
-		self:_remove_buff_synced(id)
-	end
-
-	self:_free_sync_id(id)
-end)
-
-mod:hook_origin(BuffExtension, "update", function (self, unit, input, dt, context, t)
-	local world = self.world
-	local buffs = self._buffs
-	local buff_extension_function_params = buff_extension_function_params
-	buff_extension_function_params.t = t
-	local queue = self._remove_buff_queue
-
-	if queue then
-		self._remove_buff_queue = nil
-
-		for i = 1, #queue, 1 do
-			self:remove_buff(queue[i])
-		end
-	end
-
-	for i = 1, self._num_buffs, 1 do
-		local buff = buffs[i]
-
-		if not buff.removed then
-			local template = buff.template
-			local end_time = buff.duration and buff.start_time + buff.duration
-			local ticks = template.ticks
-			local current_ticks = buff.current_ticks
-			buff_extension_function_params.bonus = buff.bonus
-			buff_extension_function_params.multiplier = buff.multiplier
-			buff_extension_function_params.value = buff.value
-			buff_extension_function_params.end_time = end_time
-			buff_extension_function_params.attacker_unit = buff.attacker_unit
-			buff_extension_function_params.source_attacker_unit = buff.source_attacker_unit
-			local done_ticking = ticks and ticks <= current_ticks
-
-			if (end_time and end_time <= t) or (not end_time and done_ticking) then
-				local on_remove_stack_down = template.on_remove_stack_down
-            	local buff_name = template.name
-				local on_remove_stack_down_done = {}
-
-            	if on_remove_stack_down and on_remove_stack_down_done[buff_name] == nil then
-					mod:echo(on_remove_stack_down)
-                	local current_stacks = self:num_buff_type(buff_name)
-
-                	self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
-                	on_remove_stack_down_done[buff_name] = true
-
-               		if current_stacks == 1 then
-                    	if template.buff_after_delay and not buff.aborted then
-                        	local delayed_buff_name = buff.delayed_buff_name
-
-                        	if buff.delayed_buff_params then
-                        	    local delayed_buff_params = buff.delayed_buff_params
-
-                	            self:add_buff(delayed_buff_name, delayed_buff_params)
-                	        else
-                	            self:add_buff(delayed_buff_name)
-                	        end
-                	    end
-                	end
-            	elseif on_remove_stack_down and on_remove_stack_down_done[buff_name] then
-					mod:echo(on_remove_stack_down)
-                	buff.start_time = t
-            	else
-					self:_remove_sub_buff(buff, i, buff_extension_function_params, true)
-					mod:echo(on_remove_stack_down)
-
-					if template.buff_after_delay and not buff.aborted then
-						local delayed_buff_name = buff.delayed_buff_name
-
-						if buff.delayed_buff_params then
-							local delayed_buff_params = buff.delayed_buff_params
-
-							self:add_buff(delayed_buff_name, delayed_buff_params)
-						else
-							self:add_buff(delayed_buff_name)
-						end
-					end
-            	end
-			elseif not done_ticking then
-				local update_func = template.update_func
-
-				if update_func then
-					local next_update_t = buff._next_update_t
-
-					if not next_update_t then
-						next_update_t = t + (buff.template.update_start_delay or 0)
-						buff._next_update_t = next_update_t
-					end
-
-					if next_update_t <= t then
-						buff_extension_function_params.time_into_buff = t - buff.start_time
-						buff_extension_function_params.time_left_on_buff = end_time and end_time - t
-						local override_update_t = BuffFunctionTemplates.functions[update_func](unit, buff, buff_extension_function_params, world)
-
-						if not override_update_t then
-							slot23 = buff.template.update_frequency or 0
-							slot23 = t + slot23
-						end
-
-						buff._next_update_t = slot23
-
-						if current_ticks then
-							buff.current_ticks = current_ticks + 1
-						end
-					end
-				end
-			end
-		end
-	end
-
-	local i = 1
-	local removed = 0
-
-	while i <= self._num_buffs - removed do
-		buffs[i] = buffs[i + removed]
-
-		if not buffs[i] then
-			break
-		elseif buffs[i].removed then
-			removed = removed + 1
-		else
-			i = i + 1
-		end
-	end
-
-	for j = i, self._num_buffs, 1 do
-		buffs[j] = nil
-	end
-
-	self._num_buffs = self._num_buffs - removed
-
-	if self._num_buffs == 0 then
-		Managers.state.entity:system("buff_system"):set_buff_ext_active(unit, false)
-	end
-end)
 ]]
-
 local function updateValues()
 	for _, buffs in pairs(TalentBuffTemplates) do
 		table.merge_recursive(BuffTemplates, buffs)
 	end
-
 	return
-
-end
-
---Add the new templates to the DamageProfile templates
---Setup proper linkin in NetworkLookup
-for key, _ in pairs(NewDamageProfileTemplates) do
-    i = #NetworkLookup.damage_profiles + 1
-    NetworkLookup.damage_profiles[i] = key
-    NetworkLookup.damage_profiles[key] = i
-end
---Merge the tables together
-table.merge_recursive(DamageProfileTemplates, NewDamageProfileTemplates)
---Do FS things
-for name, damage_profile in pairs(DamageProfileTemplates) do
-	if not damage_profile.targets then
-		damage_profile.targets = {}
-	end
-
-	fassert(damage_profile.default_target, "damage profile [\"%s\"] missing default_target", name)
-
-	if type(damage_profile.critical_strike) == "string" then
-		local template = PowerLevelTemplates[damage_profile.critical_strike]
-
-		fassert(template, "damage profile [\"%s\"] has no corresponding template defined in PowerLevelTemplates. Wanted template name is [\"%s\"] ", name, damage_profile.critical_strike)
-
-		damage_profile.critical_strike = template
-	end
-
-	if type(damage_profile.cleave_distribution) == "string" then
-		local template = PowerLevelTemplates[damage_profile.cleave_distribution]
-
-		fassert(template, "damage profile [\"%s\"] has no corresponding template defined in PowerLevelTemplates. Wanted template name is [\"%s\"] ", name, damage_profile.cleave_distribution)
-
-		damage_profile.cleave_distribution = template
-	end
-
-	if type(damage_profile.armor_modifier) == "string" then
-		local template = PowerLevelTemplates[damage_profile.armor_modifier]
-
-		fassert(template, "damage profile [\"%s\"] has no corresponding template defined in PowerLevelTemplates. Wanted template name is [\"%s\"] ", name, damage_profile.armor_modifier)
-
-		damage_profile.armor_modifier = template
-	end
-
-	if type(damage_profile.default_target) == "string" then
-		local template = PowerLevelTemplates[damage_profile.default_target]
-
-		fassert(template, "damage profile [\"%s\"] has no corresponding template defined in PowerLevelTemplates. Wanted template name is [\"%s\"] ", name, damage_profile.default_target)
-
-		damage_profile.default_target = template
-	end
-
-	if type(damage_profile.targets) == "string" then
-		local template = PowerLevelTemplates[damage_profile.targets]
-
-		fassert(template, "damage profile [\"%s\"] has no corresponding template defined in PowerLevelTemplates. Wanted template name is [\"%s\"] ", name, damage_profile.targets)
-
-		damage_profile.targets = template
-	end
-end
-
-local no_damage_templates = {}
-
-for name, damage_profile in pairs(DamageProfileTemplates) do
-	local no_damage_name = name .. "_no_damage"
-
-	if not DamageProfileTemplates[no_damage_name] then
-		local no_damage_template = table.clone(damage_profile)
-
-		if no_damage_template.targets then
-			for _, target in ipairs(no_damage_template.targets) do
-				if target.power_distribution then
-					target.power_distribution.attack = 0
-				end
-			end
-		end
-
-		if no_damage_template.default_target.power_distribution then
-			no_damage_template.default_target.power_distribution.attack = 0
-		end
-
-		no_damage_templates[no_damage_name] = no_damage_template
-	end
-end
-
-DamageProfileTemplates = table.merge(DamageProfileTemplates, no_damage_templates)
-
-local MeleeBuffTypes = MeleeBuffTypes or {
-	MELEE_1H = true,
-	MELEE_2H = true
-}
-local RangedBuffTypes = RangedBuffTypes or {
-	RANGED_ABILITY = true,
-	RANGED = true
-}
-local WEAPON_DAMAGE_UNIT_LENGTH_EXTENT = 1.919366
-local TAP_ATTACK_BASE_RANGE_OFFSET = 0.6
-local HOLD_ATTACK_BASE_RANGE_OFFSET = 0.65
-
-for item_template_name, item_template in pairs(Weapons) do
-	item_template.name = item_template_name
-	item_template.crosshair_style = item_template.crosshair_style or "dot"
-	local attack_meta_data = item_template.attack_meta_data
-	local tap_attack_meta_data = attack_meta_data and attack_meta_data.tap_attack
-	local hold_attack_meta_data = attack_meta_data and attack_meta_data.hold_attack
-	local set_default_tap_attack_range = tap_attack_meta_data and tap_attack_meta_data.max_range == nil
-	local set_default_hold_attack_range = hold_attack_meta_data and hold_attack_meta_data.max_range == nil
-
-	if RangedBuffTypes[item_template.buff_type] and attack_meta_data then
-		attack_meta_data.effective_against = attack_meta_data.effective_against or 0
-		attack_meta_data.effective_against_charged = attack_meta_data.effective_against_charged or 0
-		attack_meta_data.effective_against_combined = bit.bor(attack_meta_data.effective_against, attack_meta_data.effective_against_charged)
-	end
-
-	if MeleeBuffTypes[item_template.buff_type] then
-		fassert(attack_meta_data, "Missing attack metadata for weapon %s", item_template_name)
-		fassert(tap_attack_meta_data, "Missing tap_attack metadata for weapon %s", item_template_name)
-		fassert(hold_attack_meta_data, "Missing hold_attack metadata for weapon %s", item_template_name)
-		fassert(tap_attack_meta_data.arc, "Missing arc parameter in tap_attack metadata for weapon %s", item_template_name)
-		fassert(hold_attack_meta_data.arc, "Missing arc parameter in hold_attack metadata for weapon %s", item_template_name)
-	end
-
-	local actions = item_template.actions
-
-	for action_name, sub_actions in pairs(actions) do
-		for sub_action_name, sub_action_data in pairs(sub_actions) do
-			local lookup_data = {
-				item_template_name = item_template_name,
-				action_name = action_name,
-				sub_action_name = sub_action_name
-			}
-			sub_action_data.lookup_data = lookup_data
-			local action_kind = sub_action_data.kind
-			local action_assert_func = ActionAssertFuncs[action_kind]
-
-			if action_assert_func then
-				action_assert_func(item_template_name, action_name, sub_action_name, sub_action_data)
-			end
-
-			if action_name == "action_one" then
-				local range_mod = sub_action_data.range_mod or 1
-
-				if set_default_tap_attack_range and string.find(sub_action_name, "light_attack") then
-					local current_attack_range = tap_attack_meta_data.max_range or math.huge
-					local tap_attack_range = TAP_ATTACK_BASE_RANGE_OFFSET + WEAPON_DAMAGE_UNIT_LENGTH_EXTENT * range_mod
-					tap_attack_meta_data.max_range = math.min(current_attack_range, tap_attack_range)
-				elseif set_default_hold_attack_range and string.find(sub_action_name, "heavy_attack") then
-					local current_attack_range = hold_attack_meta_data.max_range or math.huge
-					local hold_attack_range = HOLD_ATTACK_BASE_RANGE_OFFSET + WEAPON_DAMAGE_UNIT_LENGTH_EXTENT * range_mod
-					hold_attack_meta_data.max_range = math.min(current_attack_range, hold_attack_range)
-				end
-			end
-
-			local impact_data = sub_action_data.impact_data
-
-			if impact_data then
-				local pickup_settings = impact_data.pickup_settings
-
-				if pickup_settings then
-					local link_hit_zones = pickup_settings.link_hit_zones
-
-					if link_hit_zones then
-						for i = 1, #link_hit_zones, 1 do
-							local hit_zone_name = link_hit_zones[i]
-							link_hit_zones[hit_zone_name] = true
-						end
-					end
-				end
-			end
-		end
-	end
 end
 
 mod.on_enabled = function (self)

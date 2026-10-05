@@ -1,0 +1,293 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { hrefForBalanceChanges } from '../lib/balanceChanges';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  entries: CollectionEntry<'balanceChanges'>[];
+  activeId?: string;
+  activeHeadings?: Heading[];
+}
+const { entries, activeId, activeHeadings = [] } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
+
+interface GroupNode {
+  slug: string;
+  text: string;
+  items: { slug: string; text: string }[];
+}
+
+// activeHeadings is the active page's own flat heading list, in document
+// order: depth 1 = group (Hero, or a THP/Stagger section), depth 2 = item
+// (Career, or a talent/passive name group). Deeper headings (e.g. Career
+// Ability/Passives/Talents) are intentionally not shown in the nav.
+const groups: GroupNode[] = [];
+for (const h of activeHeadings) {
+  if (h.depth === 1) {
+    groups.push({ slug: h.slug, text: h.text, items: [] });
+  } else if (h.depth === 2) {
+    groups.at(-1)?.items.push({ slug: h.slug, text: h.text });
+  }
+}
+---
+
+<div class="patch-sidebar-wrapper">
+  <button
+    type="button"
+    id="patch-sidebar-toggle"
+    class="patch-sidebar-toggle"
+    aria-expanded="true"
+    aria-controls="patch-sidebar"
+  >
+    ☰
+  </button>
+  <aside id="patch-sidebar" class="patch-sidebar">
+    <input
+      type="search"
+      id="patch-sidebar-search"
+      class="patch-sidebar-search"
+      placeholder="Search balance changes..."
+      aria-label="Search balance changes"
+    />
+    <ul class="patch-sidebar-list" id="patch-sidebar-list">
+      {
+        entries.map((entry) => (
+          <li class="page-item" data-text={entry.data.title.toLowerCase()}>
+            <a href={`${base}${hrefForBalanceChanges(entry.id)}`} class={entry.id === activeId ? 'active' : ''}>
+              {entry.data.title}
+            </a>
+            {entry.id === activeId && groups.length > 0 && (
+              <ul class="group-list">
+                {groups.map((group) => (
+                  <li class="group-item" data-text={group.text.toLowerCase()}>
+                    <a href={`#${group.slug}`}>{group.text}</a>
+                    <ul class="item-list">
+                      {group.items.map((item) => (
+                        <li class="item-item" data-text={item.text.toLowerCase()}>
+                          <a href={`#${item.slug}`}>{item.text}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))
+      }
+    </ul>
+  </aside>
+</div>
+
+<script>
+  const toggle = document.getElementById('patch-sidebar-toggle');
+  const wrapper = toggle?.closest('.patch-sidebar-wrapper');
+  const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
+  toggle?.addEventListener('click', () => {
+    const hasCollapsedClass = wrapper?.classList.toggle('collapsed');
+    // On desktop ".collapsed" hides an initially-shown sidebar; on mobile it
+    // reveals an initially-hidden one — same class, opposite meaning below
+    // the breakpoint, so aria-expanded is computed accordingly either way.
+    const isExpanded = isMobile() ? hasCollapsedClass : !hasCollapsedClass;
+    toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+  });
+
+  const search = document.getElementById('patch-sidebar-search') as HTMLInputElement | null;
+
+  search?.addEventListener('input', () => {
+    const query = search.value.trim().toLowerCase();
+
+    document.querySelectorAll<HTMLLIElement>('.page-item').forEach((pageEl) => {
+      const pageMatches = !query || (pageEl.dataset.text ?? '').includes(query);
+      let pageHasVisibleGroup = false;
+
+      pageEl.querySelectorAll<HTMLLIElement>('.group-item').forEach((groupEl) => {
+        const groupMatches = !query || (groupEl.dataset.text ?? '').includes(query);
+        let groupHasVisibleItem = false;
+
+        groupEl.querySelectorAll<HTMLLIElement>('.item-item').forEach((itemEl) => {
+          const itemMatches = !query || (itemEl.dataset.text ?? '').includes(query);
+          const visible = itemMatches || groupMatches || pageMatches;
+          itemEl.style.display = visible ? '' : 'none';
+          groupHasVisibleItem = groupHasVisibleItem || visible;
+        });
+
+        const groupVisible = groupMatches || pageMatches || groupHasVisibleItem;
+        groupEl.style.display = groupVisible ? '' : 'none';
+        pageHasVisibleGroup = pageHasVisibleGroup || groupVisible;
+      });
+
+      pageEl.style.display = pageMatches || pageHasVisibleGroup ? '' : 'none';
+    });
+  });
+</script>
+
+<style>
+  .patch-sidebar-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    position: sticky;
+    /* Matches where it naturally sat before (below the header plus main's
+       own top padding), rather than snapping flush to the header. */
+    top: calc(var(--header-height) + 2rem);
+    z-index: 5;
+  }
+
+  .patch-sidebar-toggle {
+    background: none;
+    border: 1px solid #333;
+    color: var(--color-text);
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .patch-sidebar-toggle:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .patch-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition:
+      width 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .patch-sidebar-wrapper.collapsed .patch-sidebar {
+    width: 0;
+    opacity: 0;
+  }
+
+  @media (max-width: 768px) {
+    .patch-sidebar-wrapper {
+      /* Children below are fixed-positioned overlays, so the wrapper itself
+         contributes no size to the document flow — no more empty gap
+         before the main content starts. */
+      position: static;
+      width: auto;
+      display: block;
+    }
+
+    .patch-sidebar-toggle {
+      /* Always reachable at the same spot on screen, regardless of scroll
+         position — matches the desktop sticky behavior. */
+      position: fixed;
+      top: calc(var(--header-height) + 1rem);
+      left: 1rem;
+      z-index: 20;
+    }
+
+    .patch-sidebar {
+      /* Hidden off-canvas by default; slides in from the right as an
+         overlay on top of the main content instead of pushing it aside. */
+      position: fixed;
+      top: var(--header-height);
+      right: 0;
+      width: min(85vw, 320px);
+      height: calc(100vh - var(--header-height));
+      background: rgba(18, 18, 18, 0.98);
+      box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
+      padding: 1rem;
+      box-sizing: border-box;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      opacity: 1;
+      z-index: 15;
+    }
+
+    /* Same toggle class as desktop, but inverted meaning: here it reveals
+       the sidebar instead of hiding it (see the isMobile() check in the
+       script above, which keeps aria-expanded correct either way).
+       Explicitly overrides width/opacity from the desktop collapsed rule
+       above — same selector, so both would otherwise apply at once here. */
+    .patch-sidebar-wrapper.collapsed .patch-sidebar {
+      transform: translateX(0);
+      width: min(85vw, 320px);
+      opacity: 1;
+    }
+  }
+
+  .patch-sidebar-search {
+    width: 100%;
+    box-sizing: border-box;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: var(--color-text);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+  }
+  .patch-sidebar-search:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  .patch-sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .patch-sidebar-list a {
+    display: block;
+    text-decoration: none;
+    color: var(--color-text);
+    border-radius: 4px;
+  }
+  .patch-sidebar-list a:hover {
+    background: #1a1a1a;
+    color: var(--color-accent);
+  }
+
+  .page-item {
+    margin-bottom: 0.15rem;
+  }
+  .page-item > a {
+    padding: 0.5rem 0.4rem;
+    font-weight: bold;
+  }
+  .page-item > a.active {
+    color: var(--color-accent);
+  }
+
+  .group-list {
+    list-style: none;
+    margin: 0.15rem 0 0.5rem;
+    padding: 0;
+    border-left: 1px solid #333;
+  }
+  .group-item > a {
+    padding: 0.35rem 0.4rem 0.35rem 0.8rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+
+  .item-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .item-item > a {
+    padding: 0.25rem 0.4rem 0.25rem 1.4rem;
+    font-size: 0.8rem;
+    opacity: 0.75;
+  }
+  .item-item > a:hover {
+    opacity: 1;
+  }
+</style>

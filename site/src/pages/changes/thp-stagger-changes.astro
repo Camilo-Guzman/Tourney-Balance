@@ -1,0 +1,28 @@
+---
+import BalanceChangesLayout from '../../layouts/BalanceChangesLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+const entries = await getCollection('balanceChanges');
+const entry = entries.find((e) => e.id === 'thp-stagger-changes');
+
+let Content = null;
+let headings: { depth: number; slug: string; text: string }[] = [];
+if (entry) {
+  const rendered = await render(entry);
+  Content = rendered.Content;
+  headings = rendered.headings;
+}
+---
+
+<BalanceChangesLayout title="THP & Stagger Changes" activeId="thp-stagger-changes" activeHeadings={headings}>
+  {
+    Content ? (
+      <Content />
+    ) : (
+      <>
+        <h1>THP &amp; Stagger Changes</h1>
+        <p>No THP &amp; stagger changes documented yet.</p>
+      </>
+    )
+  }
+</BalanceChangesLayout>

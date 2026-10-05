@@ -1,0 +1,63 @@
+---
+import Layout from './Layout.astro';
+import BalanceChangesSidebar from '../components/BalanceChangesSidebar.astro';
+import { getSortedBalanceChanges } from '../lib/balanceChanges';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  title: string;
+  activeId?: string;
+  activeHeadings?: Heading[];
+}
+const { title, activeId, activeHeadings = [] } = Astro.props;
+const entries = await getSortedBalanceChanges();
+---
+
+<Layout title={title}>
+  <div class="patch-layout">
+    <BalanceChangesSidebar entries={entries} activeId={activeId} activeHeadings={activeHeadings} />
+    <div class="balance-main">
+      <slot />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .patch-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  .balance-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    .patch-layout {
+      flex-direction: column;
+    }
+  }
+
+  /* Plain divider - the source's per-career "***" at the top of each file. */
+  :global(.balance-main hr) {
+    border: none;
+    height: 1px;
+    background: var(--color-accent);
+    opacity: 0.35;
+    margin: 1.5rem 0;
+  }
+
+  /* A divider immediately followed by a main header (Hero name, THP/Stagger
+     title, both H1) - 3x as thick, to set those sections apart. */
+  :global(.balance-main hr:has(+ h1)) {
+    height: 3px;
+    opacity: 0.6;
+    margin: 3rem 0;
+  }
+</style>

@@ -18,4 +18,12 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { patchNotes, docs };
+const balanceChanges = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/balance-changes' }),
+  schema: z.object({
+    title: z.string(),
+    order: z.number().default(0),
+  }),
+});
+
+export const collections = { patchNotes, docs, balanceChanges };

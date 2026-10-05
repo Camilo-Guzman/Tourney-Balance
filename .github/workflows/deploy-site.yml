@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'site/**'
+      - 'scripts/mods/TourneyBalance/changes/career_changes/**'
   workflow_dispatch:
 
 permissions:

@@ -1,12 +1,28 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import BalanceChangesLayout from '../../layouts/BalanceChangesLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+const entries = await getCollection('balanceChanges');
+const entry = entries.find((e) => e.id === 'career-changes');
+
+let Content = null;
+let headings: { depth: number; slug: string; text: string }[] = [];
+if (entry) {
+  const rendered = await render(entry);
+  Content = rendered.Content;
+  headings = rendered.headings;
+}
 ---
 
-<Layout title="Balance Changes">
-  <h1>Balance Changes</h1>
-  <p>Coming soon — Career, Talent, Weapon, and Misc changes will be documented here.</p>
-  <p>
-  For now you can checkout the outdated 
-  Google Document <a href="https://docs.google.com/document/d/1AKHfd_0QGPtYnNOiO7IuOf5NSEqDbwN2755Ogowu364/edit?tab=t.0#heading=h.xkssf5sn3qck">here</a>
-  </p>
-</Layout>
+<BalanceChangesLayout title="Career Changes" activeId="career-changes" activeHeadings={headings}>
+  {
+    Content ? (
+      <Content />
+    ) : (
+      <>
+        <h1>Career Changes</h1>
+        <p>No career changes documented yet.</p>
+      </>
+    )
+  }
+</BalanceChangesLayout>

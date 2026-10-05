@@ -140,6 +140,9 @@ const { title, fullBleed = false } = Astro.props;
   :global(h3) {
     font-family: 'Caslon Antique', serif;
     color: var(--color-accent);
+    /* Anchor-jump targets (sidebar nav links, in-page TOCs) would otherwise
+       land right under the sticky header and get hidden behind it. */
+    scroll-margin-top: calc(var(--header-height) + 1rem);
   }
 
   :global(a) {

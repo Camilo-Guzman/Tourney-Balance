@@ -2,6 +2,8 @@
 dist/
 # generated types
 .astro/
+# generated from scripts/mods/TourneyBalance/changes/career_changes
+src/content/balance-changes/
 
 # dependencies
 node_modules/

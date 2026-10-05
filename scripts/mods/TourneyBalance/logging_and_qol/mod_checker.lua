@@ -226,9 +226,9 @@ local show_text = function ()
     end
 end
 
-mod:hook_safe(IngameHud, "update", function(self)
+mod:add_ingame_hud_update_function(function(self)
     if not self._currently_visible_components.EquipmentUI then return end
-    
+
     if (is_tourney_time and not is_openbeta) or mod:get("tourney_mode") then
         show_text()
     end
@@ -355,18 +355,18 @@ local initiate_mod_checker = function ()
 
 end
 
-mod.on_all_mods_loaded = function()
+mod:add_all_mods_loaded_function(function()
     initiate_mod_checker()
-end
+end)
 
-mod.on_setting_changed = function()
+mod:add_setting_changed_function(function()
     initiate_mod_checker()
-end
+end)
 
-mod.on_game_state_changed = function(status, state_name)
+mod:add_game_state_changed_function(function(status, state_name)
     initiate_mod_checker()
-    
+
     if Managers.state.network and Managers.state.network.is_server then
         global_send_prohibited_mods = false
     end
-end
+end)

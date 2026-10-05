@@ -43,10 +43,13 @@ jobs:
               $cfgFile      = "itemV2-Open-Beta.cfg"
               $bundleFolder = "bundleV2-Open-Beta"
               Write-Host "Running in Open-Beta environment..."
-          } else {
+          } elseif ($env:GITHUB_REPOSITORY -eq "Camilo-Guzman/Tourney-Balance") {
               $cfgFile      = "itemV2.cfg"
               $bundleFolder = "bundleV2"
               Write-Host "Running in Production environment..."
+          } else {
+              Write-Error "Unauthorized repository: $env:GITHUB_REPOSITORY. Canceling run."
+              exit 1
           }
 
           # 2. Read the raw config file using the dynamic variable
