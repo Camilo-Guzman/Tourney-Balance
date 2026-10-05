@@ -21,6 +21,29 @@ function talent_api.insert_career_passives(hero_id, buffs)
     end
 end
 
+function talent_api.remove_career_passives(hero_id, buffs)
+    local passive_buffs = PassiveAbilitySettings[hero_id].buffs
+
+    for _, buff in ipairs(buffs) do
+        for i = #passive_buffs, 1, -1 do
+            if passive_buffs[i] == buff then
+                table.remove(passive_buffs, i)
+            end
+        end
+    end
+end
+
+-- perk_display_name is the perk's full localization key, e.g. "career_passive_name_we_1d"
+function talent_api.remove_career_perk_description(hero_id, perk_display_name)
+    local perks = PassiveAbilitySettings[hero_id].perks
+
+    for i = #perks, 1, -1 do
+        if perks[i].display_name == perk_display_name then
+            table.remove(perks, i)
+        end
+    end
+end
+
 function talent_api.insert_career_perk_descriptions(hero_id, perk_name)
     local hero_passives = PassiveAbilitySettings[hero_id]
     local perks = hero_passives.perks

@@ -10,15 +10,16 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Reduced Infiltrate stealth duration to 3s (from 5s).
 
 		### Passives
-		**Grim Fortune** (added to the passive description next to Assassin's Blade)
-		- Increases critical strike chance by 10%.
+		**Assassin's Blade**
+		- Increases movement speed by 10%. Added from Gladerunner.
 
-		**Blur**
-		- Parrying (within Shade's 0.75s parry window) also makes the next hit within 3s a guaranteed critical backstab (used up on hit).
-		- Entering stealth (Infiltrate or Blur) removes it.
+		**Grim Fortune** (new, replaces Blur)
+		- Increases critical strike chance by 10%.
+		- Parrying an attack makes the next attack within 3s a guaranteed critical strike (melee or ranged).
+		- Blur moved to the Blur talent (see Talents).
 
 		**Murderous Prowess**
-		- Charged critical backstabs only instantly slay the first 2 man-sized enemies an attack hits.
+		- Charged critical backstabs only instantly slay the first 1 man-sized enemies an attack hits.
 
 		### Talents
 		**Cruelty**
@@ -30,12 +31,26 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Chain Killer**
 		- Melee headshots also grant the backstab damage bonus.
-		- Each stack also increases headshot damage by 25%.
+		- Charged backstabs from Khaine's Counter also grant the bonus.
 		- Other attacks no longer remove the bonus.
+
+		**Focused Slaying**
+		- Only real backstabs from behind count (not Khaine's Counter or Ruthless Precision backstabs).
 
 		**Bloodfetcher**
 		- Changed ammo refund to 5% (from 1 ammo).
 		- Melee headshots also refund ammo, sharing the 2s cooldown.
+
+		**Blur** (moved from the passive, replaces Blood Drinker)
+		- Parrying an attack and quickly dodging grants Kerillian stealth for a short period.
+		- Increased parry window to 0.75s (from 0.5s).
+		- Keeps Blood Drinker's effect: critical hits reduce damage taken by 20% for 5s.
+
+		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
+		- Parrying an attack makes all melee attacks count as backstabs for 6s within the normal 0.5s parry window, scaling down to 3s at the end of Shade's extended 0.75s window.
+
+		**Ruthless Precision** (new, replaces Gladerunner)
+		- Melee headshots count as backstabs.
 
 		**Shimmer Strike**
 		- Limited extending stealth to 4 times.
@@ -105,98 +120,78 @@ mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_activated_abili
 mod_api.insert_text("career_active_desc_we_1_2", "Kerillian becomes undetectable, can pass through enemies, and deals greatly increased melee damage. Lasts for 3 seconds or until she deals damage.")
 
 --[[
-	Shared helpers
-]]
--- Melee headshot by the breed's hit zone type, which covers head and neck
-local function tb_shade_is_melee_headshot(breed, hit_zone_name, attack_type)
-	return (attack_type == "light_attack" or attack_type == "heavy_attack") and breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
-end
-
--- Real backstab from behind (vanilla _check_backstab angle, ignoring guaranteed_backstab)
-local function tb_shade_is_behind_target(owner_unit, target_unit)
-	local owner_to_target_dir = Vector3.normalize(POSITION_LOOKUP[target_unit] - POSITION_LOOKUP[owner_unit])
-	local target_direction = Quaternion.forward(Unit.local_rotation(target_unit, 0))
-	local hit_angle = Vector3.dot(target_direction, owner_to_target_dir)
-
-	return hit_angle >= 0.55 and hit_angle <= 1
-end
-
---[[
 
 	Passive
-
 ]]
---[[
-	Grim Fortune
-]]
--- 10% crit chance through vanilla kerillian_shade_passive_crit (5%), which vanilla defines but never adds to the passive
-mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
-	bonus = 0.1, -- 0.05
-})
-mod_api.insert_career_passives("we_1", {
-	"kerillian_shade_passive_crit",
-})
-mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Grim Fortune increases critical strike chance by 10%.")
-
 --[[
 	Blur
 ]]
--- A long (0.75s window) parry grants one buff with a guaranteed backstab and a guaranteed critical strike (Assassin's
--- Blade's icon). It lasts 3 seconds and is used up by the next hit. It's never granted while invisible, and entering
--- stealth (Blur or Infiltrate) removes it. on_timed_block_long and on_invisible both fire on the owning client, which
--- is where backstabs and crits are decided
-local PARRY_BACKSTAB_BUFF = "tb_kerillian_shade_parry_backstab"
+-- Blur moves out of the passive into talent row 5 (see Blur under Talents); its buff keeps the long parry window
+mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_stealth_parry", {
+	event = "on_timed_block_long", -- "on_timed_block"
+})
+mod_api.remove_career_passives("we_1", {
+	"kerillian_shade_passive_stealth_parry",
+})
+mod_api.remove_career_perk_description("we_1", "career_passive_name_we_1d") -- vanilla Blur perk entry
 
-mod_api.insert_talent_buff_template("wood_elf", PARRY_BACKSTAB_BUFF, {
-	icon = "kerillian_shade_passive",
+--[[
+	Grim Fortune
+]]
+-- 10% crit chance (vanilla kerillian_shade_passive_crit at 5%, never added to the passive in vanilla)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
+	bonus = 0.1, -- 0.05
+})
+-- A guaranteed crit (melee or ranged) for 3 seconds after a (long) parry, used up by the next attack that hits.
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_parry", {
+	buff_func = "add_buff_local",
+	buff_to_add = "tb_kerillian_shade_grim_fortune_crit_buff",
+	event = "on_timed_block_long",
+})
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_crit_buff", {
 	duration = 3,
 	max_stacks = 1,
 	refresh_durations = true,
-	event = "on_hit",
-	remove_on_proc = true,
+	icon = "kerillian_shade_perk_dagger_in_the_dark",
 	stat_buff = "critical_strike_chance",
 	bonus = 1,
-	perks = {
-		"guaranteed_backstab",
-	},
 })
-mod_api.insert_proc_function("tb_shade_parry_backstab_on_parry", function (owner_unit, buff, params)
-	local status_extension = ScriptUnit.has_extension(owner_unit, "status_system")
-
-	if ALIVE[owner_unit] and status_extension and not status_extension:is_invisible() then
-		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(buff.template.buff_to_add)
-	end
-end)
-mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_parry_backstab_passive", {
-	buff_func = "tb_shade_parry_backstab_on_parry",
-	buff_to_add = PARRY_BACKSTAB_BUFF,
-	event = "on_timed_block_long",
-})
-mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_parry_backstab_stealth_remover", {
+-- Removed on hit (same vanilla remover as the passive's kerillian_shade_stealth_crits_remover)
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_crit_consumer", {
 	buff_func = "remove_buff_stack",
-	event = "on_invisible",
+	event = "on_hit",
 	remove_buff_stack_data = {
 		{
-			buff_to_remove = PARRY_BACKSTAB_BUFF,
+			buff_to_remove = "tb_kerillian_shade_grim_fortune_crit_buff",
 			num_stacks = 1,
 			server_controlled = false,
 		},
 	},
 })
 mod_api.insert_career_passives("we_1", {
-	"tb_kerillian_shade_parry_backstab_passive",
-	"tb_kerillian_shade_parry_backstab_stealth_remover",
+	"kerillian_shade_passive_crit",
+	"tb_kerillian_shade_grim_fortune_parry",
+	"tb_kerillian_shade_grim_fortune_crit_consumer",
 })
-mod_api.insert_text("career_passive_desc_we_1d", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Parrying also makes her next unstealthed hit within 3 seconds a guaranteed critical backstab.")
+mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
+mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
+
+--[[
+	Gladerunner
+]]
+-- Gladerunner moves onto the passive, described in Assassin's Blade's passive description
+mod_api.insert_career_passives("we_1", {
+	"kerillian_shade_movement_speed",
+})
+mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Gladerunner increases movement speed by 10%.")
 
 --[[
 	Murderous Prowess
 ]]
--- Vanilla instakill (kerillian_shade_passive_backstab_killing_blow), limited to the first 3 enemies each attack hits.
+-- Vanilla instakill (kerillian_shade_passive_backstab_killing_blow), limited to the first 2 enemies each attack hits.
 -- The limit is applied where the perk is read, in the calculate_damage override
 -- (thp_stagger_damage_changes/01_damage_calc_changes.lua)
--- Vanilla perk order: Dagger in the Dark (we_1a_2), Blur (we_1d), Murderous Prowess (we_1a_3)
-mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay up to 2 man-sized enemies hit.")
+mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay 1 man-sized enemy.")
 
 --[[
 
@@ -289,11 +284,27 @@ mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_en
 
 --[[
 	Row 4: melee headshots also trigger Chain Killer's and Bloodfletcher's backstab effects.
+	Focused Slaying only triggers on real backstabs from behind.
 ]]
+-- Same headshot check as Ruthless Precision (01_damage_calc_changes.lua): the breed's hit zone type, which covers
+-- head and neck
+local function tb_shade_is_melee_headshot(breed, hit_zone_name, attack_type)
+	return (attack_type == "light_attack" or attack_type == "heavy_attack") and breed and hit_zone_name and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
+end
+
+-- Real backstab from behind (vanilla _check_backstab angle, ignoring guaranteed_backstab)
+local function tb_shade_is_behind_target(owner_unit, target_unit)
+	local owner_to_target_dir = Vector3.normalize(POSITION_LOOKUP[target_unit] - POSITION_LOOKUP[owner_unit])
+	local target_direction = Quaternion.forward(Unit.local_rotation(target_unit, 0))
+	local hit_angle = Vector3.dot(target_direction, owner_to_target_dir)
+
+	return hit_angle >= 0.55 and hit_angle <= 1
+end
+
 --[[
 	Chain Killer
 ]]
--- Charged backstab (incl. guaranteed backstabs) or melee headshot adds a stack; other hits no longer clear them
+-- Charged backstab (incl. Khaine's Counter) or melee headshot adds a stack; other hits no longer clear them
 mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", function (owner_unit, buff, params)
 	local hit_unit = params[1]
 
@@ -308,27 +319,45 @@ mod_api.insert_proc_function("tb_shade_buff_on_charged_backstab_or_headshot", fu
 
 	if (backstab and attack_type == "heavy_attack" or headshot) and not buff_extension:has_buff_type("kerillian_shade_passive_improved_crit_blocker") then
 		buff_extension:add_buff(buff.template.buff_to_add)
-		buff_extension:add_buff("tb_kerillian_shade_charged_backstabs_headshot_buff")
 		buff_extension:add_buff("kerillian_shade_passive_improved_crit_blocker")
 	end
 end)
 mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_charged_backstabs", {
 	buff_func = "tb_shade_buff_on_charged_backstab_or_headshot", -- "kerillian_shade_buff_on_charged_backstab"
 })
--- Headshot damage copy of the stack buff (scales the headshot bonus), added alongside it. No icon: the vanilla one shows
-local CHAIN_KILLER_HEADSHOT_MULTIPLIER = 0.25
-mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_charged_backstabs_headshot_buff", {
-	stat_buff = "headshot_multiplier",
-	multiplier = CHAIN_KILLER_HEADSHOT_MULTIPLIER,
-	duration = 5,
-	max_stacks = 2,
-	refresh_durations = true,
-})
 mod_api.update_talent("we_shade", 4, 1, {
 	description = "kerillian_shade_charged_backstabs_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_charged_backstabs_desc", string.format("Successive charged backstabs and melee headshots increase backstab damage by 25%% and headshot damage by %d%% for 5 seconds. Stacks up to 2 times.", CHAIN_KILLER_HEADSHOT_MULTIPLIER * 100))
+mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charged backstabs and melee headshots increase backstab damage by 25% for 5 seconds. Stacks up to 2 times.")
+
+--[[
+	Focused Slaying
+]]
+-- Only real backstab kills from behind (not Khaine's Counter / Ruthless Precision). params: killing_blow, breed, killed_unit
+mod_api.insert_proc_function("tb_shade_cooldown_regen_on_real_backstab_kill", function (owner_unit, buff, params)
+	local player = Managers.player:owner(owner_unit)
+	local killed_unit = params[3]
+
+	if not player or not ALIVE[owner_unit] or not ALIVE[killed_unit] then
+		return
+	end
+
+	local backstab_multiplier = params[1][DamageDataIndex.BACKSTAB_MULTIPLIER]
+	local backstab = backstab_multiplier and backstab_multiplier > 1 and tb_shade_is_behind_target(owner_unit, killed_unit)
+
+	if backstab and (player.local_player or Managers.state.network.is_server and player.bot_player) then
+		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(buff.template.buff_to_add)
+	end
+end)
+mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_backstabs_cooldown_regeneration", {
+	buff_func = "tb_shade_cooldown_regen_on_real_backstab_kill", -- "kerillian_shade_cooldown_regen_on_backstab_kill"
+})
+mod_api.update_talent("we_shade", 4, 2, {
+	description = "kerillian_shade_backstabs_cooldown_regeneration_desc",
+	description_values = {},
+})
+mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a direct backstab from behind increases cooldown regeneration by 100% for 3 seconds.")
 
 --[[
 	Bloodfletcher
@@ -397,6 +426,144 @@ mod_api.update_talent("we_shade", 4, 3, {
 	},
 })
 mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Backstabs and melee headshots return 5% of maximum ammunition. 2 second cooldown.")
+
+--[[
+	Blur (moved from the passive, replaces Blood Drinker)
+]]
+-- Vanilla Blur, applied on both sides like the vanilla passive buff, plus Blood Drinker's damage reduction on crit.
+-- Blood Drinker is a server talent in vanilla, but on_critical_hit procs on both the owner and the server here, so its
+-- trigger only adds the buff on the server (vanilla add_buff from the client would add it a second time via RPC)
+mod_api.insert_proc_function("tb_shade_add_buff_on_server", function (owner_unit, buff, params)
+	if Managers.state.network.is_server then
+		ProcFunctions.add_buff(owner_unit, buff, params)
+	end
+end)
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_blur_damage_reduction_on_critical_hit", {
+	buff_func = "tb_shade_add_buff_on_server",
+	buff_to_add = "kerillian_shade_damage_reduction_on_critical_hit_buff", -- vanilla: 20% for 5s
+	event = "on_critical_hit",
+})
+mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
+	buffer = "both",
+	icon = "kerillian_shade_perk_blur",
+	buffs = {
+		"kerillian_shade_passive_stealth_parry",
+		"tb_kerillian_shade_blur_damage_reduction_on_critical_hit",
+	},
+})
+mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Critical hits reduce damage taken by 20% for 5 seconds.")
+
+--[[
+	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)
+]]
+-- Guaranteed backstabs after a parry: 6s in the 0.5s window, down to 3s at the end of the 0.75s window.
+-- The parry event is owner-only; the buff is synced to the server so Chain Killer's server copy sees it.
+local tb_khaines_counter_params = {}
+mod_api.insert_proc_function("tb_shade_khaines_counter_on_parry", function (owner_unit, buff, params)
+	if not ALIVE[owner_unit] then
+		return
+	end
+
+	local template = buff.template
+	local t = Managers.time:time("game")
+	local status_extension = ScriptUnit.extension(owner_unit, "status_system")
+	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+	local short_window_end = status_extension.timed_block
+	local long_window_end = status_extension.timed_block_long
+	local short_window = short_window_end and (t < short_window_end or buff_extension:has_buff_type("power_up_deus_block_procs_parry_exotic"))
+	local duration = template.short_window_duration
+
+	if not short_window and short_window_end and long_window_end and long_window_end > short_window_end then
+		local progress = math.clamp((t - short_window_end) / (long_window_end - short_window_end), 0, 1)
+
+		duration = math.lerp(template.short_window_duration, template.long_window_duration, progress)
+	end
+
+	-- Don't cut a longer remaining buff short (refreshing applies the new duration)
+	local existing_buff = buff_extension:get_buff_type(template.buff_to_add)
+
+	if existing_buff and existing_buff.end_time and existing_buff.end_time - t >= duration then
+		return
+	end
+
+	table.clear(tb_khaines_counter_params)
+
+	tb_khaines_counter_params.external_optional_duration = duration
+
+	Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, template.buff_to_add, BuffSyncType.LocalAndServer, tb_khaines_counter_params)
+end)
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_counter_parry", {
+	buff_func = "tb_shade_khaines_counter_on_parry",
+	buff_to_add = "tb_kerillian_shade_khaines_counter_backstab_buff",
+	event = "on_timed_block_long",
+	short_window_duration = 6, -- within the 0.5s window
+	long_window_duration = 3, -- at the end of the 0.75s window
+})
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_counter_backstab_buff", {
+	duration = 6, -- overridden per parry by tb_kerillian_shade_khaines_counter_parry
+	max_stacks = 1,
+	refresh_durations = true,
+	icon = "kerillian_shade_movement_speed_on_critical_hit", -- Spring-Heeled Assassin's icon marks backstabs
+	perks = {
+		"guaranteed_backstab",
+	},
+})
+mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_khaines_counter", {
+	buffer = "client",
+	icon = "kerillian_shade_movement_speed_on_critical_hit",
+	buffs = {
+		"tb_kerillian_shade_khaines_counter_parry",
+	},
+})
+mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes all melee attacks count as backstabs for 6 seconds, down to 3 seconds the later the parry.")
+
+--[[
+	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)
+]]
+-- Melee headshots count as backstabs (perk read in 01_damage_calc_changes.lua, hence buffer "both").
+-- Backstab feedback for converted headshots, as in ActionSweep._check_backstab (on_backstab plays Shade's backstab sound)
+mod:hook(ActionSweep, "_play_character_impact", function (func, self, is_server, attacker_unit, hit_unit, breed, hit_position, hit_zone_name, current_action, damage_profile, target_index, power_level, attack_direction, blocking, boost_curve_multiplier, is_critical_strike, backstab_multiplier, ...)
+	if not blocking and (not backstab_multiplier or backstab_multiplier <= 1) and damage_profile and HEALTH_ALIVE[hit_unit]
+		and tb_shade_is_melee_headshot(breed, hit_zone_name, damage_profile.charge_value) then
+		local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
+
+		if buff_extension and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and buff_extension:apply_buffs_to_value(1, "backstab_multiplier") > 1 then
+			local first_person_extension = ScriptUnit.has_extension(attacker_unit, "first_person_system")
+
+			if first_person_extension then
+				first_person_extension:play_hud_sound_event("hud_player_buff_backstab")
+			end
+
+			local side = Managers.state.side.side_by_unit[attacker_unit]
+			local player_and_bot_units = side and side.PLAYER_AND_BOT_UNITS
+
+			if player_and_bot_units then
+				for i = 1, #player_and_bot_units do
+					local friendly_buff_extension = ScriptUnit.has_extension(player_and_bot_units[i], "buff_system")
+
+					if friendly_buff_extension then
+						friendly_buff_extension:trigger_procs("on_backstab", hit_unit)
+					end
+				end
+			end
+		end
+	end
+
+	return func(self, is_server, attacker_unit, hit_unit, breed, hit_position, hit_zone_name, current_action, damage_profile, target_index, power_level, attack_direction, blocking, boost_curve_multiplier, is_critical_strike, backstab_multiplier, ...)
+end)
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_ruthless_precision_headshot_backstab", {
+	perks = {
+		"tb_headshot_counts_as_backstab",
+	},
+})
+mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision", {
+	buffer = "both",
+	icon = "kerillian_shade_movement_speed", -- reuse Gladerunner's old icon, since this replaces it in this slot
+	buffs = {
+		"tb_kerillian_shade_ruthless_precision_headshot_backstab",
+	},
+})
+mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs.")
 
 --[[
 	Shimmer Strike
@@ -527,7 +694,7 @@ mod_api.insert_talent_buff_template("wood_elf", "tb_hungry_wind_crit_buff", {
 	duration = 10, -- keep in sync with kerillian_shade_power_buff
 	max_stacks = 1,
 	refresh_durations = true,
-	icon = "kerillian_shade_perk_dagger_in_the_dark",
+	icon = "kerillian_shade_perk_dagger_in_the_dark", -- same crit icon as Grim Fortune
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
 })

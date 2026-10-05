@@ -22,6 +22,8 @@ local buff_api = require("scripts/mods/TourneyBalance/_api/_buff_api")
         _talent_api.lua       : update_career_ability_cooldown
                                 insert_career_passives
                                 insert_career_perk_descriptions
+                                remove_career_passives
+                                remove_career_perk_description
                                 insert_talent_buff_template
                                 update_talent_buff_template
                                 insert_talent

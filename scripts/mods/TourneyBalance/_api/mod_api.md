@@ -288,7 +288,9 @@ sequenceDiagram
 | `insert_talent` | `_talent_api.lua` | mod load | `Talents`, `TalentTrees`, `TalentIDLookup` |
 | `update_career_ability_cooldown` | `_talent_api.lua` | mod load | `ActivatedAbilitySettings[hero_id][1].cooldown` (in place) |
 | `insert_career_passives` | `_talent_api.lua` | mod load | `PassiveAbilitySettings[hero_id].buffs` (appends) |
+| `remove_career_passives` | `_talent_api.lua` | mod load | `PassiveAbilitySettings[hero_id].buffs` (removes every entry matching each given buff name) |
 | `insert_career_perk_descriptions` | `_talent_api.lua` | mod load | `PassiveAbilitySettings[hero_id].perks` (appends a `career_passive_name_/desc_<perk_name>` entry) |
+| `remove_career_perk_description` | `_talent_api.lua` | mod load | `PassiveAbilitySettings[hero_id].perks` (removes the entry whose `display_name` is the given full key) |
 | `insert_buff_template` | `_buff_api.lua` | mod load | `BuffTemplates`, `NetworkLookup.buff_templates` (no hero tie-in) |
 | `insert_proc_function` | `_buff_api.lua` | mod load | `ProcFunctions` |
 | `insert_buff_function` | `_buff_api.lua` | mod load | `BuffFunctionTemplates.functions` |

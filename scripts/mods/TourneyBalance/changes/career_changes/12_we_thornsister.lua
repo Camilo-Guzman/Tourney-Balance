@@ -90,8 +90,8 @@ mod_api.insert_text("kerillian_thorn_sister_attack_speed_on_full_desc", "Increas
 	Atharti's Delight
 ]]
 -- Vanilla proc (any melee hit on a poisoned enemy), but the bleed only stacks once
-BuffTemplates.thorn_sister_big_bleed.buffs[1].max_stacks = 2 -- 3
-mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee attacks against poisoned enemies inflict a heavy bleed for 5 seconds. Does not stack.")
+BuffTemplates.thorn_sister_big_bleed.buffs[1].max_stacks = 1 -- 3
+mod_api.insert_text("kerillian_thorn_sister_crit_big_bleed_desc_2", "Melee attacks against poisoned enemies inflict bleed.")
 
 
 --[[

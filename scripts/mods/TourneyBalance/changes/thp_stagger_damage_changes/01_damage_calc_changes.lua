@@ -465,7 +465,7 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
-local MURDEROUS_PROWESS_MAX_TARGETS = 2
+local MURDEROUS_PROWESS_MAX_TARGETS = 1
 
 mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 	local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
@@ -517,6 +517,14 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 		has_power_boost = buff_extension:has_buff_perk("potion_armor_penetration")
 		has_crit_head_shot_killing_blow_perk = buff_extension:has_buff_perk("crit_headshot_killing_blow")
 		has_crit_backstab_killing_blow_perk = buff_extension:has_buff_perk("crit_backstab_killing_blow")
+
+		local is_melee = damage_profile and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
+
+		-- Shade's Ruthless Precision: melee headshots count as backstabs (_check_backstab doesn't know the hit zone).
+		-- Sound and on_backstab procs: 11_we_shade.lua
+		if breed and (not backstab_multiplier or backstab_multiplier <= 1) and is_melee and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot" then
+			backstab_multiplier = buff_extension:apply_buffs_to_value(1, "backstab_multiplier")
+		end
 
 		-- Shade's Murderous Prowess (the only source of this perk): the charged crit backstab instakill only applies to the
 		-- first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits. Melee target_index counts the enemies hit, starting at 1
