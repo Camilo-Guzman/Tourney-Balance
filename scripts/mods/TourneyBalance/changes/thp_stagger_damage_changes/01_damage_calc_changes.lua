@@ -87,20 +87,7 @@ mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, tar
 		if not HEALTH_ALIVE [target_unit] then -- If it dies make it say it just died
 			just_died = true
 		end
-		-- Shade's Murderous Prowess charge: calculate_damage flags a backstab instakill; spend the charge if this real hit did
-		if buff_extension then
-			buff_extension.tb_backstab_instakill_pending = nil
-		end
-
 		DamageUtils.add_damage_network_player(damage_profile, target_index, attack_power_level, target_unit, attacker_unit, hit_zone_name, hit_position, attack_direction, damage_source, hit_ragdoll_actor, boost_curve_multiplier, is_critical_strike, added_dot, first_hit, total_hits, backstab_multiplier, source_attacker_unit)
-
-		if buff_extension and buff_extension.tb_backstab_instakill_pending then
-			buff_extension.tb_backstab_instakill_pending = nil
-
-			if mod.tb_consume_murderous_prowess_charge then
-				mod.tb_consume_murderous_prowess_charge(attacker_unit)
-			end
-		end
 
 		local is_direct_hit = not (damage_profile and (damage_profile.is_dot or damage_profile.is_explosion))
 		-- Excludes push/shield-slam splash hits, i.e. only the center/damage-dealing hit can generate stagger count.
@@ -478,6 +465,8 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
+local MURDEROUS_PROWESS_MAX_TARGETS = 3
+
 mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 	local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
 	local breed, dummy_unit_armor, is_dummy, unit_max_health = nil
@@ -529,11 +518,10 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 		has_crit_head_shot_killing_blow_perk = buff_extension:has_buff_perk("crit_headshot_killing_blow")
 		has_crit_backstab_killing_blow_perk = buff_extension:has_buff_perk("crit_backstab_killing_blow")
 
-		-- Shade's Murderous Prowess is a one-use charge granted by parrying (career_changes/11_we_shade.lua). Flag hits that
-		-- will trigger the charged crit backstab instakill (mirrors the killing-blow check in do_damage_calculation), so
-		-- server_apply_hit can spend the charge. Only server_apply_hit acts on the flag, so damage predictions don't
-		if has_crit_backstab_killing_blow_perk and is_critical_strike and backstab_multiplier and backstab_multiplier > 1 and damage_profile and damage_profile.charge_value == "heavy_attack" and breed and not breed.boss and not breed.primary_armor_category and not (hit_zone_name == "head" and has_crit_head_shot_killing_blow_perk) then
-			buff_extension.tb_backstab_instakill_pending = true
+		-- Shade's Murderous Prowess (the only source of this perk): the charged crit backstab instakill only applies to the
+		-- first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits. Melee target_index counts the enemies hit, starting at 1
+		if has_crit_backstab_killing_blow_perk and target_index and target_index > MURDEROUS_PROWESS_MAX_TARGETS then
+			has_crit_backstab_killing_blow_perk = false
 		end
 	end
 

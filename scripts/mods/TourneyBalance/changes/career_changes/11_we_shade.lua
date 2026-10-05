@@ -1,4 +1,3 @@
-local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 --[[
@@ -14,12 +13,11 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Increases critical strike chance by 10%.
 
 		**Blur**
-		- Parrying (within Shade's 0.75s parry window) also makes the next hit a guaranteed critical backstab (1 stack, used up on hit).
+		- Parrying (within Shade's 0.75s parry window) also makes the next hit within 3s a guaranteed critical backstab (used up on hit).
 		- Entering stealth (Infiltrate or Blur) removes it.
 
 		**Murderous Prowess**
-		- Charged critical backstabs no longer always instantly slay man-sized enemies.
-		- Instead, parrying an attack (within Shade's 0.75s parry window) grants a charge (Blur icon): the next charged critical backstab instantly slays one man-sized enemy, using up the charge.
+		- Charged critical backstabs only instantly slay the first 3 man-sized enemies an attack hits.
 
 		### Talents
 		**Cruelty**
@@ -130,7 +128,7 @@ end
 --[[
 	Grim Fortune
 ]]
--- Vanilla kerillian_shade_passive_crit, never added to the passive in vanilla
+-- 10% crit chance through vanilla kerillian_shade_passive_crit (5%), which vanilla defines but never adds to the passive
 mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
 	bonus = 0.1, -- 0.05
 })
@@ -142,16 +140,17 @@ mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking
 --[[
 	Blur
 ]]
--- A (long, 0.75s window) parry grants a guaranteed backstab and a guaranteed critical strike (vanilla
--- guaranteed_backstab perk, Blur's icon), for the next unstealthed hit. Used up by that hit (remove_on_proc).
--- It's never granted while invisible, and entering stealth (Blur or Infiltrate) removes it right away through
--- on_invisible, the same way vanilla's kerillian_shade_stealth_crits_remover reacts to on_visible.
--- on_timed_block_long and on_invisible both fire on the owning client, which is where backstabs and crits are decided
+-- A long (0.75s window) parry grants one buff with a guaranteed backstab and a guaranteed critical strike (Assassin's
+-- Blade's icon). It lasts 3 seconds and is used up by the next hit. It's never granted while invisible, and entering
+-- stealth (Blur or Infiltrate) removes it. on_timed_block_long and on_invisible both fire on the owning client, which
+-- is where backstabs and crits are decided
 local PARRY_BACKSTAB_BUFF = "tb_kerillian_shade_parry_backstab"
 
 mod_api.insert_talent_buff_template("wood_elf", PARRY_BACKSTAB_BUFF, {
-	icon = "kerillian_shade_perk_blur",
+	icon = "kerillian_shade_passive",
+	duration = 3,
 	max_stacks = 1,
+	refresh_durations = true,
 	event = "on_hit",
 	remove_on_proc = true,
 	stat_buff = "critical_strike_chance",
@@ -187,62 +186,16 @@ mod_api.insert_career_passives("we_1", {
 	"tb_kerillian_shade_parry_backstab_passive",
 	"tb_kerillian_shade_parry_backstab_stealth_remover",
 })
-mod_api.insert_text("career_passive_desc_we_1d", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Parrying also makes her next unstealthed hit a guaranteed critical backstab.")
+mod_api.insert_text("career_passive_desc_we_1d", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Parrying also makes her next unstealthed hit within 3 seconds a guaranteed critical backstab.")
 
 --[[
 	Murderous Prowess
 ]]
--- The charged critical backstab instakill is no longer permanent: parrying grants a one-use charge (Blur's icon)
--- carrying the vanilla perk. The first instakill spends it, so it only ever slays one enemy. It lasts until used,
--- one at a time.
--- Parries are only detected on the owning client, but the perk is read on the server (calculate_damage override,
--- thp_stagger_damage_changes/01_damage_calc_changes.lua), so the charge is a synced buff (BuffSyncType.All): added on
--- the owner, synced to the server and relayed to everyone. server_apply_hit spends it on the server through
--- tb_consume_murderous_prowess_charge, and that removal is synced back to every peer
-local MURDEROUS_PROWESS_CHARGE_BUFF = "tb_kerillian_shade_murderous_prowess_charge"
-
-mod_api.remove_career_passives("we_1", {
-	"kerillian_shade_passive_backstab_killing_blow",
-})
-mod_api.insert_talent_buff_template("wood_elf", MURDEROUS_PROWESS_CHARGE_BUFF, {
-	icon = "kerillian_shade_perk_blur",
-	max_stacks = 1,
-	perks = {
-		"crit_backstab_killing_blow",
-	},
-})
-mod_api.insert_proc_function("tb_shade_murderous_prowess_charge_on_parry", function (owner_unit, buff, params)
-	local player = Managers.player:owner(owner_unit)
-
-	if not ALIVE[owner_unit] or not player or player.remote then
-		return
-	end
-
-	local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
-
-	if not buff_extension:has_buff_type(buff.template.buff_to_add) then
-		Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, buff.template.buff_to_add, BuffSyncType.All)
-	end
-end)
-mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_murderous_prowess_parry", {
-	buff_func = "tb_shade_murderous_prowess_charge_on_parry",
-	buff_to_add = MURDEROUS_PROWESS_CHARGE_BUFF,
-	event = "on_timed_block_long", -- same long parry window as Blur's guaranteed backstab
-})
-mod_api.insert_career_passives("we_1", {
-	"tb_kerillian_shade_murderous_prowess_parry",
-})
-
-function mod.tb_consume_murderous_prowess_charge(unit)
-	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
-	local charge = buff_extension and buff_extension:get_buff_type(MURDEROUS_PROWESS_CHARGE_BUFF)
-
-	if charge then
-		buff_extension:remove_buff(charge.id)
-	end
-end
+-- Vanilla instakill (kerillian_shade_passive_backstab_killing_blow), limited to the first 3 enemies each attack hits.
+-- The limit is applied where the perk is read, in the calculate_damage override
+-- (thp_stagger_damage_changes/01_damage_calc_changes.lua)
 -- Vanilla perk order: Dagger in the Dark (we_1a_2), Blur (we_1d), Murderous Prowess (we_1a_3)
-mod_api.insert_text("career_passive_desc_we_1a_3", "Parrying an attack grants Murderous Prowess: the next charged critical backstab instantly slays a man-sized enemy.")
+mod_api.insert_text("career_passive_desc_we_1a_3", "Charged critical backstabs instantly slay up to 3 man-sized enemies hit.")
 
 --[[
 
