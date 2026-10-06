@@ -15,9 +15,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Unyielding Blessing**
 		- Duration reduced to 7s (from 10s).
-
-		**United in Prayer**
-		- Duration reduced to 3s (from 5s).
 	$END_TB
 ]]
 
@@ -99,6 +96,6 @@ mod:hook_origin(ActionCareerWHPriestUtility, "_add_buffs_to_target", function (t
 	end
 end)
 mod_api.insert_text("victor_priest_6_1_desc_new", "Shield of Faith now lasts 7 seconds. The shielded hero's attacks cause the shield to pulse, staggering nearby enemies.")
-mod_api.insert_text("victor_priest_6_2_desc", "Shield of Faith always affects Victor as well. Shield of Faith now lasts 3 seconds.")
+--mod_api.insert_text("victor_priest_6_2_desc", "Shield of Faith always affects Victor as well. Shield of Faith now lasts 5 seconds.")
 
 
