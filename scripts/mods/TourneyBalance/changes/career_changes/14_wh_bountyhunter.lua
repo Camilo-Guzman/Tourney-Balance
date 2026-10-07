@@ -88,7 +88,7 @@ mod_api.update_talent("wh_bountyhunter", 2, 3, {
 	description_values = {
 		{
 			value_type = "percent",
-			value = 0.025, --buff_tweak_data.victor_bountyhunter_power_level_on_clip_size_buff.multiplier,
+			value = 0.02, --buff_tweak_data.victor_bountyhunter_power_level_on_clip_size_buff.multiplier,
 		},
 	},
 })

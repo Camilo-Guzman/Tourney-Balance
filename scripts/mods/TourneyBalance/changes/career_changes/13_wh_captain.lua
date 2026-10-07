@@ -18,8 +18,8 @@ local is_local = shared_utils.is_local
 		- Elites and specials take 25% more direct damage from Saltzpyre.
 
 		**I Shall Judge You All**
-		- Apply Witch Hunt and mark all enemies within Animosity's range.
-		- Headshotting Witch-Hunted enemies extends the duration by 2s.
+		- Creates and aura that continuously applies Witch Hunt and reveals all specials within Animosity's range.
+		- Headshotting Witch-Hunted enemies extends the aura duration by 2s.
 
 		**Fervency**
 		- Increased duration to 10s (from 6s).

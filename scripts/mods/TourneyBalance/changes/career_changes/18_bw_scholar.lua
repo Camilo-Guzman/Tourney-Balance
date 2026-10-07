@@ -5,6 +5,9 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 	$BEGIN_TB
 		---
 		## Pyromancer
+		### Ult
+		- Lowered casting time to 0.3 seconds (from 1 seconds)
+
 		### Talents
 		**Martial Study**
 		- Increased attack speed to 10% (from 5%).

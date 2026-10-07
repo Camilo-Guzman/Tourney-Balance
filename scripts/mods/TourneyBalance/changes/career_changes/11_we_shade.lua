@@ -37,6 +37,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Focused Slaying**
 		- Only real backstabs from behind count (not Khaine's Counter or Ruthless Precision backstabs).
+		- Melee headshot kills also trigger it.
 
 		**Bloodfetcher**
 		- Changed ammo refund to 5% (from 1 ammo).
@@ -285,7 +286,7 @@ mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_en
 
 --[[
 	Row 4: melee headshots also trigger Chain Killer's and Bloodfletcher's backstab effects.
-	Focused Slaying only triggers on real backstabs from behind.
+	Focused Slaying only triggers on real backstabs from behind, or melee headshots.
 ]]
 -- Same headshot check as Ruthless Precision (01_damage_calc_changes.lua): the breed's hit zone type, which covers
 -- head and neck
@@ -335,19 +336,22 @@ mod_api.insert_text("kerillian_shade_charged_backstabs_desc", "Successive charge
 --[[
 	Focused Slaying
 ]]
--- Only real backstab kills from behind (not Khaine's Counter / Ruthless Precision). params: killing_blow, breed, killed_unit
+-- Real backstab kills from behind (not Khaine's Counter / Ruthless Precision) or melee headshot kills.
+-- params: killing_blow, breed, killed_unit
 mod_api.insert_proc_function("tb_shade_cooldown_regen_on_real_backstab_kill", function (owner_unit, buff, params)
 	local player = Managers.player:owner(owner_unit)
+	local killing_blow = params[1]
 	local killed_unit = params[3]
 
 	if not player or not ALIVE[owner_unit] or not ALIVE[killed_unit] then
 		return
 	end
 
-	local backstab_multiplier = params[1][DamageDataIndex.BACKSTAB_MULTIPLIER]
+	local backstab_multiplier = killing_blow[DamageDataIndex.BACKSTAB_MULTIPLIER]
 	local backstab = backstab_multiplier and backstab_multiplier > 1 and tb_shade_is_behind_target(owner_unit, killed_unit)
+	local headshot = tb_shade_is_melee_headshot(params[2], killing_blow[DamageDataIndex.HIT_ZONE], killing_blow[DamageDataIndex.ATTACK_TYPE])
 
-	if backstab and (player.local_player or Managers.state.network.is_server and player.bot_player) then
+	if (backstab or headshot) and (player.local_player or Managers.state.network.is_server and player.bot_player) then
 		ScriptUnit.extension(owner_unit, "buff_system"):add_buff(buff.template.buff_to_add)
 	end
 end)
@@ -358,7 +362,7 @@ mod_api.update_talent("we_shade", 4, 2, {
 	description = "kerillian_shade_backstabs_cooldown_regeneration_desc",
 	description_values = {},
 })
-mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a direct backstab from behind increases cooldown regeneration by 100% for 3 seconds.")
+mod_api.insert_text("kerillian_shade_backstabs_cooldown_regeneration_desc", "Killing an enemy with a direct backstab from behind or a melee headshot increases cooldown regeneration by 100% for 3 seconds.")
 
 --[[
 	Bloodfletcher
