@@ -185,7 +185,7 @@ mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 mod_api.insert_career_passives("we_1", {
 	"kerillian_shade_movement_speed",
 })
-mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Gladerunner increases movement speed by 10%.")
+mod_api.insert_text("career_passive_desc_we_1b_2", "Double damage when attacking enemies from behind with melee attacks. Increases movement speed by 10%.")
 
 --[[
 	Murderous Prowess
