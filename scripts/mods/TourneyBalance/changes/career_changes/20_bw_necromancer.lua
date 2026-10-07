@@ -53,7 +53,7 @@ mod_api.insert_text("sienna_necromancer_2_2_desc", "Casting spells grants 5% ran
 mod_api.update_talent_buff_template("bright_wizard", "sienna_necromancer_2_3", {
 	multiplier = 0 -- 0.25
 })
-mod_api.insert_text("sienna_necromancer_2_3_desc", "Critical attacks have unlimited cleave.")
+mod_api.insert_text("sienna_necromancer_2_3_desc", "Melee critical attacks have unlimited cleave.")
 
 --[[
 	Cursed Blood

@@ -32,7 +32,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Now also grants a stack on any damage taken (from only venting).
 
 		**Enfeebling Flames**
-		- Reduced damage reduction against burning enemies to 10% (from 30%).
+		- Reduced damage reduction against burning enemies to 20% (from 30%).
 
 	$END_TB
 ]]

@@ -6,6 +6,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		---
 		## Foot Knight
 		### Career Ability
+		= Charge cleave (attack and impact) increased to 4 (from 2)
 		- Ult blast radius buffed to 5 (from 3) for all ults.
 
 		### Passives
@@ -49,7 +50,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Mainstay grants effect at 50% cooldown regeneration for 0.5s
 
 		**Numb to Pain**
-		- Invulnerability duration on ult increased to 6s (from 3s).
+		- Invulnerability duration on ult increased to 5s (from 3s).
 
 		**Battering Ram**
 		- Battering Ram charge width reduced to 4 (from 5).
