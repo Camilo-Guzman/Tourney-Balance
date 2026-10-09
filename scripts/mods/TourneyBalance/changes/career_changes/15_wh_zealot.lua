@@ -14,8 +14,8 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Fiery Faith**
-		- Damage taken by Zealot converts into Overhealth for his allies (max 25).
-		- Damage taken by his allies is absorbed by Overhealth first.
+		- Damage taken by Zealot converts into Overhealth, divided evenly between his allies (max 20 per ally). A share that doesn't fit an ally's full Overhealth is wasted.
+		- Damage taken by his allies is absorbed by their own Overhealth first.
 		- Can hit trade with it.
 
 		**Ironheart**
@@ -119,42 +119,73 @@ end)
 --[[
     Fiery Faith - Overhealth
 ]]
--- Damage Zealot takes is stored in a team-wide overhealth pool (max 25). Damage taken by his teammates is
--- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
--- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
-local OVERHEALTH_MAX = 25
+-- Damage Zealot takes is divided evenly between his allies (alive, not knocked down, not Zealots themselves) and added
+-- to each ally's own overhealth (max 20 each); a share that doesn't fit a full bar is wasted. Damage taken by an ally
+-- is absorbed by their own overhealth first; Zealot himself never has any. Pools are server-authoritative; each
+-- rounded-up amount is synced to every peer by game object id, to drive a local-only buff icon whose stack count
+-- shows the local player's overhealth.
+local OVERHEALTH_MAX = 20
 local OVERHEALTH_PASSIVE_BUFF = "victor_zealot_passive_increased_damage" -- Fiery Faith parent buff
 local OVERHEALTH_ICON_BUFF = "tb_victor_zealot_overhealth_icon"
 local OVERHEALTH_NETWORK_ID = "tb_zealot_overhealth"
 local NUMB_TO_PAIN_BUFF = "markus_knight_ability_invulnerability_buff"
 local OVERHEALTH_ULT_REGEN_MODIFIER = 1 -- absorbed damage charges the ult like the health had been lost
 
-local overhealth_pool = 0 -- server only
-local overhealth_display = 0 -- every peer, math.ceil of the pool
+local overhealth_pools = {} -- server only: unit -> overhealth
+local overhealth_go_ids = {} -- server only: unit -> game object id, to clear the display after the unit is gone
+local overhealth_displays = {} -- every peer: game object id -> math.ceil of that unit's overhealth
+local overhealth_recipients = {}
 
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre's damage taken is converted into up to 25 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre's damage taken is divided between his allies as up to 20 Overhealth each. Damage taken by allies is absorbed by their Overhealth first.")
 
-local function set_overhealth_pool(amount)
-    overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)
+local function set_overhealth(unit, amount)
+    amount = math.clamp(amount, 0, OVERHEALTH_MAX)
+    overhealth_pools[unit] = amount > 0 and amount or nil
 
-    local display = math.ceil(overhealth_pool)
+    local go_id = Managers.state.network:unit_game_object_id(unit)
 
-    if display ~= overhealth_display then
-        overhealth_display = display
-        mod:network_send(OVERHEALTH_NETWORK_ID, "others", display)
+    overhealth_go_ids[unit] = amount > 0 and go_id or nil
+
+    if not go_id then
+        return
+    end
+
+    local display = math.ceil(amount)
+
+    if display ~= (overhealth_displays[go_id] or 0) then
+        overhealth_displays[go_id] = display > 0 and display or nil
+        mod:network_send(OVERHEALTH_NETWORK_ID, "others", go_id, display)
     end
 end
 
-mod:network_register(OVERHEALTH_NETWORK_ID, function (sender_peer_id, display)
-    overhealth_display = display or 0
+-- Server: drop the overhealth of units that are gone, so a reused game object id doesn't inherit it
+local function clear_destroyed_overhealth()
+    for unit, go_id in pairs(overhealth_go_ids) do
+        if not ALIVE[unit] then
+            overhealth_pools[unit] = nil
+            overhealth_go_ids[unit] = nil
+
+            if overhealth_displays[go_id] then
+                overhealth_displays[go_id] = nil
+                mod:network_send(OVERHEALTH_NETWORK_ID, "others", go_id, 0)
+            end
+        end
+    end
+end
+
+mod:network_register(OVERHEALTH_NETWORK_ID, function (sender_peer_id, go_id, display)
+    if go_id then
+        overhealth_displays[go_id] = display and display > 0 and display or nil
+    end
 end)
 
 mod:add_game_state_changed_function(function ()
-    overhealth_pool = 0
-    overhealth_display = 0
+    table.clear(overhealth_pools)
+    table.clear(overhealth_go_ids)
+    table.clear(overhealth_displays)
 end)
 
 -- Hit trading: each career's passive has its own "<career>_ability_cooldown_on_damage_taken" buff with its own
@@ -227,20 +258,52 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
         return damage
     end
 
-    -- Zealot converts the damage he takes into overhealth for his teammates
+    -- Zealot's damage taken is divided evenly between his allies' overhealth
     if buff_extension:has_buff_type(OVERHEALTH_PASSIVE_BUFF) then
-        set_overhealth_pool(overhealth_pool + damage)
+        local player_and_bot_units = side.PLAYER_AND_BOT_UNITS
+        local num_recipients = 0
+
+        table.clear(overhealth_recipients)
+
+        for i = 1, #player_and_bot_units do
+            local ally_unit = player_and_bot_units[i]
+
+            if ally_unit ~= attacked_unit and HEALTH_ALIVE[ally_unit] then
+                local ally_status_extension = ScriptUnit.has_extension(ally_unit, "status_system")
+                local ally_buff_extension = ScriptUnit.has_extension(ally_unit, "buff_system")
+
+                if ally_status_extension and not ally_status_extension:is_knocked_down() and not ally_status_extension:is_dead()
+                    and ally_buff_extension and not ally_buff_extension:has_buff_type(OVERHEALTH_PASSIVE_BUFF) then
+                    num_recipients = num_recipients + 1
+                    overhealth_recipients[num_recipients] = ally_unit
+                end
+            end
+        end
+
+        if num_recipients > 0 then
+            local share = damage / num_recipients
+
+            for i = 1, num_recipients do
+                local ally_unit = overhealth_recipients[i]
+
+                set_overhealth(ally_unit, (overhealth_pools[ally_unit] or 0) + share)
+            end
+        end
+
+        table.clear(overhealth_recipients)
 
         return damage
     end
 
-    if overhealth_pool <= 0 then
+    local overhealth = overhealth_pools[attacked_unit] or 0
+
+    if overhealth <= 0 then
         return damage
     end
 
-    local absorbed = math.min(overhealth_pool, damage)
+    local absorbed = math.min(overhealth, damage)
 
-    set_overhealth_pool(overhealth_pool - absorbed)
+    set_overhealth(attacked_unit, overhealth - absorbed)
 
     -- Absorbed damage still charges the hit hero's ult, at their own career's on-damage-taken rate
     if damage_source ~= "temporary_health_degen" then
@@ -254,11 +317,16 @@ mod:add_apply_buffs_to_damage_wrapper(function (func, current_damage, attacked_u
     return damage - absorbed
 end)
 
--- Icon: local-only buff on the local player's unit while the pool is non-empty (not network synced)
+-- Icon: local-only buff on the local player's unit while they have overhealth (not network synced)
 local icon_unit = nil
 local icon_buff_id = nil
+local overhealth_display = 0 -- the local player's overhealth, read by the icon and its stack count
 
 mod:add_update_function(function (dt)
+    if next(overhealth_go_ids) and Managers.state.network and Managers.state.network.is_server then
+        clear_destroyed_overhealth()
+    end
+
     local local_player = Managers.player and Managers.player:local_player_safe(1)
     local unit = local_player and local_player.player_unit
 
@@ -268,6 +336,8 @@ mod:add_update_function(function (dt)
     end
 
     if not unit or not Unit.alive(unit) then
+        overhealth_display = 0
+
         return
     end
 
@@ -276,6 +346,10 @@ mod:add_update_function(function (dt)
     if not buff_extension then
         return
     end
+
+    local go_id = Managers.state.network and Managers.state.network:unit_game_object_id(unit)
+
+    overhealth_display = go_id and overhealth_displays[go_id] or 0
 
     if overhealth_display > 0 and not icon_buff_id then
         icon_buff_id = buff_extension:add_buff(OVERHEALTH_ICON_BUFF)
