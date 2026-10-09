@@ -1,5 +1,6 @@
 local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
+local is_within_attack_target_cap = require("scripts/mods/TourneyBalance/_api/shared_utils").is_within_attack_target_cap
 
 --[[
 	$BEGIN_TB
@@ -15,7 +16,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Grim Fortune** (new, replaces Blur)
 		- Increases critical strike chance by 10%.
-		- Parrying an attack makes the next attack within 3s a guaranteed critical strike (melee or ranged).
+		- Parrying an attack makes the next melee attack within 3s a guaranteed critical strike.
 		- Blur moved to the Blur talent (see Talents).
 
 		**Murderous Prowess**
@@ -27,7 +28,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		- Increased crit damage bonus to 80% (from 50%).
 
 		**Exploit Weakness**
-		- Poison, Bleed, and Burn each individually increase damage dealt by 20%. Stacks additive, up to 60% against a target suffering from all three.
+		- Poison, Bleed, and Burn each individually increase damage dealt by 10%. Stacks additive, up to 30% against a target suffering from all three.
 		- All attacks apply bleed (WHC Flense, 3s + 3 stacks). Weapons keep their own poison, bleed or burn alongside it.
 
 		**Chain Killer**
@@ -50,9 +51,11 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
 		- Parrying an attack makes all melee attacks count as backstabs for 6s within the normal 0.5s parry window, scaling down to 3s at the end of Shade's extended 0.75s window.
+		- Only applies to the first 2 enemies an attack hits (1 per weapon on dual weapon attacks that swing both weapons at once).
 
 		**Ruthless Precision** (new, replaces Gladerunner)
 		- Melee headshots count as backstabs.
+		- Only applies to the first 2 enemies an attack hits (1 per weapon on dual weapon attacks that swing both weapons at once).
 
 		**Shimmer Strike**
 		- Limited extending stealth to 4 times.
@@ -144,7 +147,7 @@ mod_api.remove_career_perk_description("we_1", "career_passive_name_we_1d") -- v
 mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_passive_crit", {
 	bonus = 0.1, -- 0.05
 })
--- A guaranteed crit (melee or ranged) for 3 seconds after a (long) parry, used up by the next attack that hits.
+-- A guaranteed melee crit for 3 seconds after a (long) parry, used up by the next melee attack that hits.
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_parry", {
 	buff_func = "add_buff_local",
 	buff_to_add = "tb_kerillian_shade_grim_fortune_crit_buff",
@@ -155,12 +158,20 @@ mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune
 	max_stacks = 1,
 	refresh_durations = true,
 	icon = "kerillian_shade_perk_dagger_in_the_dark",
-	stat_buff = "critical_strike_chance",
+	stat_buff = "critical_strike_chance_melee", -- "critical_strike_chance" (melee and ranged)
 	bonus = 1,
 })
--- Removed on hit (same vanilla remover as the passive's kerillian_shade_stealth_crits_remover)
+-- Removed on melee hit (vanilla remove_buff_stack, as the passive's kerillian_shade_stealth_crits_remover), so ranged
+-- hits don't use it up
+mod_api.insert_proc_function("tb_shade_grim_fortune_remove_crit_on_melee_hit", function (owner_unit, buff, params)
+	local attack_type = params[2]
+
+	if attack_type == "light_attack" or attack_type == "heavy_attack" then
+		ProcFunctions.remove_buff_stack(owner_unit, buff, params)
+	end
+end)
 mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_grim_fortune_crit_consumer", {
-	buff_func = "remove_buff_stack",
+	buff_func = "tb_shade_grim_fortune_remove_crit_on_melee_hit", -- "remove_buff_stack"
 	event = "on_hit",
 	remove_buff_stack_data = {
 		{
@@ -175,7 +186,7 @@ mod_api.insert_career_passives("we_1", {
 	"tb_kerillian_shade_grim_fortune_parry",
 	"tb_kerillian_shade_grim_fortune_crit_consumer",
 })
-mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed critical strike lasting 3 seconds.")
+mod_api.insert_perk_text("tb_we_1_grim_fortune", "Grim Fortune", "Increases critical strike chance by 10%. Parrying an attack grants a guaranteed melee critical strike lasting 3 seconds.")
 mod_api.insert_career_perk_descriptions("we_1", "tb_we_1_grim_fortune")
 
 --[[
@@ -282,7 +293,7 @@ mod_api.update_talent("we_shade", 2, 2, {
 		"tb_kerillian_shade_exploit_weakness_dots",
 	},
 })
-mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_enemy_desc", "Increases damage by 20.0% for each type of status effect (poison, bleed, burn) afflicting the enemy. All attacks apply bleed.")
+mod_api.insert_text("kerillian_shade_increased_damage_on_poisoned_or_bleeding_enemy_desc", "Increases damage by 10.0% for each type of status effect (poison, bleed, burn) afflicting the enemy. All attacks apply bleed.")
 
 --[[
 	Row 4: melee headshots also trigger Chain Killer's and Bloodfletcher's backstab effects.
@@ -513,6 +524,20 @@ mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_khaines_coun
 		"guaranteed_backstab",
 	},
 })
+-- The guaranteed backstab only applies to the first KHAINES_COUNTER_MAX_TARGETS enemies an attack hits (1 per hand on
+-- dual weapons); real backstabs from behind still count on every enemy. _check_backstab gets no target index, but
+-- _calculate_hit_mass has already counted the current enemy in _number_of_hit_enemies
+local KHAINES_COUNTER_MAX_TARGETS = 2
+
+mod:hook(ActionSweep, "_check_backstab", function (func, self, breed, hit_unit, owner_unit, buff_extension, first_person_extension, ...)
+	if breed and HEALTH_ALIVE[hit_unit] and buff_extension and buff_extension:has_buff_type("tb_kerillian_shade_khaines_counter_backstab_buff")
+		and not is_within_attack_target_cap(self._number_of_hit_enemies, KHAINES_COUNTER_MAX_TARGETS, self.item_name, self._damage_profile)
+		and not tb_shade_is_behind_target(owner_unit, hit_unit) then
+		return 1
+	end
+
+	return func(self, breed, hit_unit, owner_unit, buff_extension, first_person_extension, ...)
+end)
 mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_khaines_counter", {
 	buffer = "client",
 	icon = "kerillian_shade_movement_speed_on_critical_hit",
@@ -520,16 +545,20 @@ mod_api.insert_talent("we_shade", 5, 2, "tb_kerillian_shade_khaines_counter", {
 		"tb_kerillian_shade_khaines_counter_parry",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes all melee attacks count as backstabs for 6 seconds, down to 3 seconds the later the parry.")
+mod_api.insert_talent_text("tb_kerillian_shade_khaines_counter", "Khaine's Counter", "Parrying an attack makes melee attacks count as backstabs against up to 2 enemies per attack for 6 seconds, down to 3 seconds the later the parry.")
 
 --[[
 	Ruthless Precision (new, replaces Gladerunner, which moved to the passive)
 ]]
--- Melee headshots count as backstabs (perk read in 01_damage_calc_changes.lua, hence buffer "both").
+-- Melee headshots on the first 2 enemies an attack hits count as backstabs (perk read in 01_damage_calc_changes.lua,
+-- hence buffer "both"; same cap there).
 -- Backstab feedback for converted headshots, as in ActionSweep._check_backstab (on_backstab plays Shade's backstab sound)
+local RUTHLESS_PRECISION_MAX_TARGETS = 2
+
 mod:hook(ActionSweep, "_play_character_impact", function (func, self, is_server, attacker_unit, hit_unit, breed, hit_position, hit_zone_name, current_action, damage_profile, target_index, power_level, attack_direction, blocking, boost_curve_multiplier, is_critical_strike, backstab_multiplier, ...)
 	if not blocking and (not backstab_multiplier or backstab_multiplier <= 1) and damage_profile and HEALTH_ALIVE[hit_unit]
-		and tb_shade_is_melee_headshot(breed, hit_zone_name, damage_profile.charge_value) then
+		and tb_shade_is_melee_headshot(breed, hit_zone_name, damage_profile.charge_value)
+		and is_within_attack_target_cap(target_index, RUTHLESS_PRECISION_MAX_TARGETS, self.item_name, damage_profile) then
 		local buff_extension = ScriptUnit.has_extension(attacker_unit, "buff_system")
 
 		if buff_extension and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and buff_extension:apply_buffs_to_value(1, "backstab_multiplier") > 1 then
@@ -568,7 +597,7 @@ mod_api.insert_talent("we_shade", 5, 3, "tb_kerillian_shade_ruthless_precision",
 		"tb_kerillian_shade_ruthless_precision_headshot_backstab",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs.")
+mod_api.insert_talent_text("tb_kerillian_shade_ruthless_precision", "Ruthless Precision", "Melee headshots count as backstabs against up to 2 enemies per attack.")
 
 --[[
 	Shimmer Strike

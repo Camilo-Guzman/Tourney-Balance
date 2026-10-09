@@ -7,8 +7,8 @@ Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_bopp
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_right_upward.anim_time_scale = 1.25
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.light_attack_left_upward.anim_time_scale = 1.25
 
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.anim_time_scale = 1.62 --1.35 ~20% faster
-Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_second.anim_time_scale = 1.35 --1.08 ~25% faster
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.anim_time_scale = 1.62 -- 1.5 -- 11%, --1.35 ~20% faster
+Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_second.anim_time_scale = 1.35 -- 1.2 -- 11% --1.08 ~25% faster
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[1].external_multiplier = 1.5
 Weapons.two_handed_swords_wood_elf_template.actions.action_one.heavy_attack_down_first.buff_data[2].external_multiplier = 0.5
 DamageProfileTemplates.heavy_slashing_smiter_stab.targets[1].boost_curve_coefficient_headshot = 2

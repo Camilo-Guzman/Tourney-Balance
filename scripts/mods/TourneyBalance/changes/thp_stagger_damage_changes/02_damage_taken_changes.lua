@@ -345,15 +345,15 @@ mod:set_apply_buffs_to_damage(function(current_damage, attacked_unit, attacker_u
 					local exploit_weakness_bonus = 0
 
 					if attacked_buff_extension:has_buff_perk("poisoned") then
-						exploit_weakness_bonus = exploit_weakness_bonus + 0.2
+						exploit_weakness_bonus = exploit_weakness_bonus + 0.1
 					end
 
 					if attacked_buff_extension:has_buff_perk("bleeding") then
-						exploit_weakness_bonus = exploit_weakness_bonus + 0.2
+						exploit_weakness_bonus = exploit_weakness_bonus + 0.1
 					end
 
 					if Managers.state.status_effect:unit_is_burning(attacked_unit) then
-						exploit_weakness_bonus = exploit_weakness_bonus + 0.2
+						exploit_weakness_bonus = exploit_weakness_bonus + 0.1
 					end
 
 					damage = damage * (1 + exploit_weakness_bonus)

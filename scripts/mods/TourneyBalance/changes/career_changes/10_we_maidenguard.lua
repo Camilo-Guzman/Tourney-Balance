@@ -20,7 +20,7 @@ local tb_maidenguard_update_birch_stance_damage_reduction
 
 		**Renewal**
 		- Stam regen aura range increased to 20 (from 5).
-		- Healing received beyond max health is given as THP, split between allies in the aura that are not at full health.
+		- THP gained from her THP talents beyond max health is given as THP, split between allies in the aura that are not at full health.
 
 		**Oak Guard (listed)**
 		- (Added to list) Increases maximum stamina by 1.
@@ -177,17 +177,39 @@ end)
     Renewal
 ]]
 -- Replace the vanilla Renewal perk text (career_passive_name_we_2b) instead of adding a second Renewal entry
-mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received and shares overflowing healing as temporary health divided to injured teammates.")
+mod_api.insert_text("career_passive_desc_we_2b_2", "Aura that increases stamina regeneration speed by 100%. Kerillian's gains 40% increased healing received and shares overflowing temporary health from her level 5 talents evenly divided to injured teammates.")
 mod_api.update_talent_buff_template("wood_elf", "kerillian_maidenguard_passive_stamina_regen_aura", {
 	range = 20 -- 5
 })
 
--- Any healing (THP or permanent) Handmaiden gains beyond her max health is divided evenly between the alive allies inside the Renewal aura
+-- THP Handmaiden gains from her THP talents beyond her max health is divided evenly between the alive allies inside the Renewal aura
 -- that are not at full health, and given to them as THP. Registered through the add_heal dispatcher in TourneyBalance.lua.
 local RENEWAL_AURA_BUFF = "kerillian_maidenguard_passive_stamina_regen_aura"
 local RENEWAL_SHARE_HEAL_TYPE = "heal_from_proc"
 local renewal_sharing = false -- guards against the share heals re-entering this wrapper
 local renewal_recipients = {}
+
+-- THP talent heals are flagged while their proc runs: on the server, DamageUtils.heal_network reaches add_heal synchronously.
+-- Proc functions of the THP talents (03_thp_talents_changes.lua, loaded before this file): Carve, Execute, Sting, Second Wind
+local RENEWAL_THP_TALENT_PROC_FUNCTIONS = {
+    "heal_damage_targets_on_melee",
+    "heal_percentage_of_enemy_hp_on_melee_kill",
+    "tb_heal_finesse_damage_on_melee",
+    "tb_heal_stagger_targets_on_melee",
+}
+local renewal_thp_talent_heal = false
+
+for i = 1, #RENEWAL_THP_TALENT_PROC_FUNCTIONS do
+    mod:hook(ProcFunctions, RENEWAL_THP_TALENT_PROC_FUNCTIONS[i], function (func, ...)
+        renewal_thp_talent_heal = true
+
+        local result = func(...)
+
+        renewal_thp_talent_heal = false
+
+        return result
+    end)
+end
 
 local function get_renewal_aura_range()
     local template = BuffTemplates[RENEWAL_AURA_BUFF]
@@ -203,7 +225,7 @@ mod:add_player_add_heal_wrapper(function (func, self, healer_unit, heal_amount, 
     local status_extension = self.status_extension
     local overflow = 0
 
-    if self.is_server and not renewal_sharing and game and game_object_id and heal_amount > 0
+    if self.is_server and renewal_thp_talent_heal and not renewal_sharing and healer_unit == unit and game and game_object_id and heal_amount > 0
         and not status_extension:is_knocked_down() then
         local career_extension = ScriptUnit.has_extension(unit, "career_system")
 
