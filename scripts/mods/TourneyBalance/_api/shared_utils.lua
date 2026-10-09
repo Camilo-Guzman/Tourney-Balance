@@ -77,6 +77,63 @@ function shared_utils.reduce_cooldown_percent_on_owner(unit, fraction)
     end
 end
 
+--[[
+    is_within_attack_target_cap(target_index, max_targets, damage_source, damage_profile) - Whether a melee hit is
+    among the first max_targets enemies its attack hits.
+    Melee target_index counts the enemies hit, starting at 1, but per sweep: an action with weapon_action_hand = "both"
+    (every dual weapon's charged attacks) runs one sweep per hand, each counting from 1. Those hands get half the cap
+    each instead. A hit belongs to such an action when its weapon (damage_source is the item name) has a "both" action
+    using that damage profile. Keyed per weapon, since some of these profiles are shared with one-handed weapons.
+]]
+local dual_hand_damage_profiles = nil -- weapon template name -> { [damage_profile] = true }, built on first use
+
+local function build_dual_hand_damage_profiles()
+    dual_hand_damage_profiles = {}
+
+    for template_name, weapon_template in pairs(Weapons) do
+        for _, action in pairs(weapon_template.actions or {}) do
+            for _, sub_action in pairs(action) do
+                if type(sub_action) == "table" and sub_action.weapon_action_hand == "both" then
+                    local profiles = dual_hand_damage_profiles[template_name] or {}
+
+                    dual_hand_damage_profiles[template_name] = profiles
+
+                    for _, key in ipairs({ "damage_profile_left", "damage_profile_right", "damage_profile" }) do
+                        local damage_profile = sub_action[key] and DamageProfileTemplates[sub_action[key]]
+
+                        if damage_profile then
+                            profiles[damage_profile] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+function shared_utils.is_dual_hand_hit(damage_source, damage_profile)
+    if not dual_hand_damage_profiles then
+        build_dual_hand_damage_profiles()
+    end
+
+    local item_data = damage_source and rawget(ItemMasterList, damage_source)
+    local profiles = item_data and item_data.template and dual_hand_damage_profiles[item_data.template]
+
+    return not not (profiles and profiles[damage_profile])
+end
+
+function shared_utils.is_within_attack_target_cap(target_index, max_targets, damage_source, damage_profile)
+    if not target_index then
+        return true
+    end
+
+    if shared_utils.is_dual_hand_hit(damage_source, damage_profile) then
+        max_targets = math.max(math.floor(max_targets / 2), 1)
+    end
+
+    return target_index <= max_targets
+end
+
 return shared_utils
 
 

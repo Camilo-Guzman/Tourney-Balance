@@ -9,13 +9,12 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		## Unchained
 		### Career Ability
 		**Living Bomb**
-		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout).
+		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout). Not with Bomb Balm.
 		- Never deals friendly fire.
 
 		### Passives
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
-		- The overcharge explosion deals no friendly fire.
 
 		### Talents
 		**Abandon (reworked)**
@@ -32,7 +31,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Now also grants a stack on any damage taken (from only venting).
 
 		**Enfeebling Flames**
-		- Reduced damage reduction against burning enemies to 20% (from 30%).
+		- Reduced damage reduction against burning enemies to 10% (from 30%).
 
 	$END_TB
 ]]
@@ -312,20 +311,16 @@ mod:hook(PlayerCharacterStateOverchargeExploding, "explode", function (func, sel
 	overcharge_extension:remove_charge(1)
 end)
 
--- No friendly fire from Unchained's overcharge explosion or Living Bomb (incl. its stagger).
--- The overcharge templates are shared with other careers' staves, and the server receives explosions by template name,
--- so the flag is forced where every peer resolves the template: a cached copy with no_friendly_fire is passed instead.
+-- No friendly fire from Living Bomb (the overcharge explosion keeps vanilla friendly fire).
+-- The server receives explosions by template name, so the flag is forced where every peer resolves the template:
+-- a cached copy with no_friendly_fire is passed instead.
 -- Registered through the dispatcher in TourneyBalance.lua.
-local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
-	overcharge = true,
-	career_ability = true,
-}
 local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
 
 mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 	local explosion_data = explosion_template and explosion_template.explosion
 
-	if explosion_data and not explosion_data.no_friendly_fire and TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES[damage_source] and ALIVE[attacker_unit] then
+	if explosion_data and not explosion_data.no_friendly_fire and damage_source == "career_ability" and ALIVE[attacker_unit] then
 		local career_extension = ScriptUnit.has_extension(attacker_unit, "career_system")
 
 		if career_extension and career_extension:career_name() == "bw_unchained" then
@@ -343,6 +338,9 @@ mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_po
 
 	return func(world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 end)
+
+-- Witch Hunter Captain's shout
+local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 
 -- Only wielding is allowed while overcharge is exploding, and on the ranged weapon during Aqshy's Blaze
 local function tb_aqshys_blaze_weapon_locked(unit)
@@ -376,9 +374,6 @@ end)
 	Ultimate
 
 ]]
--- Witch Hunter Captain's shout
-local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
-
 mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
 
 local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
@@ -402,7 +397,7 @@ local function tb_living_bomb_create_explosion(self, explosion_template_name, po
 	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
 end
 
--- Vanilla _run_ability, plus WHC shout
+-- Vanilla _run_ability, plus WHC shout (except with Bomb Balm)
 mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
 	self:_stop_priming()
 
@@ -475,7 +470,12 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	local damage_source_id = NetworkLookup.damage_sources.career_ability
 
 	tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
-	tb_living_bomb_create_explosion(self, LIVING_BOMB_STAGGER_EXPLOSION, position, rotation, career_power_level)
+
+	-- No WHC shout with Bomb Balm
+	if not talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
+		tb_living_bomb_create_explosion(self, LIVING_BOMB_STAGGER_EXPLOSION, position, rotation, career_power_level)
+	end
+
 	career_extension:start_activated_ability_cooldown()
 
 	if talent_extension:has_talent("sienna_unchained_activated_ability_fire_aura") then
@@ -844,13 +844,13 @@ mod_api.insert_text("sienna_unchained_reduced_damage_taken_after_venting_desc_2"
 -- Burning enemies deal 10% less damage (from 30%). The multiplier is read straight from the buff template in
 -- thp_stagger_damage_changes/02_damage_taken_changes.lua
 mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_burning_enemies_reduced_damage", {
-	multiplier = -0.2, -- -0.3
+	multiplier = -0.1, -- -0.3
 })
 mod_api.update_talent("bw_unchained", 5, 1, { -- update description
 	description_values = {
 		{
 			value_type = "percent",
-			value = -0.2, -- buff_tweak_data.sienna_unchained_burning_enemies_reduced_damage.multiplier
+			value = -0.1, -- buff_tweak_data.sienna_unchained_burning_enemies_reduced_damage.multiplier
 		},
 	},
 })

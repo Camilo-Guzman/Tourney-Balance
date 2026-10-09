@@ -1,5 +1,6 @@
 local mod = get_mod("TourneyBalance")
 local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
+local is_within_attack_target_cap = require("scripts/mods/TourneyBalance/_api/shared_utils").is_within_attack_target_cap
 
 -- Fixes the cannons crashing the game in "Return of the Reik"
 mod:hook(DamageUtils, "stagger_ai", function (func, t, damage_profile, target_index, power_level, target_unit, attacker_unit, hit_zone_name, attack_direction, boost_curve_multiplier, is_critical_strike, blocked, damage_source, source_attacker_unit, optional_predicted_damage)
@@ -465,49 +466,10 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
--- Shade's Murderous Prowess cap: the first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits. Melee target_index
--- counts the enemies hit, starting at 1, but per sweep: an action with weapon_action_hand = "both" (every dual weapon's
--- charged attacks) runs one sweep per hand, each counting from 1. Those hands get half the cap each instead.
--- A hit belongs to such an action when its weapon (damage_source is the item name) has a "both" action using that
--- damage profile. Keyed per weapon, since some of these profiles are shared with one-handed weapons
+-- Shade's Murderous Prowess and Ruthless Precision caps: the first 2 enemies an attack hits, 1 per hand on dual
+-- weapons (shared_utils.is_within_attack_target_cap)
 local MURDEROUS_PROWESS_MAX_TARGETS = 2
-local MURDEROUS_PROWESS_MAX_TARGETS_PER_HAND = 1
-local dual_hand_damage_profiles = nil -- weapon template name -> { [damage_profile] = true }, built on first use
-
-local function build_dual_hand_damage_profiles()
-	dual_hand_damage_profiles = {}
-
-	for template_name, weapon_template in pairs(Weapons) do
-		for _, action in pairs(weapon_template.actions or {}) do
-			for _, sub_action in pairs(action) do
-				if type(sub_action) == "table" and sub_action.weapon_action_hand == "both" then
-					local profiles = dual_hand_damage_profiles[template_name] or {}
-
-					dual_hand_damage_profiles[template_name] = profiles
-
-					for _, key in ipairs({ "damage_profile_left", "damage_profile_right", "damage_profile" }) do
-						local damage_profile = sub_action[key] and DamageProfileTemplates[sub_action[key]]
-
-						if damage_profile then
-							profiles[damage_profile] = true
-						end
-					end
-				end
-			end
-		end
-	end
-end
-
-local function is_dual_hand_hit(damage_source, damage_profile)
-	if not dual_hand_damage_profiles then
-		build_dual_hand_damage_profiles()
-	end
-
-	local item_data = damage_source and rawget(ItemMasterList, damage_source)
-	local profiles = item_data and item_data.template and dual_hand_damage_profiles[item_data.template]
-
-	return not not (profiles and profiles[damage_profile])
-end
+local RUTHLESS_PRECISION_MAX_TARGETS = 2
 
 mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 	local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
@@ -562,20 +524,18 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 
 		local is_melee = damage_profile and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
 
-		-- Shade's Ruthless Precision: melee headshots count as backstabs (_check_backstab doesn't know the hit zone).
-		-- Sound and on_backstab procs: 11_we_shade.lua
-		if breed and (not backstab_multiplier or backstab_multiplier <= 1) and is_melee and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot" then
+		-- Shade's Ruthless Precision: melee headshots on the first RUTHLESS_PRECISION_MAX_TARGETS enemies an attack hits
+		-- count as backstabs (_check_backstab doesn't know the hit zone). Sound and on_backstab procs: 11_we_shade.lua
+		if breed and (not backstab_multiplier or backstab_multiplier <= 1) and is_melee and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
+			and is_within_attack_target_cap(target_index, RUTHLESS_PRECISION_MAX_TARGETS, damage_source, damage_profile) then
 			backstab_multiplier = buff_extension:apply_buffs_to_value(1, "backstab_multiplier")
 		end
 
 		-- Shade's Murderous Prowess (the only source of this perk): the charged crit backstab instakill only applies to the
-		-- first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits, split between the hands of dual weapons
-		if has_crit_backstab_killing_blow_perk and target_index and damage_profile and damage_profile.charge_value == "heavy_attack" then
-			local max_targets = is_dual_hand_hit(damage_source, damage_profile) and MURDEROUS_PROWESS_MAX_TARGETS_PER_HAND or MURDEROUS_PROWESS_MAX_TARGETS
-
-			if target_index > max_targets then
-				has_crit_backstab_killing_blow_perk = false
-			end
+		-- first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits
+		if has_crit_backstab_killing_blow_perk and target_index and damage_profile and damage_profile.charge_value == "heavy_attack"
+			and not is_within_attack_target_cap(target_index, MURDEROUS_PROWESS_MAX_TARGETS, damage_source, damage_profile) then
+			has_crit_backstab_killing_blow_perk = false
 		end
 	end
 

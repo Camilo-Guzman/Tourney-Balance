@@ -14,7 +14,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		### Passives
 		**Fiery Faith**
-		- Damage taken by Zealot converts into Overhealth for his allies (max 100).
+		- Damage taken by Zealot converts into Overhealth for his allies (max 25).
 		- Damage taken by his allies is absorbed by Overhealth first.
 		- Can hit trade with it.
 
@@ -119,15 +119,15 @@ end)
 --[[
     Fiery Faith - Overhealth
 ]]
--- Damage Zealot takes is stored in a team-wide overhealth pool (max 100). Damage taken by his teammates is
+-- Damage Zealot takes is stored in a team-wide overhealth pool (max 25). Damage taken by his teammates is
 -- absorbed by the pool first; Zealot himself never draws from it. The pool is server-authoritative; its
 -- rounded-up amount is synced to every peer to drive a local-only buff icon whose stack count shows the pool.
-local OVERHEALTH_MAX = 100
+local OVERHEALTH_MAX = 25
 local OVERHEALTH_PASSIVE_BUFF = "victor_zealot_passive_increased_damage" -- Fiery Faith parent buff
 local OVERHEALTH_ICON_BUFF = "tb_victor_zealot_overhealth_icon"
 local OVERHEALTH_NETWORK_ID = "tb_zealot_overhealth"
 local NUMB_TO_PAIN_BUFF = "markus_knight_ability_invulnerability_buff"
-local OVERHEALTH_ULT_REGEN_MODIFIER = 1 -- absorbed damage charges the ult like the health had been lost (Numb to Pain stays at 20%, 03_es_knight.lua)
+local OVERHEALTH_ULT_REGEN_MODIFIER = 1 -- absorbed damage charges the ult like the health had been lost
 
 local overhealth_pool = 0 -- server only
 local overhealth_display = 0 -- every peer, math.ceil of the pool
@@ -135,7 +135,7 @@ local overhealth_display = 0 -- every peer, math.ceil of the pool
 mod_api.insert_talent_buff_template("witch_hunter", OVERHEALTH_ICON_BUFF, {
     icon = "victor_zealot_max_stamina_on_damage_taken",
 })
-mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre's damage taken is converted into up to 100 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
+mod_api.insert_text("career_passive_desc_wh_1a", "Gains 5% power for every 25 health missing. Max Stacks 6. Saltzpyre's damage taken is converted into up to 25 Overhealth. Damage taken by allies is absorbed by Overhealth first.")
 
 local function set_overhealth_pool(amount)
     overhealth_pool = math.clamp(amount, 0, OVERHEALTH_MAX)

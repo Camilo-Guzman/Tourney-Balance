@@ -45,9 +45,8 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		
 		**Inspiring Blow**
 		- Now only affects the Foot Knight himself (no longer nearby allies).
-		- Lowered cooldown regeneration to 100% (from 200%)
 		- Also procs when Mainstay marks an elite with a stagger count, even if the hit doesn't actually stagger it.
-		- Mainstay grants effect at 50% cooldown regeneration for 0.5s
+		- Mainstay grants effect at 20% cooldown regeneration for 0.5s
 
 		**Numb to Pain**
 		- Invulnerability duration on ult increased to 5s (from 3s).
@@ -676,10 +675,10 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_on
 })
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_buff", {
 	duration = 0.5, -- 0.5
-	multiplier = 1, -- 2
+	multiplier = 2, -- 2
 	icon = "markus_knight_improved_passive_defence_aura"
 })
-mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 100%% (50%%) for 0.5 seconds.")
+mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 200%% (20%%) for 0.5 seconds.")
 
 -- Separate, weaker buff for the Mainstay stagger-count proc
 mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
@@ -687,7 +686,7 @@ mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
 	refresh_durations = true,
 	stat_buff = "cooldown_regen",
 	duration = 0.5,
-	multiplier = 0.5,
+	multiplier = 0.2,
 	icon = "markus_knight_improved_passive_defence_aura",
 })
 
