@@ -119,7 +119,8 @@ first attack). The grid shows, per breed and target index:
 - Green = your edit beats the TB value, red = worse.
 - Options: your power level or a typed one, difficulty, hit zone (torso/head), crit, stagger
   stacks (TB's 20% per stack), 1-5 targets, hits-to-kill or raw damage, and which categories
-  to show: **Trash, Elite, Specials, Boss, Lords**.
+  to show: **Trash, Elite, Specials, Other, Boss, Lords** (taken from the categories used in
+  `breakpoints.BREEDS`, so a new category there gets its own checkbox automatically).
 - **hit log**: tick "record hits" to log real hits (damage, stagger multiplier, hits to kill)
   and flag any that disagree with the prediction. Known gaps: instakill perks (Killing Shot,
   Murderous Prowess), buffs on the target, ranged falloff.

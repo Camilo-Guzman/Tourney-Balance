@@ -28,11 +28,10 @@ local WORSE_COLOR = { 255, 110, 90, 255 }
 local INFO_COLOR = { 150, 200, 255, 255 }
 local MISMATCH_COLOR = { 255, 110, 90, 255 }
 
--- Grid rows, grouped by category in this order. The breed list follows
--- changes/thp_stagger_damage_changes/00_bloodlust_health.lua (minus _dummy/_tutorial variants);
--- its "monster" breeds are split into bosses and lords.
-breakpoints.CATEGORIES = { "Trash", "Elite", "Specials", "Boss", "Lords" }
-
+-- Grid rows: { breed name, label, category }, shown grouped in this order. The breed list
+-- follows changes/thp_stagger_damage_changes/00_bloodlust_health.lua (minus _dummy/_tutorial
+-- variants); its "monster" breeds are split into bosses and lords. Categories (and their
+-- filter checkboxes) come from this list, in order of first appearance.
 breakpoints.BREEDS = {
 	{ "skaven_slave", "Slave Rat", "Trash" },
 	{ "skaven_clan_rat", "Clan Rat", "Trash" },
@@ -80,6 +79,21 @@ breakpoints.BREEDS = {
 	{ "chaos_exalted_sorcerer", "Burblespue", "Lords" },
 	{ "chaos_exalted_sorcerer_drachenfels", "Nurgloth", "Lords" },
 }
+
+breakpoints.CATEGORIES = {}
+
+do
+	local seen = {}
+
+	for _, entry in ipairs(breakpoints.BREEDS) do
+		local category = entry[3]
+
+		if not seen[category] then
+			seen[category] = true
+			breakpoints.CATEGORIES[#breakpoints.CATEGORIES + 1] = category
+		end
+	end
+end
 
 local HIT_ZONES = { "torso", "head" }
 local STAGGER_LEVELS = { "0", "1", "2" }
@@ -205,6 +219,12 @@ end
 
 local function default_options()
 	local difficulty = Managers.state and Managers.state.difficulty and Managers.state.difficulty:get_difficulty()
+	-- Category -> shown in the grid (all on)
+	local categories = {}
+
+	for _, category in ipairs(breakpoints.CATEGORIES) do
+		categories[category] = true
+	end
 
 	return {
 		use_own_power = true,
@@ -215,14 +235,7 @@ local function default_options()
 		stagger_index = 1,
 		target_count_index = 3,
 		display_index = 1,
-		-- Category -> shown in the grid
-		categories = {
-			Trash = true,
-			Elite = true,
-			Specials = true,
-			Boss = true,
-			Lords = true,
-		},
+		categories = categories,
 	}
 end
 
@@ -493,11 +506,13 @@ local function draw_grid(grid, options)
 
 		for _, row in ipairs(hand_grid.rows) do
 			if row.header then
-				-- Category divider: label in the first column, the rest of the row left empty
+				-- Category divider: label in the first column, the rest of the row left empty.
+				-- target_count + 2 columns, so it takes that many next_column calls to wrap
+				-- back to the first column of the next row.
 				Imgui.separator()
 				text_colored(row.header, INFO_COLOR)
 
-				for _ = 1, target_count + 1 do
+				for _ = 1, target_count + 2 do
 					Imgui.next_column()
 				end
 			else
