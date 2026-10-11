@@ -13,6 +13,11 @@ local mod = get_mod("TourneyBalance")
 		                     buffs (dodge, movement) and ammo_data need "re-equip" (or /tbwe_reequip),
 		                     which the window flags when needed. Damage profiles
 		                     open with an "attack sheet" (per-target columns, armor types named)
+		structure mode       add/remove fields, add/remove/duplicate/reorder array entries (new
+		                     targets, new chain actions); the sheet's "-" cells become "+"
+		explosions, spread   searchable on their own, and opened from the fields naming them.
+		                     Weapons fire their own table.clone'd copy of an explosion: "link to
+		                     global" points the weapon at ExplosionTemplates.x so edits reach both
 		fork                 copy a profile into a new tb_ profile and point this attack (or all
 		                     attacks of the weapon using it) at it - exports as a new block
 		breakpoints          button on any attack (or /tbwe_breakpoints): hits-to-kill grid comparing
@@ -46,9 +51,15 @@ local export = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_e
 local ui = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_ui")
 local breakpoints = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_breakpoints")
 
+-- Globals the editor can edit and export. Projectiles is deliberately absent: weapon templates
+-- are built with table.clone, so every action fires its own embedded copy of its
+-- projectile_info and nothing looks Projectiles up by name - those copies are edited (and
+-- exported) through the Weapons path instead.
 local SUPPORTED_ROOTS = {
 	Weapons = true,
 	DamageProfileTemplates = true,
+	ExplosionTemplates = true,
+	SpreadTemplates = true,
 }
 
 local SAVED_EDITS_SETTING = "tbwe_saved_edits"
@@ -72,6 +83,8 @@ local function capture_tables()
 		Weapons = core.deep_copy(Weapons, seen),
 		DamageProfileTemplates = core.deep_copy(DamageProfileTemplates, seen),
 		PowerLevelTemplates = core.deep_copy(PowerLevelTemplates, seen),
+		ExplosionTemplates = core.deep_copy(ExplosionTemplates, seen),
+		SpreadTemplates = core.deep_copy(SpreadTemplates, seen),
 	}
 end
 
@@ -109,6 +122,8 @@ local editor = {
 	state = state,
 	core = core,
 	report = report,
+	SUPPORTED_ROOTS = SUPPORTED_ROOTS,
+	selected_global = nil, -- { root = "ExplosionTemplates", name = "..." } when not showing a weapon
 	window_open = false,
 	interacting = false,
 	selected_template = nil,
@@ -268,6 +283,40 @@ function editor.weapon_sharing(t, current_template_name)
 	return others
 end
 
+-- Weapon action fields holding their own copy of this explosion instead of the global
+-- (weapon templates are table.clone'd). The immediate blast uses that copy, so edits to
+-- ExplosionTemplates[name] miss it until it's linked. Returns a list of key paths.
+function editor.embedded_explosion_copies(name)
+	local global = ExplosionTemplates[name]
+	local copies = {}
+
+	local function scan(t, keys, depth)
+		for k, v in pairs(t) do
+			if type(v) == "table" and not core.EXCLUDED_KEYS[k] then
+				local child_keys = core.append_key(keys, k)
+
+				if v.name == name and v ~= global and (v.explosion or v.aoe) then
+					copies[#copies + 1] = child_keys
+				elseif depth < 6 then
+					scan(v, child_keys, depth + 1)
+				end
+			end
+		end
+	end
+
+	for template_name, template in pairs(Weapons) do
+		if type(template) == "table" and type(template.actions) == "table" then
+			scan(template.actions, { "Weapons", template_name, "actions" }, 1)
+		end
+	end
+
+	table.sort(copies, function (a, b)
+		return core.format_path(a) < core.format_path(b)
+	end)
+
+	return copies
+end
+
 -- Every action field that points at this profile, plus what it pointed at in vanilla
 function editor.profile_users(profile_name)
 	local users = {}
@@ -326,7 +375,7 @@ local function save_edits()
 	local lines = {}
 
 	for _, path in ipairs(paths) do
-		lines[#lines + 1] = path .. "\t" .. core.encode_value(state.edits[path].value)
+		lines[#lines + 1] = path .. "\t" .. core.encode_edit(state.edits[path])
 	end
 
 	mod:set(SAVED_EDITS_SETTING, table.concat(lines, "\n"))
@@ -383,13 +432,14 @@ local function copy_on_write(keys)
 	end
 end
 
--- Puts shared tables back once no edit underneath them is left
+-- Puts shared tables back once no edit underneath (or above) them is left. An edit above
+-- one is a whole-table edit whose recorded contents include the private copy.
 local function restore_unused_copies()
 	for cow_path, record in pairs(state.cow) do
 		local in_use = false
 
 		for path in pairs(state.edits) do
-			if core.path_is_under(path, cow_path) then
+			if core.path_is_under(path, cow_path) or core.path_is_under(cow_path, path) then
 				in_use = true
 
 				break
@@ -409,9 +459,54 @@ local function restore_unused_copies()
 	end
 end
 
-function editor.apply_edit(keys, value)
+-- Puts an edited field back to what it held before the edit
+local function restore_edit(edit)
+	local _, ancestors = core.live_value(edit.keys)
+	local parent = ancestors[#ancestors]
+
+	if type(parent) == "table" and #ancestors == #edit.keys - 1 then
+		local restored = edit.original_live
+
+		if restored == nil then
+			restored = type(edit.baseline) == "table" and core.deep_copy(edit.baseline) or edit.baseline
+		end
+
+		parent[edit.keys[#edit.keys]] = restored
+	end
+end
+
+-- The closest edit above `keys` that isn't a plain value edit (whole table, removal, link)
+local function covering_edit(keys)
+	for last_index = #keys - 1, 3, -1 do
+		local path = core.format_path(keys, nil, last_index)
+		local edit = state.edits[path]
+
+		if edit and (edit.kind or "value") ~= "value" then
+			return edit, path
+		end
+	end
+
+	return nil
+end
+
+local function is_unchanged(kind, value, baseline)
+	if kind == "value" then
+		return core.values_equal(value, baseline)
+	elseif kind == "table" then
+		return core.deep_equal(value, baseline)
+	elseif kind == "removed" then
+		return baseline == nil
+	end
+
+	-- A link can't be compared against a snapshot copy
+	return false
+end
+
+-- Single write path for every edit kind (see we_core.lua): kind "value" payload is the new
+-- leaf, "table" a table (stored as a copy), "removed" nothing, "ref" a global's path.
+local function write_change(keys, kind, payload)
 	if #keys < 3 or not SUPPORTED_ROOTS[keys[1]] then
-		return false, "only Weapons.* and DamageProfileTemplates.* fields can be edited"
+		return false, "only fields inside Weapons, DamageProfileTemplates, ExplosionTemplates and SpreadTemplates entries can be edited"
 	end
 
 	local current, ancestors = core.live_value(keys)
@@ -420,12 +515,59 @@ function editor.apply_edit(keys, value)
 		return false, "path doesn't resolve"
 	end
 
-	if type(current) == "table" then
-		return false, "not a leaf value"
+	local new_value = nil
+
+	if kind == "value" then
+		if type(current) == "table" then
+			return false, "not a leaf value"
+		end
+
+		if current ~= nil and type(current) ~= type(payload) then
+			return false, string.format("type mismatch (field is %s, got %s)", type(current), type(payload))
+		end
+
+		new_value = payload
+	elseif kind == "table" then
+		if current ~= nil and type(current) ~= "table" then
+			return false, "field holds a " .. type(current) .. ", not a table"
+		end
+
+		new_value = core.deep_copy(payload)
+	elseif kind == "removed" then
+		if current == nil then
+			return false, "field doesn't exist"
+		end
+	elseif kind == "ref" then
+		new_value = core.live_value(core.parse_path(payload))
+
+		if type(new_value) ~= "table" then
+			return false, "unknown global " .. tostring(payload)
+		end
+	else
+		return false, "unknown edit kind " .. tostring(kind)
 	end
 
-	if current ~= nil and type(current) ~= type(value) then
-		return false, string.format("type mismatch (field is %s, got %s)", type(current), type(value))
+	local covering, covering_path = covering_edit(keys)
+
+	if covering and covering.kind ~= "table" then
+		return false, string.format("%s is %s - edit that instead", covering_path, core.describe_edit(covering))
+	end
+
+	local path = core.format_path(keys)
+
+	-- A structural change supersedes whatever was edited underneath it. Those edits are undone
+	-- in the live table first, so the table remembered for a revert is the unedited one (the
+	-- new value already carries their changes, since the UI built it from the live table).
+	if not covering and kind ~= "value" then
+		for edit_path, edit in pairs(state.edits) do
+			if edit_path ~= path and core.path_is_under(edit_path, path) then
+				restore_edit(edit)
+
+				state.edits[edit_path] = nil
+			end
+		end
+
+		current = core.live_value(keys)
 	end
 
 	if keys[1] == "DamageProfileTemplates" then
@@ -434,30 +576,65 @@ function editor.apply_edit(keys, value)
 
 	local _, write_ancestors = core.live_value(keys)
 
-	write_ancestors[#write_ancestors][keys[#keys]] = value
+	write_ancestors[#write_ancestors][keys[#keys]] = new_value
 	editor.edit_generation = editor.edit_generation + 1
 
 	flag_reequip(keys)
 
-	local path = core.format_path(keys)
-	local baseline = core.snapshot_value(state.tb_baseline, keys)
+	if covering then
+		-- Folded into the whole-table edit above: it records that table's new contents
+		covering.value = core.deep_copy(core.live_value(covering.keys))
 
-	if core.values_equal(value, baseline) then
-		state.edits[path] = nil
-
-		restore_unused_copies()
+		if is_unchanged("table", covering.value, covering.baseline) then
+			state.edits[covering_path] = nil
+		end
 	else
-		state.edits[path] = {
-			keys = keys,
-			value = value,
-			baseline = baseline,
-		}
+		local existing = state.edits[path]
+		local baseline = existing and existing.baseline
+
+		if not existing then
+			baseline = core.snapshot_value(state.tb_baseline, keys)
+		end
+
+		if is_unchanged(kind, new_value, baseline) then
+			state.edits[path] = nil
+		else
+			state.edits[path] = {
+				keys = keys,
+				kind = kind,
+				value = kind == "table" and core.deep_copy(new_value) or (kind == "value" and new_value or nil),
+				ref = kind == "ref" and payload or nil,
+				baseline = baseline,
+				-- The exact table this field held before the first structural edit, so a
+				-- revert puts back that object (keeping shared-preset identity) not a copy
+				original_live = existing and existing.original_live or (type(current) == "table" and current or nil),
+			}
+		end
 	end
 
+	restore_unused_copies()
 	flush_mechanism_cache()
 	save_edits()
 
 	return true
+end
+
+function editor.apply_edit(keys, value)
+	return write_change(keys, "value", value)
+end
+
+-- Sets a field to (a copy of) a whole table: adds a table field, or rewrites an array
+function editor.set_table(keys, value)
+	return write_change(keys, "table", value)
+end
+
+function editor.remove_field(keys)
+	return write_change(keys, "removed")
+end
+
+-- Points a field at a live global table, e.g. "ExplosionTemplates.fireball_charged"
+function editor.link_global(keys, global_path)
+	return write_change(keys, "ref", global_path)
 end
 
 function editor.revert_matching(predicate)
@@ -465,12 +642,7 @@ function editor.revert_matching(predicate)
 
 	for path, edit in pairs(state.edits) do
 		if predicate(path, edit) then
-			local _, ancestors = core.live_value(edit.keys)
-			local parent = ancestors[#ancestors]
-
-			if type(parent) == "table" and #ancestors == #edit.keys - 1 then
-				parent[edit.keys[#edit.keys]] = edit.baseline
-			end
+			restore_edit(edit)
 
 			flag_reequip(edit.keys)
 
@@ -694,7 +866,9 @@ local function reapply_edits()
 	state.edits = {}
 
 	for _, edit in pairs(edits) do
-		editor.apply_edit(edit.keys, edit.value)
+		local kind = edit.kind or "value"
+
+		write_change(edit.keys, kind, kind == "ref" and edit.ref or edit.value)
 	end
 
 	state.needs_reapply = false
@@ -708,22 +882,43 @@ local function restore_saved_edits()
 	end
 
 	local restored, landed, failed = 0, 0, 0
+	local entries = {}
 
 	for line in saved:gmatch("[^\n]+") do
 		local path, encoded = line:match("^(.-)\t(.*)$")
 
 		if path then
-			local keys = core.parse_path(path)
-			local value = core.decode_value(encoded)
+			entries[#entries + 1] = {
+				path = path,
+				encoded = encoded,
+			}
+		end
+	end
 
-			if core.values_equal(core.snapshot_value(state.tb_baseline, keys), value) then
-				landed = landed + 1
-			elseif editor.apply_edit(keys, value) then
-				restored = restored + 1
-			else
-				failed = failed + 1
-				report("Couldn't restore saved edit %s", path)
-			end
+	-- Shorter paths first, so a table that was added exists before anything inside it
+	table.sort(entries, function (a, b)
+		return #a.path < #b.path
+	end)
+
+	for _, entry in ipairs(entries) do
+		local keys = core.parse_path(entry.path)
+		local kind, payload = core.decode_edit(entry.encoded)
+		local in_files
+
+		if kind == "ref" then
+			-- Landed when the files now point the field at that global themselves
+			in_files = core.live_value(keys) == core.live_value(core.parse_path(payload))
+		elseif kind then
+			in_files = is_unchanged(kind, payload, core.snapshot_value(state.tb_baseline, keys))
+		end
+
+		if in_files then
+			landed = landed + 1
+		elseif kind and write_change(keys, kind, payload) then
+			restored = restored + 1
+		else
+			failed = failed + 1
+			report("Couldn't restore saved edit %s", entry.path)
 		end
 	end
 
@@ -938,7 +1133,27 @@ end
 function editor.select_template(template_name)
 	if Weapons[template_name] then
 		editor.selected_template = template_name
+		editor.selected_global = nil
 	end
+end
+
+-- Shows a non-weapon entry (e.g. ExplosionTemplates.conflag) instead of a weapon template
+function editor.select_global(root, name)
+	local entries = SUPPORTED_ROOTS[root] and rawget(_G, root)
+
+	if entries and type(entries[name]) == "table" then
+		editor.selected_global = {
+			root = root,
+			name = name,
+		}
+	end
+end
+
+-- Generic revert for any root's entry (weapon template, explosion, spread template, profile)
+function editor.revert_entry(root, name)
+	return editor.revert_matching(function (_, edit)
+		return edit.keys[1] == root and edit.keys[2] == name
+	end)
 end
 
 function editor.select_wielded(silent)
@@ -1136,7 +1351,7 @@ mod:command("tbwe_status", "Weapon editor: list current edits and what happened 
 	for _, path in ipairs(paths) do
 		local edit = state.edits[path]
 
-		report("  %s = %s (TB %s)", path, core.format_value(edit.value), core.format_value(edit.baseline))
+		report("  %s = %s (TB %s)", path, core.describe_edit(edit), core.format_value(edit.baseline))
 	end
 end)
 

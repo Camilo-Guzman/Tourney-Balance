@@ -16,6 +16,20 @@ local ui = {}
 local ITEM_WIDTH = 160
 local SEARCH_WIDTH = 280
 local MAX_SEARCH_RESULTS = 40
+local SEARCH_SOURCES = {
+	{
+		root = "Weapons",
+		prefix = "",
+	},
+	{
+		root = "ExplosionTemplates",
+		prefix = "[explosion] ",
+	},
+	{
+		root = "SpreadTemplates",
+		prefix = "[spread] ",
+	},
+}
 local EDITED_COLOR = { 255, 200, 80, 255 }
 local WARNING_COLOR = { 255, 120, 90, 255 }
 local INFO_COLOR = { 150, 200, 255, 255 }
@@ -26,10 +40,28 @@ local INFO_COLOR = { 150, 200, 255, 255 }
 
 local dropdowns = {}
 
+-- String fields that name an entry of another editable global (opened in place, like profiles)
+local LINKED_GLOBALS = {
+	explosion_template = "ExplosionTemplates",
+	aoe = "ExplosionTemplates",
+	aoe_name = "ExplosionTemplates",
+	default_spread_template = "SpreadTemplates",
+	spread_template_override = "SpreadTemplates",
+	spread_template = "SpreadTemplates",
+}
+
 local function build_dropdown(key)
 	local names = nil
 
-	if key == "attack_template" then
+	if LINKED_GLOBALS[key] then
+		names = {}
+
+		for name, entry in pairs(rawget(_G, LINKED_GLOBALS[key]) or {}) do
+			if type(entry) == "table" then
+				names[#names + 1] = name
+			end
+		end
+	elseif key == "attack_template" then
 		names = table.keys(AttackTemplates)
 	elseif key == "boost_curve_type" then
 		names = table.keys(BoostCurves)
@@ -94,12 +126,91 @@ local function text_colored(text, color)
 	Imgui.text_colored(text, color[1], color[2], color[3], color[4])
 end
 
-local function apply(editor, keys, value)
-	local ok, err = editor.apply_edit(keys, value)
-
+local function report_result(editor, keys, ok, err)
 	if not ok then
 		editor.report("Edit rejected (%s): %s", core.format_path(keys), err)
 	end
+end
+
+local function apply(editor, keys, value)
+	report_result(editor, keys, editor.apply_edit(keys, value))
+end
+
+local function set_table(editor, keys, value)
+	report_result(editor, keys, editor.set_table(keys, value))
+end
+
+local function remove_field(editor, keys)
+	report_result(editor, keys, editor.remove_field(keys))
+end
+
+--[[
+	Structure edits (structure mode): add/remove fields, add/remove/duplicate/move array entries.
+	Array changes rewrite the whole array as one "table" edit, so entry indices stay consistent.
+]]
+
+-- Tables that are lists even while empty
+local ARRAY_KEYS = {
+	targets = true,
+	allowed_chain_actions = true,
+}
+
+local function is_array(t, key)
+	return core.is_sequence(t) or (next(t) == nil and ARRAY_KEYS[key] == true)
+end
+
+local function rewrite_array(editor, keys, change)
+	local live = core.live_value(keys)
+
+	if type(live) ~= "table" then
+		return
+	end
+
+	local array = core.deep_copy(live)
+
+	change(array)
+	set_table(editor, keys, array)
+end
+
+-- What a new entry of an (possibly empty) array starts as
+local function new_array_entry(array, keys)
+	if #array > 0 then
+		return core.deep_copy(array[#array])
+	end
+
+	local key = keys[#keys]
+
+	if key == "targets" then
+		local profile = core.live_value(core.sub_keys(keys, #keys - 1))
+
+		return core.deep_copy(type(profile) == "table" and type(profile.default_target) == "table" and profile.default_target or {})
+	elseif key == "allowed_chain_actions" then
+		return {
+			action = "action_one",
+			input = "action_one",
+			start_time = 0,
+			sub_action = "default",
+		}
+	end
+
+	return {}
+end
+
+-- "+ field" input: number, true/false, {} for an empty table, anything else a string
+local function parse_new_value(text)
+	local number = tonumber(text)
+
+	if number then
+		return number
+	elseif text == "true" then
+		return true
+	elseif text == "false" then
+		return false
+	elseif text:match("^%s*{%s*}%s*$") then
+		return {}
+	end
+
+	return (text:gsub("^\"(.*)\"$", "%1"))
 end
 
 local function has_edit_under(editor, path)
@@ -265,7 +376,151 @@ end
 
 local draw_profile
 
+-- An explosion-template-shaped table inside a weapon is either the global entry itself
+-- ("linked") or the weapon's own table.clone copy ("copy"), whose immediate blast ignores
+-- edits to the global
+local function explosion_link_state(value, parent_keys)
+	if parent_keys[1] ~= "Weapons" or type(value.name) ~= "string" or not (value.explosion or value.aoe) then
+		return nil
+	end
+
+	local global = ExplosionTemplates[value.name]
+
+	if type(global) ~= "table" then
+		return nil
+	end
+
+	return value == global and "linked" or "copy", value.name
+end
+
+local function draw_structure_buttons(editor, t, keys, key, child_keys, path, parent_is_array)
+	if not editor.ui_state.structure_mode then
+		return
+	end
+
+	if parent_is_array then
+		Imgui.same_line()
+
+		if Imgui.small_button("dup##dup" .. path) then
+			rewrite_array(editor, keys, function (array)
+				table.insert(array, key + 1, core.deep_copy(array[key]))
+			end)
+		end
+
+		if key > 1 then
+			Imgui.same_line()
+
+			if Imgui.small_button("up##up" .. path) then
+				rewrite_array(editor, keys, function (array)
+					array[key], array[key - 1] = array[key - 1], array[key]
+				end)
+			end
+		end
+
+		if key < #t then
+			Imgui.same_line()
+
+			if Imgui.small_button("down##down" .. path) then
+				rewrite_array(editor, keys, function (array)
+					array[key], array[key + 1] = array[key + 1], array[key]
+				end)
+			end
+		end
+
+		Imgui.same_line()
+
+		if Imgui.small_button("x##rm" .. path) then
+			rewrite_array(editor, keys, function (array)
+				table.remove(array, key)
+			end)
+		end
+	else
+		Imgui.same_line()
+
+		if Imgui.small_button("x##rm" .. path) then
+			remove_field(editor, child_keys)
+		end
+	end
+end
+
+-- Fields removed by an edit no longer exist in the table, so list them for reverting
+local function draw_removed_fields(editor, keys)
+	local parent_path = core.format_path(keys)
+
+	for path, edit in pairs(editor.state.edits) do
+		if edit.kind == "removed" and #edit.keys == #keys + 1 and core.format_path(edit.keys, nil, #keys) == parent_path then
+			text_colored(tostring(edit.keys[#edit.keys]) .. " (removed)", WARNING_COLOR)
+			Imgui.same_line()
+
+			if Imgui.small_button("revert##removed" .. path) then
+				editor.revert_edit(path)
+			end
+		end
+	end
+end
+
+local function draw_add_controls(editor, t, keys)
+	if not editor.ui_state.structure_mode then
+		return
+	end
+
+	local path = core.format_path(keys)
+
+	if is_array(t, keys[#keys]) then
+		if Imgui.small_button("+ entry##add" .. path) then
+			rewrite_array(editor, keys, function (array)
+				array[#array + 1] = new_array_entry(array, keys)
+			end)
+		end
+
+		return
+	end
+
+	local s = editor.ui_state
+
+	s.new_fields = s.new_fields or {}
+
+	local form = s.new_fields[path] or {
+		name = "",
+		value = "",
+	}
+
+	s.new_fields[path] = form
+
+	Imgui.push_item_width(120)
+
+	form.name = Imgui.input_text("##new_name" .. path, form.name)
+
+	Imgui.same_line()
+
+	form.value = Imgui.input_text("##new_value" .. path, form.value)
+
+	Imgui.pop_item_width()
+	Imgui.same_line()
+
+	if Imgui.small_button("+ field (name, value: number / true / false / text / {})##add" .. path) then
+		if not form.name:match("^[%a_][%w_]*$") then
+			editor.report("Field name must be letters, digits and _ (not starting with a digit).")
+		elseif t[form.name] ~= nil then
+			editor.report("%s already has a field %s.", path, form.name)
+		else
+			local value = parse_new_value(form.value)
+			local new_keys = core.append_key(keys, form.name)
+
+			if type(value) == "table" then
+				set_table(editor, new_keys, value)
+			else
+				apply(editor, new_keys, value)
+			end
+
+			s.new_fields[path] = nil
+		end
+	end
+end
+
 local function edit_table(editor, t, keys, skip_keys)
+	local parent_is_array = is_array(t, keys[#keys])
+
 	for _, key in ipairs(core.sorted_keys(t)) do
 		if not (skip_keys and skip_keys[key]) then
 			local value = t[key]
@@ -276,18 +531,50 @@ local function edit_table(editor, t, keys, skip_keys)
 
 			if value_type == "table" then
 				local preset = keys[1] == "DamageProfileTemplates" and editor.preset_name(value)
+				local link_state, link_name = explosion_link_state(value, keys)
+				local node_keys = child_keys
 				local label = name
 
 				if preset then
 					label = label .. "  (preset " .. preset .. ")"
 				end
 
-				if has_edit_under(editor, path) then
+				if link_state == "linked" then
+					-- The global itself: edit (and export) it under its own path
+					node_keys = { "ExplosionTemplates", link_name }
+					label = label .. "  -> ExplosionTemplates." .. link_name
+				elseif link_state == "copy" then
+					label = label .. "  (own copy of ExplosionTemplates." .. link_name .. ")"
+				end
+
+				if has_edit_under(editor, path) or has_edit_under(editor, core.format_path(node_keys)) then
 					label = label .. "  *"
 				end
 
-				if Imgui.tree_node(label .. "##" .. path) then
-					edit_table(editor, value, child_keys)
+				local open = Imgui.tree_node(label .. "##" .. path)
+
+				if link_state == "copy" then
+					Imgui.same_line()
+
+					if Imgui.small_button("link to global##link" .. path) then
+						report_result(editor, child_keys, editor.link_global(child_keys, "ExplosionTemplates." .. link_name))
+					end
+				end
+
+				if editor.state.edits[path] then
+					Imgui.same_line()
+					text_colored(core.describe_edit(editor.state.edits[path]), EDITED_COLOR)
+					Imgui.same_line()
+
+					if Imgui.small_button("revert##table" .. path) then
+						editor.revert_edit(path)
+					end
+				end
+
+				draw_structure_buttons(editor, t, keys, key, child_keys, path, parent_is_array)
+
+				if open then
+					edit_table(editor, core.live_value(node_keys) or value, node_keys)
 					Imgui.tree_pop()
 				end
 			elseif value_type == "number" then
@@ -306,6 +593,7 @@ local function edit_table(editor, t, keys, skip_keys)
 
 			if value_type ~= "table" then
 				draw_edit_marker(editor, child_keys, path)
+				draw_structure_buttons(editor, t, keys, key, child_keys, path, parent_is_array)
 			end
 
 			-- Fields naming a damage profile open that profile right below them
@@ -315,8 +603,23 @@ local function edit_table(editor, t, keys, skip_keys)
 					Imgui.tree_pop()
 				end
 			end
+
+			-- Same for fields naming an explosion or spread template
+			local linked_root = value_type == "string" and LINKED_GLOBALS[key]
+			local linked_entries = linked_root and rawget(_G, linked_root)
+
+			if linked_entries and type(linked_entries[value]) == "table" then
+				if Imgui.tree_node(linked_root .. "." .. value .. "##open" .. path) then
+					text_colored("Shared by everything using it - exports as " .. linked_root .. " lines", INFO_COLOR)
+					edit_table(editor, linked_entries[value], { linked_root, value })
+					Imgui.tree_pop()
+				end
+			end
 		end
 	end
+
+	draw_removed_fields(editor, keys)
+	draw_add_controls(editor, t, keys)
 end
 
 --[[
@@ -336,22 +639,52 @@ local SHEET_TARGET_ROWS = {
 	{ "headshot boost (boss)", { "headshot_boost_boss" } },
 }
 
+-- What a missing sheet field is added as (structure mode "+"): the value the game assumes
+-- when it's absent, or for strings the profile's default_target value
+local SHEET_ADD_DEFAULTS = {
+	boost_curve_coefficient = 1,
+	boost_curve_coefficient_headshot = 1,
+	headshot_boost_boss = 0,
+	melee_boost_override = 1,
+	attack = 0,
+	impact = 0,
+}
+
+local function sheet_add_default(editor, keys)
+	local key = keys[#keys]
+
+	if SHEET_ADD_DEFAULTS[key] ~= nil then
+		return SHEET_ADD_DEFAULTS[key]
+	end
+
+	local profile = DamageProfileTemplates[keys[2]]
+	local default_value = profile and type(profile.default_target) == "table" and profile.default_target[key]
+
+	if type(default_value) ~= "table" and default_value ~= nil then
+		return default_value
+	end
+
+	local dropdown = dropdown_for(key)
+
+	return dropdown and dropdown.names[1] or nil
+end
+
 -- One editable value inside a sheet. relative_keys are walked from `root` (whose path is root_keys).
 local function sheet_cell(editor, root, root_keys, relative_keys)
-	local value = root
 	local keys = root_keys
 
 	for _, key in ipairs(relative_keys) do
-		if type(value) ~= "table" then
-			value = nil
-
-			break
-		end
-
-		value = value[key]
 		keys = core.append_key(keys, key)
 	end
 
+	-- The table that would hold the value; nil when something above it is missing too
+	local parent = root
+
+	for i = 1, #relative_keys - 1 do
+		parent = type(parent) == "table" and parent[relative_keys[i]] or nil
+	end
+
+	local value = type(parent) == "table" and parent[relative_keys[#relative_keys]] or nil
 	local path = core.format_path(keys)
 	local id = "##sheet" .. path
 	local value_type = type(value)
@@ -378,6 +711,14 @@ local function sheet_cell(editor, root, root_keys, relative_keys)
 			end
 		else
 			Imgui.text(value)
+		end
+	elseif editor.ui_state.structure_mode and type(parent) == "table" then
+		if Imgui.small_button("+" .. id) then
+			local default_value = sheet_add_default(editor, keys)
+
+			if default_value ~= nil then
+				apply(editor, keys, default_value)
+			end
 		end
 	else
 		Imgui.text("-")
@@ -429,8 +770,10 @@ local function draw_attack_sheet(editor, profile_name)
 	local profile = DamageProfileTemplates[profile_name]
 	local profile_keys = { "DamageProfileTemplates", profile_name }
 
+	local structure_mode = editor.ui_state.structure_mode
+
 	for _, field in ipairs(SHEET_TOP_FIELDS) do
-		if profile[field] ~= nil then
+		if profile[field] ~= nil or (structure_mode and SHEET_ADD_DEFAULTS[field] ~= nil) then
 			Imgui.text(field)
 			Imgui.same_line()
 			sheet_cell(editor, profile, profile_keys, { field })
@@ -465,6 +808,14 @@ local function draw_attack_sheet(editor, profile_name)
 		}
 	end
 
+	local targets_keys = core.append_key(profile_keys, "targets")
+
+	if structure_mode and Imgui.small_button("+ target##sheet_add_target" .. profile_name) then
+		rewrite_array(editor, targets_keys, function (array)
+			array[#array + 1] = new_array_entry(array, targets_keys)
+		end)
+	end
+
 	local labels = { "" }
 
 	for _, column in ipairs(columns) do
@@ -472,6 +823,41 @@ local function draw_attack_sheet(editor, profile_name)
 	end
 
 	sheet_header(labels)
+
+	-- Per-column structure: remove a target, give a column its own armor_modifier or drop it
+	if structure_mode then
+		Imgui.text("")
+
+		for i, column in ipairs(columns) do
+			Imgui.next_column()
+
+			local armor_keys = core.append_key(column.keys, "armor_modifier")
+			local column_path = core.format_path(column.keys)
+
+			if type(column.target.armor_modifier) == "table" then
+				if Imgui.small_button("drop own armor##sheet_armor" .. column_path) then
+					remove_field(editor, armor_keys)
+				end
+			elseif type(profile.armor_modifier) == "table" then
+				if Imgui.small_button("own armor##sheet_armor" .. column_path) then
+					set_table(editor, armor_keys, profile.armor_modifier)
+				end
+			end
+
+			if column.keys[3] == "targets" then
+				Imgui.same_line()
+
+				if Imgui.small_button("x##sheet_rm_target" .. column_path) then
+					rewrite_array(editor, targets_keys, function (array)
+						table.remove(array, i)
+					end)
+				end
+			end
+		end
+
+		Imgui.next_column()
+		Imgui.separator()
+	end
 
 	for _, row in ipairs(SHEET_TARGET_ROWS) do
 		Imgui.text(row[1])
@@ -636,7 +1022,7 @@ local function draw_template_picker(editor)
 	Imgui.same_line()
 	Imgui.push_item_width(SEARCH_WIDTH)
 
-	s.filter = Imgui.input_text("Search templates##template_filter", s.filter or "")
+	s.filter = Imgui.input_text("Search weapons / explosions / spread##template_filter", s.filter or "")
 
 	Imgui.pop_item_width()
 
@@ -648,33 +1034,86 @@ local function draw_template_picker(editor)
 		local needle = s.filter:lower()
 		local results = {}
 
-		for template_name, template in pairs(Weapons) do
-			if type(template) == "table" and template_name:lower():find(needle, 1, true) then
-				results[#results + 1] = template_name
+		for _, source in ipairs(SEARCH_SOURCES) do
+			for name, entry in pairs(rawget(_G, source.root) or {}) do
+				if type(entry) == "table" and type(name) == "string" and name:lower():find(needle, 1, true) then
+					results[#results + 1] = {
+						label = source.prefix .. name,
+						root = source.root,
+						name = name,
+					}
+				end
 			end
 		end
 
-		table.sort(results)
+		table.sort(results, function (a, b)
+			return a.label < b.label
+		end)
 
 		for i = #results, MAX_SEARCH_RESULTS + 1, -1 do
 			results[i] = nil
 		end
 
 		s.results = results
+		s.result_labels = {}
+
+		for i, result in ipairs(results) do
+			s.result_labels[i] = result.label
+		end
+
 		s.last_filter = s.filter
 	end
 
 	if #s.results > 0 then
-		local picked = Imgui.list_box("##template_results", 0, s.results, 8)
+		local picked = Imgui.list_box("##template_results", 0, s.result_labels, 8)
+		local result = picked and picked > 0 and s.results[picked]
 
-		if picked and picked > 0 and s.results[picked] then
-			editor.select_template(s.results[picked])
+		if result then
+			if result.root == "Weapons" then
+				editor.select_template(result.name)
+			else
+				editor.select_global(result.root, result.name)
+			end
 
 			s.filter = ""
 		end
 	else
-		Imgui.text("No matching templates.")
+		Imgui.text("No matches.")
 	end
+end
+
+-- An ExplosionTemplates / SpreadTemplates entry on its own
+local function draw_global_entry(editor, root, name)
+	local entry = rawget(_G, root)[name]
+	local entry_path = root .. "." .. name
+
+	Imgui.text(entry_path)
+
+	if has_edit_under(editor, entry_path) then
+		Imgui.same_line()
+
+		if Imgui.small_button("revert##revert_entry") then
+			editor.revert_entry(root, name)
+		end
+	end
+
+	if root == "ExplosionTemplates" then
+		-- table.clone'd weapon templates fire their own copy: global edits miss the immediate blast
+		for _, copy_keys in ipairs(editor.embedded_explosion_copies(name)) do
+			local copy_path = core.format_path(copy_keys)
+
+			text_colored("Own copy (immediate blast ignores edits here): " .. copy_path, WARNING_COLOR)
+			Imgui.same_line()
+
+			if Imgui.small_button("link to global##link" .. copy_path) then
+				report_result(editor, copy_keys, editor.link_global(copy_keys, entry_path))
+			end
+		end
+	elseif root == "SpreadTemplates" then
+		text_colored("Weapons read their spread template live - edits apply immediately", INFO_COLOR)
+	end
+
+	edit_table(editor, entry, { root, name })
 end
 
 local function sub_action_profiles(sub_action)
@@ -796,7 +1235,7 @@ local function draw_edit_list(editor)
 			end
 
 			Imgui.same_line()
-			Imgui.text(string.format("%s = %s (TB %s)", path, core.format_value(edit.value), core.format_value(edit.baseline)))
+			Imgui.text(string.format("%s = %s (TB %s)", path, core.describe_edit(edit), type(edit.baseline) == "table" and "<table>" or core.format_value(edit.baseline)))
 		end
 	end
 end
@@ -823,12 +1262,20 @@ local function draw_body(editor)
 	end
 
 	Imgui.text(string.format("%d edit(s) | F3: %s", editor.edit_count(), editor.interacting and "editing - press to play" or "playing - press to edit"))
+	Imgui.same_line()
+
+	editor.ui_state.structure_mode = Imgui.checkbox("structure mode (add/remove fields and entries)##structure_mode", editor.ui_state.structure_mode or false)
+
 	Imgui.push_item_width(ITEM_WIDTH)
 
 	draw_template_picker(editor)
 	Imgui.separator()
 
-	if editor.selected_template and Weapons[editor.selected_template] then
+	local selected_global = editor.selected_global
+
+	if selected_global and type(rawget(_G, selected_global.root)[selected_global.name]) == "table" then
+		draw_global_entry(editor, selected_global.root, selected_global.name)
+	elseif editor.selected_template and Weapons[editor.selected_template] then
 		draw_template(editor, editor.selected_template)
 	else
 		Imgui.text("No template selected.")

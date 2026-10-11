@@ -226,9 +226,71 @@ function core.format_value(value)
 	return tostring(value)
 end
 
--- Persisted as plain text ("path\ttype:value" per line) so it doesn't depend on VMF
--- serializing nested tables.
-function core.encode_value(value)
+-- Compact Lua literal (keys sorted, exact numbers), read back by core.deserialize
+function core.serialize(value)
+	if type(value) ~= "table" then
+		return core.format_value(value)
+	end
+
+	local parts = {}
+
+	for _, key in ipairs(core.sorted_keys(value)) do
+		local child = value[key]
+		local child_type = type(child)
+
+		if child_type ~= "function" and child_type ~= "userdata" and child_type ~= "thread" then
+			local key_text = type(key) == "number" and ("[" .. key .. "]") or string.format("[%q]", key)
+
+			parts[#parts + 1] = key_text .. "=" .. core.serialize(child)
+		end
+	end
+
+	return "{" .. table.concat(parts, ",") .. "}"
+end
+
+-- Evaluates a literal from core.serialize with nothing but math.huge in scope
+function core.deserialize(text)
+	local chunk = loadstring("return " .. text)
+
+	if not chunk then
+		return nil
+	end
+
+	setfenv(chunk, {
+		math = {
+			huge = math.huge,
+		},
+	})
+
+	local ok, value = pcall(chunk)
+
+	return ok and value or nil
+end
+
+--[[
+	Edits come in four kinds:
+		value    a leaf set to a number/string/boolean
+		table    a field set to a whole table (added field/entry, rewritten array)
+		removed  a field deleted
+		ref      a field pointed at a live global table (e.g. a weapon's embedded aoe copy
+		         replaced by ExplosionTemplates.x itself), stored as that global's path
+
+	Persisted as plain text ("path\tkind:payload" per line) so it doesn't depend on VMF
+	serializing nested tables.
+]]
+
+function core.encode_edit(edit)
+	local kind = edit.kind or "value"
+
+	if kind == "table" then
+		return "t:" .. core.serialize(edit.value)
+	elseif kind == "removed" then
+		return "r:"
+	elseif kind == "ref" then
+		return "g:" .. edit.ref
+	end
+
+	local value = edit.value
 	local value_type = type(value)
 
 	if value_type == "number" then
@@ -240,16 +302,42 @@ function core.encode_value(value)
 	return "s:" .. tostring(value)
 end
 
-function core.decode_value(text)
-	local kind, raw = text:match("^(%a):(.*)$")
+-- Returns kind, payload (value, table or ref path); nil kind when unreadable
+function core.decode_edit(text)
+	local tag, raw = text:match("^(%a):(.*)$")
 
-	if kind == "n" then
-		return tonumber(raw)
-	elseif kind == "b" then
-		return raw == "true"
+	if tag == "n" then
+		return "value", tonumber(raw)
+	elseif tag == "b" then
+		return "value", raw == "true"
+	elseif tag == "s" then
+		return "value", raw
+	elseif tag == "t" then
+		local value = core.deserialize(raw)
+
+		return type(value) == "table" and "table" or nil, value
+	elseif tag == "r" then
+		return "removed", nil
+	elseif tag == "g" then
+		return "ref", raw
 	end
 
-	return raw
+	return nil
+end
+
+-- Short human description of an edit's new state, for lists and chat
+function core.describe_edit(edit)
+	local kind = edit.kind or "value"
+
+	if kind == "table" then
+		return "<table>"
+	elseif kind == "removed" then
+		return "removed"
+	elseif kind == "ref" then
+		return "-> " .. edit.ref
+	end
+
+	return core.format_value(edit.value)
 end
 
 --[[

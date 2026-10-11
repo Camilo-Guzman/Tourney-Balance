@@ -10,6 +10,11 @@
 	- vanilla profiles          one assignment per field, or the whole sub-table where the
 	                            editor copied a shared preset (a leaf assignment there would
 	                            change the preset for every other weapon too)
+	- ExplosionTemplates /      one section per entry, same line style as Weapons; explosion
+	  SpreadTemplates           sections note weapons still firing their own copy
+
+	Structural edits print as a whole table (added field, rewritten array), "= nil"
+	(removed field) or "= ExplosionTemplates.x" (a weapon's copy linked to the global).
 ]]
 
 local core = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_core")
@@ -266,6 +271,61 @@ local function sorted_edits(edits)
 	return edits
 end
 
+local function short_value(value)
+	return type(value) == "table" and "<table>" or core.format_value(value)
+end
+
+-- One edit as Lua, for every kind (see we_core.lua): a leaf assignment, a whole table,
+-- a removal (= nil) or a link to a global table
+local function print_edit(ctx, edit)
+	local out = ctx.out
+	local kind = edit.kind or "value"
+	local vanilla_value = core.snapshot_value(ctx.state.vanilla, edit.keys)
+
+	if kind == "value" then
+		out[#out + 1] = edit.path .. " = " .. core.format_value(edit.value) .. vanilla_comment(ctx, edit.keys, edit.value, edit.baseline)
+	elseif kind == "removed" then
+		out[#out + 1] = edit.path .. " = nil -- vanilla: " .. short_value(vanilla_value)
+	elseif kind == "ref" then
+		out[#out + 1] = edit.path .. " = " .. edit.ref .. " -- vanilla: " .. (vanilla_value == nil and "none" or "the weapon's own copy")
+	elseif kind == "table" then
+		local live_table = core.live_value(edit.keys)
+		local open = edit.path .. " = {"
+
+		if type(vanilla_value) ~= "table" then
+			open = open .. " -- vanilla: " .. core.format_value(vanilla_value)
+		end
+
+		out[#out + 1] = open
+
+		if type(live_table) == "table" then
+			print_table(ctx, nil, live_table, type(vanilla_value) == "table" and vanilla_value or false, "\t", export.context_for_keys(edit.keys))
+		end
+
+		out[#out + 1] = "}"
+	end
+end
+
+local function print_global_section(ctx, root, name, edits)
+	local out = ctx.out
+
+	out[#out + 1] = ""
+	out[#out + 1] = "-- " .. root .. "." .. name
+
+	if root == "ExplosionTemplates" then
+		for _, copy_keys in ipairs(ctx.editor.embedded_explosion_copies(name)) do
+			local copy_path = core.format_path(copy_keys)
+
+			out[#out + 1] = "-- note: " .. copy_path .. " is the weapon's own copy - its immediate blast ignores these lines unless linked:"
+			out[#out + 1] = "-- " .. copy_path .. " = ExplosionTemplates." .. name
+		end
+	end
+
+	for _, edit in ipairs(sorted_edits(edits)) do
+		print_edit(ctx, edit)
+	end
+end
+
 local function print_users(ctx, users)
 	local out = ctx.out
 
@@ -284,7 +344,7 @@ local function print_session_changes(ctx, edits)
 	local out = ctx.out
 
 	for _, edit in ipairs(edits) do
-		out[#out + 1] = string.format("-- changed: %s %s -> %s", core.format_relative(edit.keys, 3), core.format_value(edit.baseline), core.format_value(edit.value))
+		out[#out + 1] = string.format("-- changed: %s %s -> %s", core.format_relative(edit.keys, 3), short_value(edit.baseline), core.describe_edit(edit))
 	end
 end
 
@@ -295,7 +355,7 @@ local function print_weapon_section(ctx, template_name, edits)
 	out[#out + 1] = "-- " .. template_name
 
 	for _, edit in ipairs(sorted_edits(edits)) do
-		out[#out + 1] = edit.path .. " = " .. core.format_value(edit.value) .. vanilla_comment(ctx, edit.keys, edit.value, edit.baseline)
+		print_edit(ctx, edit)
 	end
 end
 
@@ -369,12 +429,15 @@ local function print_vanilla_profile_section(ctx, profile_name, edits)
 	print_users(ctx, ctx.editor.profile_users(profile_name))
 
 	for _, edit in ipairs(sorted_edits(edits)) do
-		-- Shortest copied prefix above this field, if the editor copied a shared preset
+		-- Shortest copied prefix above a value edit, if the editor copied a shared preset.
+		-- Structural edits already print their whole table (or = nil) themselves.
 		local copy_path, copy_record = nil, nil
 
-		for cow_path, record in pairs(state.cow) do
-			if core.path_is_under(edit.path, cow_path) and edit.path ~= cow_path and (not copy_path or #cow_path < #copy_path) then
-				copy_path, copy_record = cow_path, record
+		if (edit.kind or "value") == "value" then
+			for cow_path, record in pairs(state.cow) do
+				if core.path_is_under(edit.path, cow_path) and edit.path ~= cow_path and (not copy_path or #cow_path < #copy_path) then
+					copy_path, copy_record = cow_path, record
+				end
 			end
 		end
 
@@ -398,7 +461,7 @@ local function print_vanilla_profile_section(ctx, profile_name, edits)
 				out[#out + 1] = "}"
 			end
 		else
-			out[#out + 1] = edit.path .. " = " .. core.format_value(edit.value) .. vanilla_comment(ctx, edit.keys, edit.value, edit.baseline)
+			print_edit(ctx, edit)
 		end
 	end
 end
@@ -420,17 +483,31 @@ function export.build(editor)
 	end
 
 	local weapon_edits, profile_edits = {}, {}
+	local global_edits = {} -- root -> entry name -> edits, for ExplosionTemplates/SpreadTemplates
 	local count = 0
 
 	for path, edit in pairs(state.edits) do
-		local bucket = edit.keys[1] == "Weapons" and weapon_edits or profile_edits
+		local root = edit.keys[1]
+		local bucket
+
+		if root == "Weapons" then
+			bucket = weapon_edits
+		elseif root == "DamageProfileTemplates" then
+			bucket = profile_edits
+		else
+			global_edits[root] = global_edits[root] or {}
+			bucket = global_edits[root]
+		end
+
 		local name = edit.keys[2]
 
 		bucket[name] = bucket[name] or {}
 		bucket[name][#bucket[name] + 1] = {
 			path = path,
 			keys = edit.keys,
+			kind = edit.kind,
 			value = edit.value,
+			ref = edit.ref,
 			baseline = edit.baseline,
 		}
 		count = count + 1
@@ -450,6 +527,20 @@ function export.build(editor)
 
 	for _, template_name in ipairs(template_names) do
 		print_weapon_section(ctx, template_name, weapon_edits[template_name])
+	end
+
+	local roots = table.keys(global_edits)
+
+	table.sort(roots)
+
+	for _, root in ipairs(roots) do
+		local names = table.keys(global_edits[root])
+
+		table.sort(names)
+
+		for _, name in ipairs(names) do
+			print_global_section(ctx, root, name, global_edits[root][name])
+		end
 	end
 
 	-- Forks export as new blocks even with no edits inside them
