@@ -15,11 +15,12 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Passives
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
+		- Only grants ult cooldown when health is actually lost (none while invulnerable, e.g. inside Warrior Priest's bubble).
 
 		### Talents
 		**Abandon (reworked)**
 		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 2.5 seconds.
-		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks grant cooldown). Replaces the passive's lethal drain.
+		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks of health actually lost grant cooldown, so none while invulnerable, e.g. inside Warrior Priest's bubble). Replaces the passive's lethal drain.
 		- Weapons can be swapped during the explosion.
 		- Can't attack with the ranged weapon for the duration.
 		- Using Living Bomb immediately ends Aqshy's Blaze.
@@ -121,26 +122,88 @@ local function tb_has_aqshys_blaze(unit)
 	return talent_extension and talent_extension:has_talent(AQSHYS_BLAZE_TALENT) or false
 end
 
-local activate_buff_stacks_based_on_overcharge_chunks = BuffFunctionTemplates.functions.activate_buff_stacks_based_on_overcharge_chunks
+local ABANDON_TICK_INTERVAL = 0.25
+local ABANDON_MAX_HEALTH_COST = 0.05 -- of max health, per tick
+local ABANDON_COOLDOWN = 0.1 -- of ult, per tick
 
+-- Vanilla activate_buff_stacks_based_on_overcharge_chunks (owner side), but the drain stack is synced to the server,
+-- where health is. Aqshy's Blaze taken: no lethal drain, drop a stack that was already up
 mod_api.insert_buff_function("tb_abandon_activate_stacks", function (unit, buff, params)
-	if not tb_has_aqshys_blaze(unit) then
-		return activate_buff_stacks_based_on_overcharge_chunks(unit, buff, params)
+	local owner_player = Managers.player:owner(unit)
+
+	if not owner_player or owner_player.remote then
+		return
 	end
 
-	-- Aqshy's Blaze taken: no lethal drain, drop a stack that was already up
+	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	local template = buff.template
+	local buff_to_add = template.buff_to_add
+	local num_chunks = 0
+
+	if not tb_has_aqshys_blaze(unit) then
+		local overcharge = ScriptUnit.extension(unit, "overcharge_system"):current_overcharge_status()
+
+		num_chunks = math.min(math.floor(overcharge / template.chunk_size), template.max_stacks)
+	end
+
 	local stack_ids = buff.stack_ids
 
-	if stack_ids and #stack_ids > 0 then
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	if not stack_ids then
+		stack_ids = {}
+		buff.stack_ids = stack_ids
+	end
 
-		for i = #stack_ids, 1, -1 do
-			buff_extension:remove_buff(table.remove(stack_ids, i))
+	local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+	if num_buff_stacks < num_chunks then
+		local buff_system = Managers.state.entity:system("buff_system")
+
+		for i = 1, num_chunks - num_buff_stacks do
+			stack_ids[#stack_ids + 1] = buff_system:add_buff_synced(unit, buff_to_add, BuffSyncType.LocalAndServer)
+		end
+	elseif num_chunks < num_buff_stacks then
+		for i = 1, num_buff_stacks - num_chunks do
+			buff_extension:remove_buff(table.remove(stack_ids, 1))
 		end
 	end
 end)
 mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to_ult", {
 	update_func = "tb_abandon_activate_stacks", -- "activate_buff_stacks_based_on_overcharge_chunks"
+})
+
+-- Vanilla sienna_unchained_health_to_cooldown_update, moved to the server: cooldown only for health actually lost
+-- (none while invulnerable, e.g. Warrior Priest's bubble)
+mod_api.insert_buff_function("tb_abandon_health_to_cooldown_update", function (unit, buff, params)
+	if not Managers.state.network.is_server or not HEALTH_ALIVE[unit] then
+		return
+	end
+
+	local t = params.t
+
+	if buff.timer and t < buff.timer then
+		return
+	end
+
+	buff.timer = t + ABANDON_TICK_INTERVAL
+
+	local career_extension = ScriptUnit.has_extension(unit, "career_system")
+	local health_extension = ScriptUnit.has_extension(unit, "health_system")
+
+	if not career_extension or not health_extension or career_extension:current_ability_cooldown_percentage() <= 0 then
+		return
+	end
+
+	local health_before = health_extension:current_health()
+	local damage = health_extension:get_max_health() * ABANDON_MAX_HEALTH_COST
+
+	DamageUtils.add_damage_network(unit, unit, damage, "torso", "life_tap", nil, Vector3(0, 0, 0), "life_tap", nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+
+	if health_extension:current_health() < health_before then
+		reduce_cooldown_percent_on_owner(unit, ABANDON_COOLDOWN)
+	end
+end)
+mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to_cooldown_buff", {
+	update_func = "tb_abandon_health_to_cooldown_update", -- "sienna_unchained_health_to_cooldown_update"
 })
 mod_api.insert_career_passives("bw_3", {
 	"sienna_unchained_health_to_ult",
@@ -180,8 +243,9 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 	local cost = health_extension:get_max_health() * AQSHYS_BLAZE_MAX_HEALTH_COST
 	local cooldown = AQSHYS_BLAZE_COOLDOWN
 
-	-- Non-lethal, only full ticks give cooldown
-	local damage = math.min(cost, health_extension:current_health() - 1)
+	-- Non-lethal, only full ticks of health actually lost give cooldown (none while invulnerable, e.g. Warrior Priest's bubble)
+	local health_before = health_extension:current_health()
+	local damage = math.min(cost, health_before - 1)
 
 	if damage <= 0 then
 		return
@@ -189,7 +253,8 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 
 	DamageUtils.add_damage_network(unit, unit, damage, "full", AQSHYS_BLAZE_DAMAGE_TYPE, nil, Vector3(0, 0, 0), AQSHYS_BLAZE_DAMAGE_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
 
-	if damage >= cost then
+	-- Damage and health are networkified (quarter steps)
+	if health_before - health_extension:current_health() >= DamageUtils.networkify_damage(cost) then
 		reduce_cooldown_percent_on_owner(unit, cooldown)
 	end
 end)
