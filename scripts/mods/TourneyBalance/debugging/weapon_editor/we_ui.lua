@@ -4,8 +4,9 @@
 	Every widget label ends in "##<full path>" so identically named fields in different
 	tables (attack/impact, target 1/target 2, ...) stay separate Imgui items.
 
-	Numbers are only written when Imgui.input_float reports a change: it returns float32
-	values, so writing back every frame would silently round every visible field.
+	Values are only written when the user actually changes a field - never echoed back
+	every frame - so browsing can't alter anything. Numbers are edited as text (see
+	draw_number_field) to avoid Imgui.input_float's 3-decimal display and float32 rounding.
 ]]
 
 local core = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_core")
@@ -219,6 +220,49 @@ local function draw_string_field(editor, key, value, keys, path)
 	end
 end
 
+-- Numbers are edited as text showing the exact value: Imgui.input_float only displays
+-- 3 decimals (0.0625 -> 0.063) and hands back float32 values (0.225 -> 0.2249999940...).
+-- A typed value is applied as soon as it parses, and kept as typed ("0.", "-") until it does.
+local function draw_number_field(editor, id, value, keys, path)
+	local buffers = editor.ui_state.number_buffers
+
+	if not buffers then
+		buffers = {}
+		editor.ui_state.number_buffers = buffers
+	end
+
+	local entry = buffers[path]
+
+	-- Changed from elsewhere (revert, another view of the same field): drop the typed text
+	if entry and not core.values_equal(entry.value, value) then
+		entry = nil
+		buffers[path] = nil
+	end
+
+	local shown = entry and entry.text or core.format_value(value)
+	local text = Imgui.input_text(id, shown)
+
+	if text ~= shown then
+		local number = tonumber(text)
+
+		entry = {
+			text = text,
+			value = value,
+		}
+		buffers[path] = entry
+
+		if number and number == number and not core.values_equal(number, value) then
+			apply(editor, keys, number)
+
+			entry.value = number
+		end
+	end
+
+	if entry and entry.text == core.format_value(entry.value) then
+		buffers[path] = nil
+	end
+end
+
 local draw_profile
 
 local function edit_table(editor, t, keys, skip_keys)
@@ -247,11 +291,7 @@ local function edit_table(editor, t, keys, skip_keys)
 					Imgui.tree_pop()
 				end
 			elseif value_type == "number" then
-				local new_value, changed = Imgui.input_float(name .. "##" .. path, value)
-
-				if changed then
-					apply(editor, child_keys, core.round_input(new_value))
-				end
+				draw_number_field(editor, name .. "##" .. path, value, child_keys, path)
 			elseif value_type == "boolean" then
 				local new_value = Imgui.checkbox(name .. "##" .. path, value)
 
@@ -319,11 +359,7 @@ local function sheet_cell(editor, root, root_keys, relative_keys)
 	Imgui.push_item_width(SHEET_CELL_WIDTH)
 
 	if value_type == "number" then
-		local new_value, changed = Imgui.input_float(id, value)
-
-		if changed then
-			apply(editor, keys, core.round_input(new_value))
-		end
+		draw_number_field(editor, id, value, keys, path)
 	elseif value_type == "boolean" then
 		local new_value = Imgui.checkbox(id, value)
 

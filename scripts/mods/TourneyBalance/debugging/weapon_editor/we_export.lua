@@ -77,11 +77,120 @@ local function preset_comment(ctx, preset_name, live_preset, vanilla_node, key)
 	return " -- vanilla: inline table (differs)"
 end
 
-local function print_table(ctx, authored, live, vanilla_node, indent)
+--[[
+	Key order: the order most NewDamageProfileTemplates blocks in the change files already use
+	(measured across all of them), so replacing an existing block reorders as little as possible.
+	Keys not listed go just before the last group (default_target/targets, power_distribution),
+	A-Z among themselves; every other table is A-Z (attack before impact, as in the files).
+]]
+
+local function rank_lookup(order, unknown_before)
+	local ranks = {}
+
+	for i, key in ipairs(order) do
+		ranks[key] = i
+	end
+
+	ranks.__unknown = ranks[unknown_before] - 0.5
+
+	return ranks
+end
+
+local KEY_RANKS = {
+	profile = rank_lookup({
+		"armor_modifier",
+		"charge_value",
+		"critical_strike",
+		"stagger_duration_modifier",
+		"no_stagger_damage_reduction_ranged",
+		"no_friendly_fire",
+		"dot_balefire_variant",
+		"is_dot",
+		"no_stagger",
+		"require_damage_for_dot",
+		"dot_template_name",
+		"armor_modifier_near",
+		"armor_modifier_far",
+		"cleave_distribution",
+		"melee_boost_override",
+		"ignore_stagger_reduction",
+		"shield_break",
+		"default_target",
+		"targets",
+	}, "default_target"),
+	target = rank_lookup({
+		"attack_template",
+		"boost_curve_type",
+		"boost_curve_coefficient_headshot",
+		"boost_curve_coefficient",
+		"stagger_duration_modifier",
+		"headshot_boost_boss",
+		"damage_type",
+		"dot_balefire_variant",
+		"power_distribution_near",
+		"dot_template_name",
+		"power_distribution_far",
+		"armor_modifier",
+		"range_modifier_settings",
+		"power_distribution",
+	}, "armor_modifier"),
+}
+
+local function ordered_keys(t, context)
+	local keys = core.sorted_keys(t)
+	local ranks = KEY_RANKS[context]
+
+	if not ranks then
+		return keys
+	end
+
+	local position = {}
+
+	for i, key in ipairs(keys) do
+		position[key] = i
+	end
+
+	table.sort(keys, function (a, b)
+		local rank_a = ranks[a] or ranks.__unknown
+		local rank_b = ranks[b] or ranks.__unknown
+
+		if rank_a ~= rank_b then
+			return rank_a < rank_b
+		end
+
+		return position[a] < position[b]
+	end)
+
+	return keys
+end
+
+-- Which ordering a child table gets: profile -> targets -> target, default_target -> target
+local function child_context(context, key)
+	if key == "default_target" or (context == "targets" and type(key) == "number") then
+		return "target"
+	elseif key == "targets" then
+		return "targets"
+	end
+
+	return "other"
+end
+
+-- Ordering for a table printed on its own, from the last key of its path
+function export.context_for_keys(keys)
+	local last, previous = keys[#keys], keys[#keys - 1]
+
+	if #keys == 2 then
+		return "profile"
+	end
+
+	return child_context(previous == "targets" and "targets" or "other", last)
+end
+
+local function print_table(ctx, authored, live, vanilla_node, indent, context)
 	local out = ctx.out
 	local in_sequence = core.is_sequence(live)
 
-	for _, key in ipairs(core.sorted_keys(live)) do
+	for _, key in ipairs(ordered_keys(live, context)) do
 		local authored_value = type(authored) == "table" and authored[key] or nil
 		local live_value = live[key]
 		local skip = false
@@ -114,7 +223,7 @@ local function print_table(ctx, authored, live, vanilla_node, indent)
 
 					out[#out + 1] = open
 
-					print_table(ctx, type(authored_value) == "table" and authored_value or nil, live_value, vanilla_child, indent .. "\t")
+					print_table(ctx, type(authored_value) == "table" and authored_value or nil, live_value, vanilla_child, indent .. "\t", child_context(context, key))
 
 					out[#out + 1] = indent .. "},"
 				end
@@ -244,7 +353,7 @@ local function print_tb_profile_section(ctx, profile_name, edits)
 
 	out[#out + 1] = header
 
-	print_table(ctx, NewDamageProfileTemplates[profile_name], DamageProfileTemplates[profile_name], vanilla_root, "\t")
+	print_table(ctx, NewDamageProfileTemplates[profile_name], DamageProfileTemplates[profile_name], vanilla_root, "\t", "profile")
 
 	out[#out + 1] = "}"
 end
@@ -284,7 +393,7 @@ local function print_vanilla_profile_section(ctx, profile_name, edits)
 
 				out[#out + 1] = open
 
-				print_table(ctx, nil, live_table, type(vanilla_table) == "table" and vanilla_table or false, "\t")
+				print_table(ctx, nil, live_table, type(vanilla_table) == "table" and vanilla_table or false, "\t", export.context_for_keys(copy_record.keys))
 
 				out[#out + 1] = "}"
 			end

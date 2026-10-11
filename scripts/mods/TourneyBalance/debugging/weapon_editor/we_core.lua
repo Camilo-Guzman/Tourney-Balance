@@ -71,12 +71,6 @@ function core.values_equal(a, b)
 	return a == b
 end
 
--- Imgui.input_float hands back float32 values (0.225 -> 0.22499999403953552), so every
--- typed number is snapped to 4 decimals before it's written anywhere.
-function core.round_input(value)
-	return math.floor(value * 10000 + 0.5) / 10000
-end
-
 --[[
 	Paths
 ]]
