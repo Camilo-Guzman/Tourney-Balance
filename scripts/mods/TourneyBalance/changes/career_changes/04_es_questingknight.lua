@@ -37,14 +37,9 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		| **Cataclysm 2** | 400 | 100 |
 		| **Cataclysm 3** | 500 | 100 |
 
-		**Virtue of Stoicism**
-		- Now regenerates 25% of damage taken as temporary health after 5s, and another 25% after 10s (from 50% after 5s).
-
-		**Virtue of Discipline**
-		- Increased duration to 10s (from 6s).
-
 		**Virtue of the Joust**
-		- Removes the movement penalty from melee weapons and Blessed Blade (attacking, charging heavy attacks and blocking).
+		- Increased push and block angle to 70% (from 30%).
+		- Increased stamina regeneration to 70% (from 30%).
 
 		**Virtue of the Impetuous Knight**
 		- Buff is now granted on using Blessed Blade (from on killing an enemy with Blessed Blade).
@@ -484,92 +479,20 @@ end)
 
 
 --[[
-	Virtue of Stoicism
-]]
--- 25% as thp instead of 50%
-mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_health_refund_over_time", {
-	heal_amount_fraction = 0.25 -- 0.5
-})
--- Another 25% after 10s: a second refund, same vanilla proc and remove func with a longer delay
-mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late", {
-	buff_func = "add_heal_percent_of_damage_taken_over_time_buff",
-	buff_to_add = "tb_grail_health_refund_over_time_late_delayed_heal",
-	event = "on_damage_taken",
-	heal_amount_fraction = 0.25
-})
-mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_health_refund_over_time_late_delayed_heal", {
-	duration = 10,
-	max_stacks = 1,
-	refresh_durations = true,
-	remove_buff_func = "refund_damage_taken",
-	icon = "markus_questing_knight_health_refund_over_time"
-})
-mod_api.update_talent("es_questingknight", 5, 1, {
-	buffs = {
-		"markus_questing_knight_health_refund_over_time",
-		"tb_grail_health_refund_over_time_late"
-	}
-})
-mod_api.insert_text("markus_questing_knight_health_refund_over_time_desc", "25.0%% of damage taken is regenerated as temporary health after 5 seconds and 10 seconds each.")
-
---[[
-	Virtue of Discipline
-]]
--- 20% power for 10s on parry (from 6s)
-mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_parry_increased_power_buff", {
-	multiplier = 0.2, --0.2
-	duration = 10, --6
-})
-mod_api.update_talent("es_questingknight", 5, 2, {
-	description_values = { -- update description
-		{
-			value_type = "percent",
-			value = 0.2, -- buff_tweak_data.markus_questing_knight_parry_increased_power_buff.multiplier
-		},
-		{
-			value = 10, -- buff_tweak_data.markus_questing_knight_parry_increased_power_buff.duration
-		},
-	},
-})
-
---[[
 	Virtue of the Joust
 ]]
--- Removes the "planted_*_decrease_movement" family's move-speed penalty (attacks and holding block use these)
--- while a melee weapon or Blessed Blade is wielded. Same approach as Ranger's No Dawdling (05_dr_ranger.lua).
-local TB_JOUST_MOVEMENT_PENALTY_BUFFS = {
-	"planted_decrease_movement",
-	"planted_fast_decrease_movement",
-	"planted_charging_decrease_movement",
-}
--- Grail Knight carries a second melee weapon in his ranged slot, so that slot counts too
-local TB_JOUST_WEAPON_SLOTS = {
-	slot_melee = true,
-	slot_ranged = true,
-	slot_career_skill_weapon = true,
-}
-
-local function tb_joust_removes_movement_penalty(unit)
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-
-	if not (talent_extension and talent_extension:has_talent("markus_questing_knight_push_arc_stamina_reg")) then
-		return false
-	end
-
-	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
-
-	return not not (inventory_extension and TB_JOUST_WEAPON_SLOTS[inventory_extension:get_wielded_slot_name()])
-end
-
--- Done after all mods load so a later rewrite of these templates can't drop the condition
-mod:add_all_mods_loaded_function(function ()
-	for _, buff_name in ipairs(TB_JOUST_MOVEMENT_PENALTY_BUFFS) do
-		mod:add_buff_apply_condition(buff_name, function (unit, template, params)
-			return mod:is_action_movement_speed_up(params) or not tb_joust_removes_movement_penalty(unit)
-		end)
-	end
-end)
-mod_api.insert_text("markus_questing_knight_push_arc_stamina_reg_desc", "Increases push angle and stamina regeneration by 30%%. Removes the movement slowdown from weapons.")
+-- 70% push/block angle and stamina regeneration (from 30%), block_angle widens both block and push
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_push_arc", {
+	multiplier = 0.7, -- 0.3
+})
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_stamina_reg", {
+	multiplier = 0.7, -- 0.3
+})
+mod_api.update_talent("es_questingknight", 5, 3, {
+	description = "tb_markus_questing_knight_push_arc_stamina_reg_desc",
+	description_values = {},
+})
+mod_api.insert_text("tb_markus_questing_knight_push_arc_stamina_reg_desc", "Increases push and block angle by 70% and stamina regeneration by 70%.")
 
 --[[
 	Virtue of the Impetuous Knight
