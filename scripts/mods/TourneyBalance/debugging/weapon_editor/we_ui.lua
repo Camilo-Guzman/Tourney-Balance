@@ -417,6 +417,10 @@ local function draw_template(editor, template_name)
 						end
 
 						if Imgui.tree_node(label .. "##" .. sub_path) then
+							if #profiles > 0 and Imgui.small_button("breakpoints##bp" .. sub_path) then
+								editor.show_breakpoints(sub_keys)
+							end
+
 							local others = editor.weapon_sharing(sub_action, template_name)
 
 							if others then
@@ -468,15 +472,14 @@ local function draw_edit_list(editor)
 	end
 end
 
--- Returns true when the window should close
-function ui.draw(editor)
-	local do_close = Imgui.begin_window("TB Weapon Editor", "menu_bar")
-
-	Imgui.set_window_size(760, 860, "once")
-
+local function draw_body(editor)
 	if Imgui.begin_menu_bar() then
 		if Imgui.menu_item("Export to clipboard") then
 			editor.export()
+		end
+
+		if Imgui.menu_item("Breakpoints") then
+			editor.toggle_breakpoints()
 		end
 
 		if Imgui.menu_item("Revert all") then
@@ -501,7 +504,22 @@ function ui.draw(editor)
 	Imgui.separator()
 	draw_edit_list(editor)
 	Imgui.pop_item_width()
+end
+
+-- Returns true when the window should close. The body runs in a pcall so end_window is
+-- always reached - an error between begin/end would leave Imgui's window stack broken.
+function ui.draw(editor)
+	local do_close = Imgui.begin_window("TB Weapon Editor", "menu_bar")
+
+	Imgui.set_window_size(760, 860, "once")
+
+	local ok, err = pcall(draw_body, editor)
+
 	Imgui.end_window()
+
+	if not ok then
+		error(err, 0)
+	end
 
 	return do_close
 end

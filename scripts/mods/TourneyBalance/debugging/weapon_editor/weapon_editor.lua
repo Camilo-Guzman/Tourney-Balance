@@ -10,6 +10,8 @@ local mod = get_mod("TourneyBalance")
 	Flow:
 		/tbwe                open/close the editor window (F3 switches between using it and playing)
 		edit values          they apply to the next swing/hit, no re-equip needed
+		breakpoints          button on any attack (or /tbwe_breakpoints): hits-to-kill grid comparing
+		                     now / TB / vanilla, plus a hit log checking predictions against real hits
 		/tbwe_export         copies the export to the clipboard (and the console log)
 		paste, rebuild, restart
 		                     on launch, edits that are now in the files are dropped automatically,
@@ -37,6 +39,7 @@ end
 local core = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_core")
 local export = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_export")
 local ui = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_ui")
+local breakpoints = require("scripts/mods/TourneyBalance/debugging/weapon_editor/we_breakpoints")
 
 local SUPPORTED_ROOTS = {
 	Weapons = true,
@@ -100,6 +103,10 @@ local editor = {
 	interacting = false,
 	selected_template = nil,
 	ui_state = {},
+	-- Bumped on every edit/revert so cached breakpoint grids know to recompute
+	edit_generation = 0,
+	breakpoints_open = false,
+	breakpoint_target = nil, -- keys of the sub-action shown in the breakpoint window
 }
 
 --[[
@@ -394,6 +401,7 @@ function editor.apply_edit(keys, value)
 	local _, write_ancestors = core.live_value(keys)
 
 	write_ancestors[#write_ancestors][keys[#keys]] = value
+	editor.edit_generation = editor.edit_generation + 1
 
 	local path = core.format_path(keys)
 	local baseline = core.snapshot_value(state.tb_baseline, keys)
@@ -436,6 +444,8 @@ function editor.revert_matching(predicate)
 	restore_unused_copies()
 	flush_mechanism_cache()
 	save_edits()
+
+	editor.edit_generation = editor.edit_generation + 1
 
 	return count
 end
@@ -663,6 +673,60 @@ function editor.close()
 	close_window()
 end
 
+-- First attack (sorted by name, action_one first) of the selected template that has a damage profile
+local function default_breakpoint_target()
+	local template = editor.selected_template and Weapons[editor.selected_template]
+	local actions = template and template.actions
+
+	if type(actions) ~= "table" then
+		return nil
+	end
+
+	local action_names = core.sorted_keys(actions)
+
+	table.sort(action_names, function (a, b)
+		if a == "action_one" or b == "action_one" then
+			return a == "action_one"
+		end
+
+		return a < b
+	end)
+
+	for _, action_name in ipairs(action_names) do
+		local action = actions[action_name]
+
+		if type(action) == "table" then
+			for _, sub_action_name in ipairs(core.sorted_keys(action)) do
+				local sub_action = action[sub_action_name]
+
+				if type(sub_action) == "table" then
+					local left_name, right_name = ActionUtils.get_damage_profile_name(sub_action, sub_action.weapon_action_hand)
+
+					if left_name or right_name then
+						return { "Weapons", editor.selected_template, "actions", action_name, sub_action_name }
+					end
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+function editor.toggle_breakpoints()
+	editor.breakpoints_open = not editor.breakpoints_open
+
+	if editor.breakpoints_open and not editor.breakpoint_target then
+		editor.breakpoint_target = default_breakpoint_target()
+	end
+end
+
+-- keys: path of a sub-action, e.g. { "Weapons", template, "actions", action, sub_action }
+function editor.show_breakpoints(keys)
+	editor.breakpoint_target = keys
+	editor.breakpoints_open = true
+end
+
 function editor.select_template(template_name)
 	if Weapons[template_name] then
 		editor.selected_template = template_name
@@ -707,10 +771,29 @@ mod:add_update_function(function ()
 	if not ok then
 		report("Window error, closing: %s", tostring(do_close))
 		close_window()
+
+		return
 	elseif do_close then
 		close_window()
+
+		return
+	end
+
+	if editor.breakpoints_open then
+		local t = Managers.time and Managers.time:time("main") or 0
+		local bp_ok, bp_close = pcall(breakpoints.draw, editor, t)
+
+		if not bp_ok then
+			report("Breakpoint window error, closing it: %s", tostring(bp_close))
+
+			editor.breakpoints_open = false
+		elseif bp_close then
+			editor.breakpoints_open = false
+		end
 	end
 end)
+
+mod:add_calculate_damage_observer(breakpoints.on_calculate_damage)
 
 -- Input services and the cursor stack don't survive a level/state change cleanly
 mod:add_game_state_changed_function(function ()
@@ -727,6 +810,11 @@ mod:command("tbwe", "Weapon editor: open/close the editor window.", function ()
 	else
 		open_window()
 	end
+end)
+
+mod:command("tbwe_breakpoints", "Weapon editor: show/hide the breakpoint window (opens the editor too).", function ()
+	open_window()
+	editor.toggle_breakpoints()
 end)
 
 mod:command("tbwe_export", "Weapon editor: copy all edits as Lua (with vanilla comments) to the clipboard.", function ()
