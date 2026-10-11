@@ -21,7 +21,9 @@ local mod = get_mod("TourneyBalance")
 local breakpoints = {}
 
 local TB_STAGGER_DAMAGE_PER_STACK = 0.2 -- mirrors 01_damage_calc_changes.lua
-local REFRESH_INTERVAL = 0.5
+-- The grid recomputes when its inputs change (see attacker_signature); this is only a safety
+-- net for anything that signature doesn't capture
+local REFRESH_INTERVAL = 5
 local MAX_HIT_LOG = 25
 local BETTER_COLOR = { 120, 230, 120, 255 }
 local WORSE_COLOR = { 255, 110, 90, 255 }
@@ -126,8 +128,76 @@ function breakpoints.hits_to_kill(health, damage)
 	return math.ceil(health / DamageUtils.networkify_damage(damage))
 end
 
--- Returns final damage (stagger multiplier applied) and base damage
-function breakpoints.predict(attacker_unit, damage_source, power_level, damage_profile, target_index, is_critical_strike, breed, hit_zone_name, difficulty_level, boost_damage_multiplier, backstab_multiplier, stagger_number)
+--[[
+	Attacker-side damage buffs. DamageUtils.add_damage_network_player runs calculate_damage and
+	then apply_buffs_to_damage on its result (TB's version: 02_damage_taken_changes.lua), which
+	is where talent/property damage buffs live: Heroism (increased_weapon_damage_heavy_attack),
+	Grail Knight's first-target perk (first_melee_hit_damage), melee/ranged/2h power-up
+	properties, damage_dealt... That function has side effects (procs, Gromril, RPCs), so this
+	mirrors only its attacker-side multipliers, in the same order. Target-side effects (target
+	health, poison/bleed, balefire, the target's own buffs) aren't modelled - the hit log flags
+	them when they change a hit.
+]]
+function breakpoints.attacker_buffed_damage(damage, attacker_unit, damage_source, damage_profile, first_hit)
+	local buff_extension = attacker_unit and ScriptUnit.has_extension(attacker_unit, "buff_system")
+
+	if not buff_extension then
+		return damage
+	end
+
+	local item_data = rawget(ItemMasterList, damage_source)
+	local weapon_template = item_data and item_data.template and rawget(Weapons, item_data.template)
+
+	if weapon_template then
+		local buff_type = weapon_template.buff_type
+
+		if buff_type then
+			damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage")
+		end
+
+		local is_melee = MeleeBuffTypes[buff_type]
+		local is_ranged = RangedBuffTypes[buff_type]
+
+		if is_melee then
+			damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee")
+
+			if buff_type == "MELEE_1H" then
+				damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_1h")
+			elseif buff_type == "MELEE_2H" then
+				damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_melee_2h")
+			end
+
+			-- apply_buffs_to_damage gets the profile's charge_value as its attack type
+			if damage_profile.charge_value == "heavy_attack" then
+				damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_heavy_attack")
+			end
+
+			if first_hit then
+				damage = buff_extension:apply_buffs_to_value(damage, "first_melee_hit_damage")
+			end
+		elseif is_ranged then
+			damage = buff_extension:apply_buffs_to_value(damage, "increased_weapon_damage_ranged")
+		end
+
+		local weapon_type = weapon_template.weapon_type
+		local weapon_stat_buffs = weapon_type and WeaponSpecificStatBuffs[weapon_type]
+
+		if weapon_stat_buffs then
+			damage = buff_extension:apply_buffs_to_value(damage, weapon_stat_buffs.damage)
+		end
+
+		if is_melee or is_ranged then
+			damage = buff_extension:apply_buffs_to_value(damage, "reduced_non_burn_damage")
+		end
+	end
+
+	return buff_extension:apply_buffs_to_value(damage, "damage_dealt")
+end
+
+-- Returns the damage a hit deals (stagger multiplier and attacker damage buffs applied),
+-- base damage (TB's formula alone) and the damage before attacker buffs. first_hit: the
+-- first enemy a swing hits, which is what first_melee_hit_damage buffs check.
+function breakpoints.predict(attacker_unit, damage_source, power_level, damage_profile, target_index, is_critical_strike, breed, hit_zone_name, difficulty_level, boost_damage_multiplier, backstab_multiplier, stagger_number, first_hit)
 	local do_damage_calculation = mod.tb_do_damage_calculation
 
 	if not do_damage_calculation then
@@ -153,7 +223,9 @@ function breakpoints.predict(attacker_unit, damage_source, power_level, damage_p
 		final_damage = base_damage * (difficulty_settings.min_stagger_damage_coefficient + (stagger_number or 0) * TB_STAGGER_DAMAGE_PER_STACK)
 	end
 
-	return final_damage, base_damage
+	local buffed_damage = breakpoints.attacker_buffed_damage(final_damage, attacker_unit, damage_source, damage_profile, first_hit)
+
+	return buffed_damage, base_damage, final_damage
 end
 
 --[[
@@ -272,6 +344,29 @@ local function compute_grid(editor, options)
 		local rows = {}
 		local current_category = nil
 
+		-- Columns whose profile is identical to an earlier column's reuse its numbers instead of
+		-- recomputing: TB = now when nothing in that profile is edited, vanilla = TB when
+		-- TourneyBalance left the profile alone
+		local same_as = {}
+		local now_path = "DamageProfileTemplates." .. tostring(hand.names.now)
+		local now_edited = false
+
+		for edit_path in pairs(editor.state.edits) do
+			if core.path_is_under(edit_path, now_path) then
+				now_edited = true
+
+				break
+			end
+		end
+
+		if hand.profiles.tb and hand.names.tb == hand.names.now and not now_edited then
+			same_as.tb = "now"
+		end
+
+		if hand.profiles.vanilla and hand.profiles.tb and core.deep_equal(hand.profiles.vanilla, hand.profiles.tb) then
+			same_as.vanilla = "tb"
+		end
+
 		for _, entry in ipairs(breakpoints.BREEDS) do
 			local breed = Breeds[entry[1]]
 			local category = entry[3]
@@ -293,8 +388,11 @@ local function compute_grid(editor, options)
 					for _, variant in ipairs(VARIANTS) do
 						local profile = hand.profiles[variant]
 
-						if profile then
-							local ok, damage = pcall(breakpoints.predict, unit, damage_source, power_level, profile, target_index, options.critical, breed, hit_zone_name, difficulty_level, 0, 1, stagger_number)
+						if same_as[variant] then
+							cell[variant] = cell[same_as[variant]]
+						elseif profile then
+							-- Target 1 is the swing's first hit (first_melee_hit_damage buffs)
+							local ok, damage = pcall(breakpoints.predict, unit, damage_source, power_level, profile, target_index, options.critical, breed, hit_zone_name, difficulty_level, 0, 1, stagger_number, target_index == 1)
 
 							if ok and damage then
 								cell[variant] = {
@@ -326,7 +424,10 @@ local function compute_grid(editor, options)
 end
 
 --[[
-	Hit log - fed by mod:add_calculate_damage_observer (see TourneyBalance.lua)
+	Hit log - fed by two TourneyBalance.lua dispatchers, called in this order for every hit:
+		mod:add_calculate_damage_observer     base + stagger damage, checked against TB's formula
+		mod:add_apply_buffs_to_damage_wrapper damage after damage buffs, checked against
+		                                      breakpoints.attacker_buffed_damage
 ]]
 
 local hit_log = {
@@ -375,17 +476,69 @@ function breakpoints.on_calculate_damage(final_damage, base_damage, damage_outpu
 
 	local difficulty_level = Managers.state.difficulty:get_difficulty()
 	local _, predicted_base = breakpoints.predict(attacker_unit, damage_source, original_power_level, damage_profile, target_index or 1, is_critical_strike, breed, hit_zone_name, difficulty_level, boost_damage_multiplier, backstab_multiplier, 0)
-	local health = breakpoints.breed_health(breed, difficulty_level)
 	local entries = hit_log.entries
 
 	table.insert(entries, 1, {
-		text = string.format("%s %s T%s%s [%s] %.2f dmg (x%.2f stagger) - %s hits of %.0f hp", breed.name, hit_zone_name, tostring(target_index), is_critical_strike and " crit" or "", profile_name(damage_profile), final_damage, base_damage > 0 and final_damage / base_damage or 0, tostring(breakpoints.hits_to_kill(health, final_damage) or "-"), health),
-		match = predicted_base ~= nil and math.abs(predicted_base - base_damage) < 0.01,
-		predicted = predicted_base,
+		breed_name = breed.name,
+		hit_zone_name = hit_zone_name,
+		target_index = target_index,
+		is_critical_strike = is_critical_strike,
+		profile_name = profile_name(damage_profile),
+		damage_profile = damage_profile,
+		damage_source = damage_source,
+		target_unit = target_unit,
+		health = breakpoints.breed_health(breed, difficulty_level),
 		base = base_damage,
+		calculated = final_damage,
+		predicted_base = predicted_base,
+		formula_match = predicted_base ~= nil and math.abs(predicted_base - base_damage) < 0.01,
+		-- Filled in by on_apply_buffs_to_damage right after
+		buffed = nil,
+		predicted_buffed = nil,
+		buff_match = nil,
 	})
 
 	entries[MAX_HIT_LOG + 1] = nil
+end
+
+local function pack(...)
+	return {
+		n = select("#", ...),
+		...,
+	}
+end
+
+-- Wrapper for TB's apply_buffs_to_damage dispatcher: passes everything through untouched and
+-- records the buffed damage on the hit's entry. Runs for every damage event in the game, so
+-- with the hit log off it's a plain tail call.
+function breakpoints.on_apply_buffs_to_damage(func, ...)
+	if not hit_log.enabled then
+		return func(...)
+	end
+
+	local current_damage, attacked_unit, attacker_unit, damage_source, _, _, _, first_hit = ...
+	local results = pack(func(...))
+	local buffed = results[1]
+
+	if type(buffed) == "number" and attacker_unit == breakpoints.local_player_unit() then
+		-- The newest entry for this target that hasn't seen its buff step yet
+		for i = 1, math.min(#hit_log.entries, 5) do
+			local entry = hit_log.entries[i]
+
+			if entry.target_unit == attacked_unit and entry.buffed == nil then
+				local ok, predicted = pcall(breakpoints.attacker_buffed_damage, current_damage, attacker_unit, damage_source, entry.damage_profile, first_hit)
+
+				entry.buffed = buffed
+				entry.first_hit = first_hit
+				entry.predicted_buffed = ok and predicted or nil
+				entry.buff_match = ok and math.abs(predicted - buffed) < 0.01
+
+				break
+			end
+		end
+	end
+
+	return unpack(results, 1, results.n)
 end
 
 --[[
@@ -455,6 +608,29 @@ local function draw_options(options)
 	end
 end
 
+-- Cheap per-frame fingerprint of everything on the attacker that feeds the grid: the buff
+-- list (BuffExtension.id counts up on every add, the list shrinks on removal), power level
+-- and wielded item (the damage source). Changes => recompute; otherwise the grid is reused.
+local function attacker_signature()
+	local unit = breakpoints.local_player_unit()
+
+	if not unit then
+		return "no unit"
+	end
+
+	local buff_extension = ScriptUnit.has_extension(unit, "buff_system")
+	local career_extension = ScriptUnit.has_extension(unit, "career_system")
+	local inventory_extension = ScriptUnit.has_extension(unit, "inventory_system")
+	local slot_data = inventory_extension and inventory_extension:get_slot_data(inventory_extension:get_wielded_slot_name())
+	local item_name = slot_data and slot_data.item_data and slot_data.item_data.name
+
+	return string.format("%s:%s|%s|%s",
+		buff_extension and buff_extension._buffs and #buff_extension._buffs or "-",
+		buff_extension and buff_extension.id or "-",
+		career_extension and career_extension:get_career_power_level() or "-",
+		tostring(item_name))
+end
+
 local function options_key(editor, options)
 	local shown_categories = {}
 
@@ -463,6 +639,7 @@ local function options_key(editor, options)
 	end
 
 	return table.concat({
+		attacker_signature(),
 		table.concat(shown_categories, ","),
 		tostring(editor.edit_generation),
 		editor.breakpoint_target and core.format_path(editor.breakpoint_target) or "none",
@@ -552,10 +729,20 @@ local function draw_hit_log()
 	end
 
 	for _, entry in ipairs(hit_log.entries) do
-		if entry.match then
-			Imgui.text(entry.text)
+		-- Damage actually dealt: after the buff step when it ran (it doesn't for every hit)
+		local dealt = entry.buffed or entry.calculated
+		local buff_multiplier = entry.buffed and entry.calculated > 0 and entry.buffed / entry.calculated or 1
+		local text = string.format("%s %s T%s%s%s [%s] %.2f dmg (x%.2f stagger, x%.2f damage buffs) - %s hits of %.0f hp",
+			entry.breed_name, entry.hit_zone_name, tostring(entry.target_index), entry.is_critical_strike and " crit" or "", entry.first_hit and " first hit" or "", entry.profile_name,
+			dealt, entry.base > 0 and entry.calculated / entry.base or 0, buff_multiplier,
+			tostring(breakpoints.hits_to_kill(entry.health, dealt) or "-"), entry.health)
+
+		if not entry.formula_match then
+			text_colored(string.format("%s - formula MISMATCH (base %.2f, predicted %.2f)", text, entry.base, entry.predicted_base or -1), MISMATCH_COLOR)
+		elseif entry.buff_match == false then
+			text_colored(string.format("%s - damage buff MISMATCH (actual x%.2f, predicted x%.2f)", text, buff_multiplier, entry.predicted_buffed and entry.calculated > 0 and entry.predicted_buffed / entry.calculated or 0), MISMATCH_COLOR)
 		else
-			text_colored(string.format("%s - formula MISMATCH (actual base %.2f, predicted %.2f)", entry.text, entry.base, entry.predicted or -1), MISMATCH_COLOR)
+			Imgui.text(text)
 		end
 	end
 end

@@ -365,7 +365,26 @@ end
 	Edits
 ]]
 
-local function save_edits()
+-- Saved only after something changed: save_edits (called by every edit/revert) marks the list
+-- dirty, and flush_saved_edits writes it SAVE_DELAY after the change (or on window close /
+-- state change), so typing "0.375" - one edit per keystroke - is one save, not five. A change
+-- that leaves the list as it was (a revert that matched nothing, an unchanged restore) writes
+-- nothing.
+local SAVE_DELAY = 1
+local edits_dirty_since = nil
+local last_saved_text = nil -- what the setting currently holds
+
+local function main_time()
+	return Managers.time and Managers.time:time("main") or 0
+end
+
+local function flush_saved_edits()
+	if not edits_dirty_since then
+		return
+	end
+
+	edits_dirty_since = nil
+
 	local paths = {}
 
 	for path in pairs(state.edits) do
@@ -380,7 +399,21 @@ local function save_edits()
 		lines[#lines + 1] = path .. "\t" .. core.encode_edit(state.edits[path])
 	end
 
-	mod:set(SAVED_EDITS_SETTING, table.concat(lines, "\n"))
+	local text = table.concat(lines, "\n")
+
+	if last_saved_text == nil then
+		last_saved_text = mod:get(SAVED_EDITS_SETTING) or ""
+	end
+
+	if text ~= last_saved_text then
+		mod:set(SAVED_EDITS_SETTING, text)
+
+		last_saved_text = text
+	end
+end
+
+local function save_edits()
+	edits_dirty_since = edits_dirty_since or main_time()
 end
 
 -- Template fields the game re-reads on every use (actions on each swing, max_fatigue_points
@@ -458,6 +491,17 @@ local function restore_unused_copies()
 
 			state.cow[cow_path] = nil
 		end
+	end
+end
+
+-- Deletes forks nothing points at anymore (assigned in the Forks section below). Paused while
+-- saved edits are being restored, since a fork's rewiring edits are re-applied one at a time.
+local remove_unused_forks = nil
+local restoring = false
+
+local function cleanup_forks()
+	if not restoring and remove_unused_forks then
+		remove_unused_forks()
 	end
 end
 
@@ -614,6 +658,11 @@ local function write_change(keys, kind, payload)
 		end
 	end
 
+	-- Pointing an attack away from a fork (e.g. back to its old profile) can orphan it
+	if type(keys[#keys]) == "string" and keys[#keys]:find("damage_profile", 1, true) then
+		cleanup_forks()
+	end
+
 	restore_unused_copies()
 	flush_mechanism_cache()
 	save_edits()
@@ -653,6 +702,8 @@ function editor.revert_matching(predicate)
 		end
 	end
 
+	-- Reverting the edit that pointed an attack at a fork leaves the fork unused
+	cleanup_forks()
 	restore_unused_copies()
 	flush_mechanism_cache()
 	save_edits()
@@ -808,20 +859,33 @@ function editor.fork_profile(source_name, new_name, field_keys_list)
 		end
 	end
 
+	-- If no attack could be pointed at it, don't keep an unused fork around
+	cleanup_forks()
+	save_edits()
+
+	if not state.forks[new_name] then
+		return false, "no attack could be pointed at the fork"
+	end
+
 	report("Forked %s into %s for %d attack(s).", source_name, new_name, #field_keys_list)
 
 	return true
 end
 
-function editor.delete_fork(name)
-	if not state.forks[name] then
-		return
+-- Removes a fork's tables, saved entry and every edit inside it (nothing to restore: the
+-- tables themselves go away). Callers save the edit list afterwards.
+local function drop_fork(name)
+	for path, edit in pairs(state.edits) do
+		if edit.keys[1] == "DamageProfileTemplates" and edit.keys[2] == name then
+			state.edits[path] = nil
+		end
 	end
 
-	-- Point every field using it back first, then drop edits inside it
-	editor.revert_matching(function (_, edit)
-		return (edit.keys[1] == "Weapons" and edit.value == name) or (edit.keys[1] == "DamageProfileTemplates" and edit.keys[2] == name)
-	end)
+	for cow_path, record in pairs(state.cow) do
+		if record.keys[1] == "DamageProfileTemplates" and record.keys[2] == name then
+			state.cow[cow_path] = nil
+		end
+	end
 
 	NewDamageProfileTemplates[name] = nil
 	DamageProfileTemplates[name] = nil
@@ -834,8 +898,34 @@ function editor.delete_fork(name)
 	if editor.on_profiles_changed then
 		editor.on_profiles_changed()
 	end
+end
 
-	report("Deleted fork %s.", name)
+-- A fork no attack points at would otherwise linger: still exported as a new block, and
+-- recreated every launch from the saved fork list
+remove_unused_forks = function ()
+	for name in pairs(state.forks) do
+		if #editor.profile_users(name) == 0 then
+			drop_fork(name)
+			report("Removed fork %s - no attack uses it anymore.", name)
+		end
+	end
+end
+
+function editor.delete_fork(name)
+	if not state.forks[name] then
+		return
+	end
+
+	-- Pointing every field back to its old profile leaves the fork unused, which removes it
+	editor.revert_matching(function (_, edit)
+		return (edit.keys[1] == "Weapons" and edit.value == name) or (edit.keys[1] == "DamageProfileTemplates" and edit.keys[2] == name)
+	end)
+
+	if state.forks[name] then
+		drop_fork(name)
+		save_edits()
+		report("Deleted fork %s.", name)
+	end
 end
 
 local function restore_saved_forks()
@@ -866,6 +956,7 @@ local function reapply_edits()
 	local edits = state.edits
 
 	state.edits = {}
+	restoring = true
 
 	for _, edit in pairs(edits) do
 		local kind = edit.kind or "value"
@@ -873,6 +964,7 @@ local function reapply_edits()
 		write_change(edit.keys, kind, kind == "ref" and edit.ref or edit.value)
 	end
 
+	restoring = false
 	state.needs_reapply = false
 end
 
@@ -940,8 +1032,16 @@ mod:add_all_mods_loaded_function(function ()
 		state.tb_baseline = capture_tables()
 
 		-- Forks first: saved edits may point actions at them or edit inside them
+		restoring = true
+
 		restore_saved_forks()
 		restore_saved_edits()
+
+		restoring = false
+
+		-- Forks saved by older versions (or whose attacks all got reverted) and no longer used
+		remove_unused_forks()
+		save_edits()
 
 		-- No weapon has spawned yet at launch, so restored edits need no re-equip
 		editor.reequip_needed = {}
@@ -1070,6 +1170,7 @@ local function close_window()
 
 	set_interacting(false)
 	Imgui.close_imgui()
+	flush_saved_edits()
 
 	editor.window_open = false
 end
@@ -1263,6 +1364,11 @@ function editor.reequip_wielded()
 end
 
 mod:add_update_function(function ()
+	-- Before the window check: commands like /tbwe_revert_all change edits with it closed
+	if edits_dirty_since and main_time() - edits_dirty_since >= SAVE_DELAY then
+		flush_saved_edits()
+	end
+
 	if not editor.window_open then
 		return
 	end
@@ -1299,10 +1405,14 @@ mod:add_update_function(function ()
 end)
 
 mod:add_calculate_damage_observer(breakpoints.on_calculate_damage)
+-- Registered before any change file's wrapper (this file loads first), so it's the outermost
+-- one and sees the final buffed damage
+mod:add_apply_buffs_to_damage_wrapper(breakpoints.on_apply_buffs_to_damage)
 
 -- Input services and the cursor stack don't survive a level/state change cleanly
 mod:add_game_state_changed_function(function ()
 	close_window()
+	flush_saved_edits()
 end)
 
 --[[

@@ -92,7 +92,9 @@ Tick **structure mode** at the top to add or remove fields and entries:
 Under a profile opened from an attack, **fork into a new tb_ profile** copies it under a new
 name (suggested `tb_<weapon>_<attack>`) and points **this attack** or **all attacks of this
 weapon using it** at the copy. It exports as a new `NewDamageProfileTemplates` block.
-**delete fork** points the attacks back and removes it.
+**delete fork** points the attacks back and removes it. A fork is also removed automatically
+once no attack points at it anymore (e.g. after reverting the edits that pointed attacks at it,
+or **Revert all**), so it no longer exports or comes back next session.
 
 ### Explosions and spread
 
@@ -121,9 +123,15 @@ first attack). The grid shows, per breed and target index:
   stacks (TB's 20% per stack), 1-5 targets, hits-to-kill or raw damage, and which categories
   to show: **Trash, Elite, Specials, Other, Boss, Lords** (taken from the categories used in
   `breakpoints.BREEDS`, so a new category there gets its own checkbox automatically).
-- **hit log**: tick "record hits" to log real hits (damage, stagger multiplier, hits to kill)
-  and flag any that disagree with the prediction. Known gaps: instakill perks (Killing Shot,
-  Murderous Prowess), buffs on the target, ranged falloff.
+- Cells include your **damage buffs** as they are when the grid refreshes (twice a second):
+  talents and properties like Grail Knight's first-target perk (target 1 counts as the first
+  hit), melee/2h power-ups and `damage_dealt`. Conditional buffs only show while active -
+  e.g. Heroism's charged-heavy bonus appears while you hold a charged heavy.
+- **hit log**: tick "record hits" to log real hits (damage dealt, stagger multiplier, damage
+  buff multiplier, hits to kill). Each hit is checked twice: TB's damage formula, and the damage
+  buff step that runs after it (`apply_buffs_to_damage`). Either disagreeing is flagged in red.
+  Known gaps: instakill perks (Killing Shot, Murderous Prowess), buffs on the target (poison,
+  bleed, balefire, target health), ranged falloff - these show up as mismatches.
 
 ## Exporting
 

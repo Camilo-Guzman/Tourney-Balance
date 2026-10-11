@@ -213,14 +213,104 @@ local function parse_new_value(text)
 	return (text:gsub("^\"(.*)\"$", "%1"))
 end
 
-local function has_edit_under(editor, path)
-	for edit_path in pairs(editor.state.edits) do
-		if core.path_is_under(edit_path, path) then
-			return true
-		end
+--[[
+	Per-frame caches. The tree is redrawn every frame, so anything derived from the edit list or
+	from table structure is built once and reused until editor.edit_generation changes (every
+	edit and revert bumps it; structure only changes through edits). Tied to the editor table
+	too: this module survives a hot reload, the editor (and its generation counter) doesn't.
+]]
+
+local cache_owner, cache_generation = nil, nil
+local edited_prefixes = {} -- path of every edit and every table above one -> true
+local removed_by_parent = {} -- parent path -> { { path, name } } for removed fields
+local field_entries_cache = {} -- table -> parent path -> sorted { key, keys, path }
+local profile_users_cache = {} -- profile name -> editor.profile_users result
+local sub_action_profiles_cache = {} -- sub-action table -> sorted profile names
+
+local function refresh_caches(editor)
+	if cache_owner == editor and cache_generation == editor.edit_generation then
+		return
 	end
 
-	return false
+	cache_owner, cache_generation = editor, editor.edit_generation
+	edited_prefixes, removed_by_parent, profile_users_cache = {}, {}, {}
+	field_entries_cache = setmetatable({}, {
+		__mode = "k",
+	})
+	sub_action_profiles_cache = setmetatable({}, {
+		__mode = "k",
+	})
+
+	for path, edit in pairs(editor.state.edits) do
+		for last_index = 2, #edit.keys do
+			edited_prefixes[core.format_path(edit.keys, nil, last_index)] = true
+		end
+
+		if edit.kind == "removed" then
+			local parent_path = core.format_path(edit.keys, nil, #edit.keys - 1)
+			local list = removed_by_parent[parent_path] or {}
+
+			list[#list + 1] = {
+				path = path,
+				name = tostring(edit.keys[#edit.keys]),
+			}
+			removed_by_parent[parent_path] = list
+		end
+	end
+end
+
+-- True when `path` itself or anything below it is edited
+local function has_edit_under(editor, path)
+	refresh_caches(editor)
+
+	return edited_prefixes[path] == true
+end
+
+-- A table's fields in display order, with each child's key path and path string precomputed.
+-- Keyed by parent path too: the same table can show up under several paths (a shared preset,
+-- a linked explosion).
+local function field_entries(editor, t, keys, parent_path)
+	refresh_caches(editor)
+
+	local by_parent = field_entries_cache[t]
+
+	if not by_parent then
+		by_parent = {}
+		field_entries_cache[t] = by_parent
+	end
+
+	local entries = by_parent[parent_path]
+
+	if not entries then
+		entries = {}
+
+		for i, key in ipairs(core.sorted_keys(t)) do
+			local child_keys = core.append_key(keys, key)
+
+			entries[i] = {
+				key = key,
+				keys = child_keys,
+				path = core.format_path(child_keys),
+			}
+		end
+
+		by_parent[parent_path] = entries
+	end
+
+	return entries
+end
+
+local function cached_profile_users(editor, profile_name)
+	refresh_caches(editor)
+
+	local users = profile_users_cache[profile_name]
+
+	if not users then
+		users = editor.profile_users(profile_name)
+		profile_users_cache[profile_name] = users
+	end
+
+	return users
 end
 
 -- A tb_ profile has no vanilla twin of the same name: compare against the profile the
@@ -444,17 +534,15 @@ local function draw_structure_buttons(editor, t, keys, key, child_keys, path, pa
 end
 
 -- Fields removed by an edit no longer exist in the table, so list them for reverting
-local function draw_removed_fields(editor, keys)
-	local parent_path = core.format_path(keys)
+local function draw_removed_fields(editor, parent_path)
+	refresh_caches(editor)
 
-	for path, edit in pairs(editor.state.edits) do
-		if edit.kind == "removed" and #edit.keys == #keys + 1 and core.format_path(edit.keys, nil, #keys) == parent_path then
-			text_colored(tostring(edit.keys[#edit.keys]) .. " (removed)", WARNING_COLOR)
-			Imgui.same_line()
+	for _, removed in ipairs(removed_by_parent[parent_path] or {}) do
+		text_colored(removed.name .. " (removed)", WARNING_COLOR)
+		Imgui.same_line()
 
-			if Imgui.small_button("revert##removed" .. path) then
-				editor.revert_edit(path)
-			end
+		if Imgui.small_button("revert##removed" .. removed.path) then
+			editor.revert_edit(removed.path)
 		end
 	end
 end
@@ -520,13 +608,16 @@ end
 
 local function edit_table(editor, t, keys, skip_keys)
 	local parent_is_array = is_array(t, keys[#keys])
+	local parent_path = core.format_path(keys)
 
-	for _, key in ipairs(core.sorted_keys(t)) do
+	for _, entry in ipairs(field_entries(editor, t, keys, parent_path)) do
+		local key = entry.key
+
 		if not (skip_keys and skip_keys[key]) then
 			local value = t[key]
 			local value_type = type(value)
-			local child_keys = core.append_key(keys, key)
-			local path = core.format_path(child_keys)
+			local child_keys = entry.keys
+			local path = entry.path
 			local name = tostring(key)
 
 			if value_type == "table" then
@@ -618,7 +709,7 @@ local function edit_table(editor, t, keys, skip_keys)
 		end
 	end
 
-	draw_removed_fields(editor, keys)
+	draw_removed_fields(editor, parent_path)
 	draw_add_controls(editor, t, keys)
 end
 
@@ -900,11 +991,12 @@ end
 	Forking
 ]]
 
--- Every field in this template that points at the profile
+-- Every field in this template that points at the profile (drawn every frame while the fork
+-- node is open, so the full Weapons scan behind it is cached)
 local function template_profile_fields(editor, template_name, profile_name)
 	local fields = {}
 
-	for _, user in ipairs(editor.profile_users(profile_name)) do
+	for _, user in ipairs(cached_profile_users(editor, profile_name)) do
 		if user.keys[2] == template_name then
 			fields[#fields + 1] = user.keys
 		end
@@ -1116,7 +1208,14 @@ local function draw_global_entry(editor, root, name)
 	edit_table(editor, entry, { root, name })
 end
 
-local function sub_action_profiles(sub_action)
+-- Damage profile names a sub-action uses, for its tree label (cached: drawn every frame)
+local function sub_action_profiles(editor, sub_action)
+	refresh_caches(editor)
+
+	if sub_action_profiles_cache[sub_action] then
+		return sub_action_profiles_cache[sub_action]
+	end
+
 	local names = {}
 
 	local function scan(t, depth)
@@ -1131,6 +1230,8 @@ local function sub_action_profiles(sub_action)
 
 	scan(sub_action, 1)
 	table.sort(names)
+
+	sub_action_profiles_cache[sub_action] = names
 
 	return names
 end
@@ -1173,7 +1274,7 @@ local function draw_template(editor, template_name)
 					if type(sub_action) == "table" then
 						local sub_keys = core.append_key(action_keys, sub_action_name)
 						local sub_path = core.format_path(sub_keys)
-						local profiles = sub_action_profiles(sub_action)
+						local profiles = sub_action_profiles(editor, sub_action)
 						local label = sub_action_name
 
 						if #profiles > 0 then
