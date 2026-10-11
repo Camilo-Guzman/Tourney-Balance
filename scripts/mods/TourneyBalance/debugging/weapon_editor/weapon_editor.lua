@@ -9,7 +9,9 @@ local mod = get_mod("TourneyBalance")
 
 	Flow:
 		/tbwe                open/close the editor window (F3 switches between using it and playing)
-		edit values          they apply to the next swing/hit, no re-equip needed. Damage profiles
+		edit values          action and damage profile edits apply to the next swing/hit. Template
+		                     buffs (dodge, movement) and ammo_data need "re-equip" (or /tbwe_reequip),
+		                     which the window flags when needed. Damage profiles
 		                     open with an "attack sheet" (per-target columns, armor types named)
 		fork                 copy a profile into a new tb_ profile and point this attack (or all
 		                     attacks of the weapon using it) at it - exports as a new block
@@ -115,6 +117,8 @@ local editor = {
 	edit_generation = 0,
 	breakpoints_open = false,
 	breakpoint_target = nil, -- keys of the sub-action shown in the breakpoint window
+	-- template name -> true when an edited field only takes effect after a re-equip
+	reequip_needed = {},
 }
 
 -- A fork was created or deleted: cached profile lists are stale
@@ -328,6 +332,23 @@ local function save_edits()
 	mod:set(SAVED_EDITS_SETTING, table.concat(lines, "\n"))
 end
 
+-- Template fields the game re-reads on every use (actions on each swing, max_fatigue_points
+-- every update, block angles on each block). Everything else outside actions is read when
+-- the weapon is wielded (template buffs: dodge, movement...) or when its units spawn
+-- (ammo_data), so edits to it only apply after a re-equip.
+local LIVE_TEMPLATE_FIELDS = {
+	actions = true,
+	max_fatigue_points = true,
+	block_angle = true,
+	outer_block_angle = true,
+}
+
+local function flag_reequip(keys)
+	if keys[1] == "Weapons" and not LIVE_TEMPLATE_FIELDS[keys[3]] then
+		editor.reequip_needed[keys[2]] = true
+	end
+end
+
 local function flush_mechanism_cache()
 	-- Templates with mechanism_overrides are shallow-copied and cached per mechanism
 	if MechanismOverrides and MechanismOverrides.mechanism_switched then
@@ -416,6 +437,8 @@ function editor.apply_edit(keys, value)
 	write_ancestors[#write_ancestors][keys[#keys]] = value
 	editor.edit_generation = editor.edit_generation + 1
 
+	flag_reequip(keys)
+
 	local path = core.format_path(keys)
 	local baseline = core.snapshot_value(state.tb_baseline, keys)
 
@@ -448,6 +471,8 @@ function editor.revert_matching(predicate)
 			if type(parent) == "table" and #ancestors == #edit.keys - 1 then
 				parent[edit.keys[#edit.keys]] = edit.baseline
 			end
+
+			flag_reequip(edit.keys)
 
 			state.edits[path] = nil
 			count = count + 1
@@ -720,6 +745,9 @@ mod:add_all_mods_loaded_function(function ()
 		-- Forks first: saved edits may point actions at them or edit inside them
 		restore_saved_forks()
 		restore_saved_edits()
+
+		-- No weapon has spawned yet at launch, so restored edits need no re-equip
+		editor.reequip_needed = {}
 	elseif state.needs_reapply then
 		reapply_edits()
 	end
@@ -937,6 +965,86 @@ function editor.select_wielded(silent)
 	end
 end
 
+-- Despawns and respawns the wielded weapon so everything read at wield/spawn time (template
+-- buffs, ammo_data) is read again. Mirrors SimpleInventoryExtension.create_equipment_in_slot,
+-- which can't be used directly: it skips an item that's already equipped.
+local function reequip_wielded()
+	local player = Managers.player and Managers.player:local_player()
+	local unit = player and player.player_unit
+
+	if not (unit and Unit.alive(unit)) then
+		report("No player unit.")
+		return
+	end
+
+	local inventory_extension = ScriptUnit.extension(unit, "inventory_system")
+	local slot_name = inventory_extension:get_wielded_slot_name()
+
+	if slot_name ~= "slot_melee" and slot_name ~= "slot_ranged" then
+		report("Wield a melee or ranged weapon first.")
+		return
+	end
+
+	if inventory_extension:resyncing_loadout() then
+		report("Still re-equipping - try again in a moment.")
+		return
+	end
+
+	local slot_data = inventory_extension:get_slot_data(slot_name)
+	local item_data = slot_data and slot_data.item_data
+
+	if not item_data then
+		return
+	end
+
+	-- Keep the ammo fraction; the respawned weapon applies it to its (possibly edited) max ammo
+	local current_ammo, max_ammo = inventory_extension:current_ammo_status(slot_name)
+	local ammo_percent = current_ammo and max_ammo and max_ammo > 0 and current_ammo / max_ammo or nil
+	local item_units = BackendUtils.get_item_units(item_data, nil, nil, inventory_extension._career_name)
+
+	inventory_extension:destroy_slot(slot_name, true)
+
+	local default_state_machine = inventory_extension._profile and inventory_extension._profile.default_state_machine
+
+	if default_state_machine then
+		inventory_extension.first_person_extension:set_state_machine(default_state_machine)
+	end
+
+	inventory_extension:_queue_item_spawn(slot_name, item_data, item_units.skin, ammo_percent)
+
+	-- Career skill weapons that borrow this slot's units (e.g. ult weapons) are respawned with it
+	local talent_extension = inventory_extension.talent_extension
+	local skill_index = talent_extension and talent_extension:get_talent_career_skill_index() or 1
+	local weapon_index = talent_extension and talent_extension:get_talent_career_weapon_index()
+	local career_skill_weapon_name = inventory_extension.career_extension:career_skill_weapon_name(skill_index, weapon_index)
+	local career_item_data = career_skill_weapon_name and rawget(ItemMasterList, career_skill_weapon_name)
+
+	if career_item_data and career_item_data.slot_to_use == slot_name then
+		inventory_extension:destroy_slot("slot_career_skill_weapon", true)
+
+		career_item_data.left_hand_unit = item_data.left_hand_unit
+		career_item_data.right_hand_unit = item_data.right_hand_unit
+
+		inventory_extension:_queue_item_spawn("slot_career_skill_weapon", career_item_data, item_units.skin)
+	end
+
+	local template_name = item_data.temporary_template or item_data.template
+
+	if template_name then
+		editor.reequip_needed[template_name] = nil
+	end
+
+	report("Re-equipped %s.", item_data.name)
+end
+
+function editor.reequip_wielded()
+	local ok, err = pcall(reequip_wielded)
+
+	if not ok then
+		report("Re-equip failed: %s", tostring(err))
+	end
+end
+
 mod:add_update_function(function ()
 	if not editor.window_open then
 		return
@@ -995,6 +1103,10 @@ end)
 mod:command("tbwe_breakpoints", "Weapon editor: show/hide the breakpoint window (opens the editor too).", function ()
 	open_window()
 	editor.toggle_breakpoints()
+end)
+
+mod:command("tbwe_reequip", "Weapon editor: respawn the wielded weapon so wield/spawn-time fields (dodge buffs, ammo) apply.", function ()
+	editor.reequip_wielded()
 end)
 
 mod:command("tbwe_export", "Weapon editor: copy all edits as Lua (with vanilla comments) to the clipboard.", function ()

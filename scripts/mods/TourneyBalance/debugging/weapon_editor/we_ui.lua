@@ -710,6 +710,15 @@ local function draw_template(editor, template_name)
 		end
 	end
 
+	if editor.reequip_needed[template_name] then
+		text_colored("Changed fields that are only read on wield/spawn (buffs, ammo) - wield this weapon and re-equip", WARNING_COLOR)
+		Imgui.same_line()
+
+		if Imgui.small_button("re-equip##reequip_template") then
+			editor.reequip_wielded()
+		end
+	end
+
 	local actions = template.actions
 
 	if type(actions) == "table" and Imgui.tree_node("actions##" .. template_name, true) then
@@ -800,6 +809,10 @@ local function draw_body(editor)
 
 		if Imgui.menu_item("Breakpoints") then
 			editor.toggle_breakpoints()
+		end
+
+		if Imgui.menu_item("Re-equip weapon") then
+			editor.reequip_wielded()
 		end
 
 		if Imgui.menu_item("Revert all") then
