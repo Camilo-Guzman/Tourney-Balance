@@ -1289,6 +1289,14 @@ end
 -- Returns true when the window should close. The body runs in a pcall so end_window is
 -- always reached - an error between begin/end would leave Imgui's window stack broken.
 function ui.draw(editor)
+	-- /tbwe_reset_windows: windows dragged outside the game window can't be grabbed back
+	if editor.pending_window_reset.editor then
+		editor.pending_window_reset.editor = nil
+
+		Imgui.set_next_window_pos(30, 30)
+		Imgui.set_next_window_size(760, 860)
+	end
+
 	local do_close = Imgui.begin_window("TB Weapon Editor", "menu_bar")
 
 	Imgui.set_window_size(760, 860, "once")

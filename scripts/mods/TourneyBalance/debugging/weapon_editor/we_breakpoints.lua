@@ -592,6 +592,14 @@ end
 -- Returns true when the window should close. The body runs in a pcall so end_window is
 -- always reached - an error between begin/end would leave Imgui's window stack broken.
 function breakpoints.draw(editor, t)
+	-- /tbwe_reset_windows: offset from the editor window so both stay grabbable
+	if editor.pending_window_reset.breakpoints then
+		editor.pending_window_reset.breakpoints = nil
+
+		Imgui.set_next_window_pos(90, 90)
+		Imgui.set_next_window_size(820, 700)
+	end
+
 	local do_close = Imgui.begin_window("TB Breakpoints")
 
 	Imgui.set_window_size(820, 700, "once")

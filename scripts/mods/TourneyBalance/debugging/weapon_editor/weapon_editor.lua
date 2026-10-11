@@ -134,6 +134,8 @@ local editor = {
 	breakpoint_target = nil, -- keys of the sub-action shown in the breakpoint window
 	-- template name -> true when an edited field only takes effect after a re-equip
 	reequip_needed = {},
+	-- window name ("editor"/"breakpoints") -> true: move it back on screen the next time it's drawn
+	pending_window_reset = {},
 }
 
 -- A fork was created or deleted: cached profile lists are stale
@@ -1322,6 +1324,13 @@ end)
 
 mod:command("tbwe_reequip", "Weapon editor: respawn the wielded weapon so wield/spawn-time fields (dodge buffs, ammo) apply.", function ()
 	editor.reequip_wielded()
+end)
+
+mod:command("tbwe_reset_windows", "Weapon editor: move the editor and breakpoint windows back on screen (default position and size).", function ()
+	editor.pending_window_reset.editor = true
+	editor.pending_window_reset.breakpoints = true
+
+	open_window()
 end)
 
 mod:command("tbwe_export", "Weapon editor: copy all edits as Lua (with vanilla comments) to the clipboard.", function ()
