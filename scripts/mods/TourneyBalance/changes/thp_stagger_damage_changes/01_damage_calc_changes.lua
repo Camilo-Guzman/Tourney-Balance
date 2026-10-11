@@ -450,9 +450,10 @@ end
 -- formula rather than vanilla's DamageUtils.custom_calculate_damage
 mod.tb_do_damage_calculation = do_damage_calculation
 
--- Shade's Murderous Prowess cap: the first 2 enemies an attack hits, 1 per hand on dual weapons
--- (shared_utils.is_within_attack_target_cap)
+-- Shade's Murderous Prowess and Ruthless Precision caps: the first 2 enemies an attack hits, 1 per hand on dual
+-- weapons (shared_utils.is_within_attack_target_cap)
 local MURDEROUS_PROWESS_MAX_TARGETS = 2
+local RUTHLESS_PRECISION_MAX_TARGETS = 2
 
 mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 	local difficulty_settings = Managers.state.difficulty:get_difficulty_settings()
@@ -504,6 +505,15 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 		has_power_boost = buff_extension:has_buff_perk("potion_armor_penetration")
 		has_crit_head_shot_killing_blow_perk = buff_extension:has_buff_perk("crit_headshot_killing_blow")
 		has_crit_backstab_killing_blow_perk = buff_extension:has_buff_perk("crit_backstab_killing_blow")
+
+		local is_melee = damage_profile and (damage_profile.charge_value == "light_attack" or damage_profile.charge_value == "heavy_attack")
+
+		-- Shade's Ruthless Precision: melee headshots on the first RUTHLESS_PRECISION_MAX_TARGETS enemies an attack hits
+		-- count as backstabs (_check_backstab doesn't know the hit zone). Sound and on_backstab procs: 11_we_shade.lua
+		if breed and (not backstab_multiplier or backstab_multiplier <= 1) and is_melee and buff_extension:has_buff_perk("tb_headshot_counts_as_backstab") and DamageUtils.get_breed_damage_multiplier_type(breed, hit_zone_name) == "headshot"
+			and is_within_attack_target_cap(target_index, RUTHLESS_PRECISION_MAX_TARGETS, damage_source, damage_profile) then
+			backstab_multiplier = buff_extension:apply_buffs_to_value(1, "backstab_multiplier")
+		end
 
 		-- Shade's Murderous Prowess (the only source of this perk): the charged crit backstab instakill only applies to the
 		-- first MURDEROUS_PROWESS_MAX_TARGETS enemies an attack hits
