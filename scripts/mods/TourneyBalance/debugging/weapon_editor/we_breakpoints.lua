@@ -220,7 +220,18 @@ function breakpoints.predict(attacker_unit, damage_source, power_level, damage_p
 	local final_damage = base_damage
 
 	if not damage_profile.is_dot then
-		final_damage = base_damage * (difficulty_settings.min_stagger_damage_coefficient + (stagger_number or 0) * TB_STAGGER_DAMAGE_PER_STACK)
+		-- Mirrors 01_damage_calc_changes.lua: ranged profiles (no_stagger_damage_reduction_ranged)
+		-- always count as at least 1 stagger stack, and stacks cap at 2 (3 with Mainstay)
+		local stagger = stagger_number or 0
+
+		if damage_profile.no_stagger_damage_reduction_ranged then
+			stagger = math.max(1, stagger)
+		end
+
+		local has_mainstay = buff_extension and buff_extension:has_buff_perk("linesman_stagger_damage")
+
+		stagger = math.min(stagger, has_mainstay and 3 or 2)
+		final_damage = base_damage * (difficulty_settings.min_stagger_damage_coefficient + stagger * TB_STAGGER_DAMAGE_PER_STACK)
 	end
 
 	local buffed_damage = breakpoints.attacker_buffed_damage(final_damage, attacker_unit, damage_source, damage_profile, first_hit)
