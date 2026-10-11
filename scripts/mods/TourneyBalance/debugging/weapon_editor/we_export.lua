@@ -205,6 +205,12 @@ local function print_table(ctx, authored, live, vanilla_node, indent, context)
 			skip = true
 		end
 
+		-- The game stamps name = <its own key> onto profiles; never export it. A copied name makes
+		-- the block claim to be another profile, which crashes the game (network lookup).
+		if context == "profile" and key == "name" then
+			skip = true
+		end
+
 		if not skip then
 			local prefix = indent .. key_text(key, in_sequence)
 

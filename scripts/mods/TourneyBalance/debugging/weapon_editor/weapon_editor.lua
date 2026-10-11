@@ -782,7 +782,11 @@ local function create_fork(source_name, new_name)
 	local authored, live = {}, {}
 
 	for k, v in pairs(source) do
-		if type(v) == "table" and preset_by_table[v] then
+		if k == "name" then
+			-- damage_profile_templates.lua stamps every vanilla profile with name = its own key
+			-- (and asserts they match). Copying it would make the fork claim to be its source:
+			-- the game then mixes the two up (missing network lookup entries, crashes).
+		elseif type(v) == "table" and preset_by_table[v] then
 			authored[k] = preset_by_table[v]
 			live[k] = v
 		else

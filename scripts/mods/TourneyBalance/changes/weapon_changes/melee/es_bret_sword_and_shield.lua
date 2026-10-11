@@ -47,7 +47,6 @@ NewDamageProfileTemplates.tb_bretsword_shield_light_1 = { -- vanilla: light_slas
 	charge_value = "light_attack",
 	critical_strike = "critical_strike_linesman_L",
 	cleave_distribution = "cleave_distribution_linesman_L",
-	name = "light_slashing_linesman",
 	default_target = "default_target_linesman_L",
 	targets = "targets_linesman_L",
 }
@@ -59,7 +58,6 @@ NewDamageProfileTemplates.tb_bretsword_shield_light_2 = { -- vanilla: light_slas
 	cleave_distribution = "cleave_distribution_smiter_default",
 	ignore_stagger_reduction = true,
 	shield_break = true, -- vanilla: none
-	name = "light_slashing_smiter",
 	default_target = "default_target_smiter_L",
 	targets = "targets_smiter_L",
 }
@@ -69,7 +67,6 @@ NewDamageProfileTemplates.tb_bretsword_shield_light_shield_bash = { -- vanilla: 
 	charge_value = "heavy_attack",
 	critical_strike = "critical_strike_slam_tank_L",
 	shield_break = true, -- vanilla: none
-	name = "shield_slam_shotgun_aoe",
 	no_damage = true,
 	default_target = "aoe_target_settings_slam_tank_L",
 	targets = {
