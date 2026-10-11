@@ -296,9 +296,9 @@ end)
     Balance Changes
 
 ]]
--- Weapon editor spike - snapshots vanilla Weapons/DamageProfileTemplates on load
+-- Weapon editor (dev tool, off by default) - snapshots vanilla Weapons/DamageProfileTemplates on load
 -- Placed first so the snapshot predates every change file
-mod:dofile("scripts/mods/TourneyBalance/debugging/weapon_editor_spike")
+mod:dofile("scripts/mods/TourneyBalance/debugging/weapon_editor/weapon_editor")
 
 -- Misc standalone fixes not tied to any other category
 mod:dofile("scripts/mods/TourneyBalance/changes/_misc_fixes")
