@@ -40,7 +40,7 @@ local mod = get_mod("TourneyBalance")
 
 ]]
 
-local ENABLED = false
+local ENABLED = true
 
 if not ENABLED then
 	return
