@@ -28,29 +28,57 @@ local WORSE_COLOR = { 255, 110, 90, 255 }
 local INFO_COLOR = { 150, 200, 255, 255 }
 local MISMATCH_COLOR = { 255, 110, 90, 255 }
 
+-- Grid rows, grouped by category in this order. The breed list follows
+-- changes/thp_stagger_damage_changes/00_bloodlust_health.lua (minus _dummy/_tutorial variants);
+-- its "monster" breeds are split into bosses and lords.
+breakpoints.CATEGORIES = { "Trash", "Elite", "Specials", "Boss", "Lords" }
+
 breakpoints.BREEDS = {
-	{ "skaven_slave", "Slave rat" },
-	{ "skaven_clan_rat", "Clan rat" },
-	{ "skaven_storm_vermin", "Stormvermin" },
-	{ "skaven_plague_monk", "Plague monk" },
-	{ "skaven_gutter_runner", "Gutter runner" },
-	{ "skaven_pack_master", "Packmaster" },
-	{ "skaven_poison_wind_globadier", "Globadier" },
-	{ "skaven_ratling_gunner", "Ratling gunner" },
-	{ "skaven_warpfire_thrower", "Warpfire" },
-	{ "chaos_fanatic", "Fanatic" },
-	{ "chaos_marauder", "Marauder" },
-	{ "chaos_raider", "Mauler" },
-	{ "chaos_berzerker", "Savage" },
-	{ "chaos_warrior", "Chaos warrior" },
-	{ "chaos_vortex_sorcerer", "Blightstormer" },
-	{ "chaos_corruptor_sorcerer", "Leech" },
-	{ "beastmen_ungor", "Ungor" },
-	{ "beastmen_gor", "Gor" },
-	{ "beastmen_bestigor", "Bestigor" },
-	{ "beastmen_standard_bearer", "Standard bearer" },
-	{ "skaven_rat_ogre", "Rat ogre" },
-	{ "chaos_spawn", "Chaos spawn" },
+	{ "skaven_slave", "Slave Rat", "Trash" },
+	{ "skaven_clan_rat", "Clan Rat", "Trash" },
+	{ "skaven_clan_rat_with_shield", "Shielded Clan Rat", "Trash" },
+	{ "chaos_fanatic", "Fanatic", "Trash" },
+	{ "chaos_marauder", "Marauder", "Trash" },
+	{ "chaos_marauder_with_shield", "Shielded Marauder", "Trash" },
+	{ "beastmen_ungor", "Ungor", "Trash" },
+	{ "beastmen_ungor_archer", "Ungor Archer", "Trash" },
+	{ "beastmen_gor", "Gor", "Trash" },
+
+	{ "skaven_storm_vermin", "Stormvermin", "Elite" },
+	{ "skaven_storm_vermin_with_shield", "Shielded Stormvermin", "Elite" },
+	{ "skaven_storm_vermin_commander", "Stormvermin Commander", "Elite" },
+	{ "skaven_plague_monk", "Plague Monk", "Elite" },
+	{ "chaos_raider", "Mauler", "Elite" },
+	{ "chaos_berzerker", "Savage", "Elite" },
+	{ "chaos_warrior", "Chaos Warrior", "Elite" },
+	{ "beastmen_bestigor", "Bestigor", "Elite" },
+
+	{ "beastmen_standard_bearer", "Standard Bearer", "Specials" },
+	{ "skaven_gutter_runner", "Gutter Runner", "Specials" },
+	{ "skaven_pack_master", "Packmaster", "Specials" },
+	{ "skaven_poison_wind_globadier", "Globadier", "Specials" },
+	{ "skaven_ratling_gunner", "Ratling Gunner", "Specials" },
+	{ "skaven_warpfire_thrower", "Warpfire", "Specials" },
+	{ "chaos_vortex_sorcerer", "Blightstormer", "Specials" },
+	{ "chaos_corruptor_sorcerer", "Leech", "Specials" },
+
+	{ "skaven_loot_rat", "Sack Rat", "Other" },
+	{ "skaven_explosive_loot_rat", "Explosive Loot Rat", "Other" },
+	{ "chaos_mutator_sorcerer", "Mutator Sorcerer", "Other" },
+
+	{ "skaven_rat_ogre", "Rat Ogre", "Boss" },
+	{ "skaven_stormfiend", "Stormfiend", "Boss" },
+	{ "chaos_spawn", "Chaos Spawn", "Boss" },
+	{ "chaos_troll", "Bile Troll", "Boss" },
+	{ "beastmen_minotaur", "Minotaur", "Boss" },
+
+	{ "skaven_grey_seer", "Rasknitt", "Lords" },
+	{ "skaven_stormfiend_boss", "Deathrattler", "Lords" },
+	{ "skaven_storm_vermin_warlord", "Skarrik", "Lords" },
+	{ "skaven_storm_vermin_champion", "Stormvermin Champion", "Lords" },
+	{ "chaos_exalted_champion_warcamp", "Bodvarr", "Lords" },
+	{ "chaos_exalted_sorcerer", "Burblespue", "Lords" },
+	{ "chaos_exalted_sorcerer_drachenfels", "Nurgloth", "Lords" },
 }
 
 local HIT_ZONES = { "torso", "head" }
@@ -187,6 +215,14 @@ local function default_options()
 		stagger_index = 1,
 		target_count_index = 3,
 		display_index = 1,
+		-- Category -> shown in the grid
+		categories = {
+			Trash = true,
+			Elite = true,
+			Specials = true,
+			Boss = true,
+			Lords = true,
+		},
 	}
 end
 
@@ -221,11 +257,20 @@ local function compute_grid(editor, options)
 
 	for _, hand in ipairs(resolve_profiles(editor, target_keys)) do
 		local rows = {}
+		local current_category = nil
 
 		for _, entry in ipairs(breakpoints.BREEDS) do
 			local breed = Breeds[entry[1]]
+			local category = entry[3]
 
-			if breed then
+			if breed and options.categories[category] then
+				if category ~= current_category then
+					current_category = category
+					rows[#rows + 1] = {
+						header = category,
+					}
+				end
+
 				local health = breakpoints.breed_health(breed, difficulty_level)
 				local cells = {}
 
@@ -387,10 +432,25 @@ local function draw_options(options)
 	options.target_count_index = Imgui.combo("targets##bp_targets", options.target_count_index, TARGET_COUNTS)
 	options.display_index = Imgui.combo("show##bp_display", options.display_index, DISPLAY_MODES)
 	options.critical = Imgui.checkbox("crit##bp_crit", options.critical)
+
+	Imgui.text("show:")
+
+	for _, category in ipairs(breakpoints.CATEGORIES) do
+		Imgui.same_line()
+
+		options.categories[category] = Imgui.checkbox(category .. "##bp_category_" .. category, options.categories[category])
+	end
 end
 
 local function options_key(editor, options)
+	local shown_categories = {}
+
+	for _, category in ipairs(breakpoints.CATEGORIES) do
+		shown_categories[#shown_categories + 1] = options.categories[category] and category or "-"
+	end
+
 	return table.concat({
+		table.concat(shown_categories, ","),
 		tostring(editor.edit_generation),
 		editor.breakpoint_target and core.format_path(editor.breakpoint_target) or "none",
 		tostring(options.use_own_power),
@@ -432,25 +492,35 @@ local function draw_grid(grid, options)
 		Imgui.separator()
 
 		for _, row in ipairs(hand_grid.rows) do
-			Imgui.text(row.label)
-			Imgui.next_column()
-			Imgui.text(string.format("%.0f", row.health))
+			if row.header then
+				-- Category divider: label in the first column, the rest of the row left empty
+				Imgui.separator()
+				text_colored(row.header, INFO_COLOR)
 
-			for target_index = 1, target_count do
-				Imgui.next_column()
-
-				local cell = row.cells[target_index]
-				local text = string.format("%s | %s | %s", format_cell_value(cell.now, options.display_index), format_cell_value(cell.tb, options.display_index), format_cell_value(cell.vanilla, options.display_index))
-				local color = cell_color(cell, options.display_index)
-
-				if color then
-					text_colored(text, color)
-				else
-					Imgui.text(text)
+				for _ = 1, target_count + 1 do
+					Imgui.next_column()
 				end
-			end
+			else
+				Imgui.text(row.label)
+				Imgui.next_column()
+				Imgui.text(string.format("%.0f", row.health))
 
-			Imgui.next_column()
+				for target_index = 1, target_count do
+					Imgui.next_column()
+
+					local cell = row.cells[target_index]
+					local text = string.format("%s | %s | %s", format_cell_value(cell.now, options.display_index), format_cell_value(cell.tb, options.display_index), format_cell_value(cell.vanilla, options.display_index))
+					local color = cell_color(cell, options.display_index)
+
+					if color then
+						text_colored(text, color)
+					else
+						Imgui.text(text)
+					end
+				end
+
+				Imgui.next_column()
+			end
 		end
 
 		Imgui.columns(1)
