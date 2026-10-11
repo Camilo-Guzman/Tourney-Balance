@@ -9,7 +9,10 @@ local mod = get_mod("TourneyBalance")
 
 	Flow:
 		/tbwe                open/close the editor window (F3 switches between using it and playing)
-		edit values          they apply to the next swing/hit, no re-equip needed
+		edit values          they apply to the next swing/hit, no re-equip needed. Damage profiles
+		                     open with an "attack sheet" (per-target columns, armor types named)
+		fork                 copy a profile into a new tb_ profile and point this attack (or all
+		                     attacks of the weapon using it) at it - exports as a new block
 		breakpoints          button on any attack (or /tbwe_breakpoints): hits-to-kill grid comparing
 		                     now / TB / vanilla, plus a hit log checking predictions against real hits
 		/tbwe_export         copies the export to the clipboard (and the console log)
@@ -47,6 +50,7 @@ local SUPPORTED_ROOTS = {
 }
 
 local SAVED_EDITS_SETTING = "tbwe_saved_edits"
+local SAVED_FORKS_SETTING = "tbwe_saved_forks"
 local INPUT_SERVICE_NAME = "tb_weapon_editor"
 local INPUT_CAPTURE_OWNER = "TBWeaponEditor"
 
@@ -89,11 +93,15 @@ else
 		tb_baseline = nil,
 		edits = {},
 		cow = {},
+		forks = {},
 		needs_reapply = false,
 	}
 
 	rawset(_G, STATE_GLOBAL, state)
 end
+
+-- State carried over a hot reload from an older version of this file
+state.forks = state.forks or {}
 
 local editor = {
 	state = state,
@@ -108,6 +116,11 @@ local editor = {
 	breakpoints_open = false,
 	breakpoint_target = nil, -- keys of the sub-action shown in the breakpoint window
 }
+
+-- A fork was created or deleted: cached profile lists are stale
+function editor.on_profiles_changed()
+	ui.invalidate_profile_caches(editor)
+end
 
 --[[
 	Shared-table lookups (built on first use)
@@ -484,6 +497,171 @@ function editor.edit_count()
 	return count
 end
 
+--[[
+	Forks: a copy of an existing profile under a new tb_ name, with the chosen actions pointed
+	at it - the same thing the change files do by hand with NewDamageProfileTemplates.tb_x
+]]
+
+local function save_forks()
+	local names = table.keys(state.forks)
+
+	table.sort(names)
+
+	local lines = {}
+
+	for _, name in ipairs(names) do
+		lines[#lines + 1] = name .. "\t" .. state.forks[name].source
+	end
+
+	mod:set(SAVED_FORKS_SETTING, table.concat(lines, "\n"))
+end
+
+-- Builds the profile the way the change files + _damage_profile_setup.lua would:
+-- an authored copy that names untouched PowerLevelTemplates presets, and a live copy that
+-- references them (so a later edit copies the preset first, like any other shared table).
+local function create_fork(source_name, new_name)
+	local source = DamageProfileTemplates[source_name]
+	local preset_by_table = {}
+
+	for name, preset in pairs(PowerLevelTemplates) do
+		if type(preset) == "table" then
+			preset_by_table[preset] = name
+		end
+	end
+
+	local authored, live = {}, {}
+
+	for k, v in pairs(source) do
+		if type(v) == "table" and preset_by_table[v] then
+			authored[k] = preset_by_table[v]
+			live[k] = v
+		else
+			authored[k] = core.deep_copy(v)
+			live[k] = core.deep_copy(v)
+		end
+	end
+
+	NewDamageProfileTemplates[new_name] = authored
+	DamageProfileTemplates[new_name] = live
+
+	-- _damage_profile_setup.lua gives every profile a zero-attack "_no_damage" twin, which
+	-- area_damage_system.lua looks up by name at runtime
+	local no_damage = core.deep_copy(live)
+
+	for _, target in ipairs(type(no_damage.targets) == "table" and no_damage.targets or {}) do
+		if target.power_distribution then
+			target.power_distribution.attack = 0
+		end
+	end
+
+	if type(no_damage.default_target) == "table" and no_damage.default_target.power_distribution then
+		no_damage.default_target.power_distribution.attack = 0
+	end
+
+	DamageProfileTemplates[new_name .. "_no_damage"] = no_damage
+
+	-- Hits send the profile as a NetworkLookup id. The table errors on unknown keys, hence rawget.
+	local lookup = NetworkLookup.damage_profiles
+
+	if not rawget(lookup, new_name) then
+		local index = #lookup + 1
+
+		lookup[index] = new_name
+		lookup[new_name] = index
+	end
+
+	-- Edits inside the fork compare against (and revert to) its values at fork time
+	state.tb_baseline.DamageProfileTemplates[new_name] = core.deep_copy(live)
+	state.forks[new_name] = {
+		source = source_name,
+	}
+
+	if profile_owner_counts then
+		build_profile_owner_counts()
+	end
+
+	if editor.on_profiles_changed then
+		editor.on_profiles_changed()
+	end
+end
+
+function editor.fork_profile(source_name, new_name, field_keys_list)
+	if type(new_name) ~= "string" or not new_name:match("^tb_[%w_]+$") then
+		return false, "name must start with tb_ and contain only letters, digits and _"
+	end
+
+	if DamageProfileTemplates[new_name] or NewDamageProfileTemplates[new_name] then
+		return false, new_name .. " already exists"
+	end
+
+	if not DamageProfileTemplates[source_name] then
+		return false, "unknown source profile " .. tostring(source_name)
+	end
+
+	create_fork(source_name, new_name)
+	save_forks()
+
+	for _, field_keys in ipairs(field_keys_list) do
+		local ok, err = editor.apply_edit(field_keys, new_name)
+
+		if not ok then
+			report("Couldn't point %s at %s: %s", core.format_path(field_keys), new_name, err)
+		end
+	end
+
+	report("Forked %s into %s for %d attack(s).", source_name, new_name, #field_keys_list)
+
+	return true
+end
+
+function editor.delete_fork(name)
+	if not state.forks[name] then
+		return
+	end
+
+	-- Point every field using it back first, then drop edits inside it
+	editor.revert_matching(function (_, edit)
+		return (edit.keys[1] == "Weapons" and edit.value == name) or (edit.keys[1] == "DamageProfileTemplates" and edit.keys[2] == name)
+	end)
+
+	NewDamageProfileTemplates[name] = nil
+	DamageProfileTemplates[name] = nil
+	DamageProfileTemplates[name .. "_no_damage"] = nil
+	state.tb_baseline.DamageProfileTemplates[name] = nil
+	state.forks[name] = nil
+
+	save_forks()
+
+	if editor.on_profiles_changed then
+		editor.on_profiles_changed()
+	end
+
+	report("Deleted fork %s.", name)
+end
+
+local function restore_saved_forks()
+	local saved = mod:get(SAVED_FORKS_SETTING)
+
+	if type(saved) ~= "string" or saved == "" then
+		return
+	end
+
+	for line in saved:gmatch("[^\n]+") do
+		local name, source = line:match("^(.-)\t(.*)$")
+
+		-- Already defined means the exported block made it into the files
+		if name and not DamageProfileTemplates[name] then
+			if DamageProfileTemplates[source] then
+				create_fork(source, name)
+			else
+				report("Couldn't restore fork %s: source %s no longer exists", name, source)
+			end
+		end
+	end
+
+	save_forks()
+end
+
 -- After a hot reload the change files overwrote whatever they set, so put the edits back
 local function reapply_edits()
 	local edits = state.edits
@@ -539,6 +717,8 @@ mod:add_all_mods_loaded_function(function ()
 	if not state.tb_baseline then
 		state.tb_baseline = capture_tables()
 
+		-- Forks first: saved edits may point actions at them or edit inside them
+		restore_saved_forks()
 		restore_saved_edits()
 	elseif state.needs_reapply then
 		reapply_edits()
@@ -566,7 +746,7 @@ local function put_on_clipboard(text)
 end
 
 function editor.export()
-	if editor.edit_count() == 0 then
+	if editor.edit_count() == 0 and next(state.forks) == nil then
 		report("Nothing to export.")
 		return
 	end

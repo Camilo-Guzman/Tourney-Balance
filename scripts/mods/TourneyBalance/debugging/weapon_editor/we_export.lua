@@ -126,7 +126,10 @@ local function print_table(ctx, authored, live, vanilla_node, indent)
 
 	if vanilla_node then
 		for _, key in ipairs(core.sorted_keys(vanilla_node)) do
-			if live[key] == nil then
+			-- damage_profile_templates.lua stamps name onto every vanilla profile at load
+			local stamped = key == "name" and type(vanilla_node[key]) == "string"
+
+			if live[key] == nil and not stamped then
 				local vanilla_value = vanilla_node[key]
 
 				out[#out + 1] = indent .. "-- removed: " .. key_label(key) .. " (vanilla: " .. (type(vanilla_value) == "table" and "<table>" or core.format_value(vanilla_value)) .. ")"
@@ -226,8 +229,15 @@ local function print_tb_profile_section(ctx, profile_name, edits)
 		header = header .. " -- vanilla: none (new profile)"
 	end
 
+	local fork = ctx.state.forks and ctx.state.forks[profile_name]
+
 	out[#out + 1] = ""
-	out[#out + 1] = "-- " .. profile_name .. ": replaces the existing block"
+
+	if fork then
+		out[#out + 1] = string.format("-- %s: new profile (forked from %s), add this block", profile_name, fork.source)
+	else
+		out[#out + 1] = "-- " .. profile_name .. ": replaces the existing block"
+	end
 
 	print_users(ctx, users)
 	print_session_changes(ctx, sorted_edits(edits))
@@ -331,6 +341,11 @@ function export.build(editor)
 
 	for _, template_name in ipairs(template_names) do
 		print_weapon_section(ctx, template_name, weapon_edits[template_name])
+	end
+
+	-- Forks export as new blocks even with no edits inside them
+	for fork_name in pairs(state.forks or {}) do
+		profile_edits[fork_name] = profile_edits[fork_name] or {}
 	end
 
 	local profile_names = table.keys(profile_edits)

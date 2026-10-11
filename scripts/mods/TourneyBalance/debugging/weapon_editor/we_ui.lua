@@ -271,7 +271,7 @@ local function edit_table(editor, t, keys, skip_keys)
 			-- Fields naming a damage profile open that profile right below them
 			if value_type == "string" and name:find("damage_profile", 1, true) and DamageProfileTemplates[value] then
 				if Imgui.tree_node("profile " .. value .. "##open" .. path) then
-					draw_profile(editor, value)
+					draw_profile(editor, value, child_keys)
 					Imgui.tree_pop()
 				end
 			end
@@ -279,17 +279,282 @@ local function edit_table(editor, t, keys, skip_keys)
 	end
 end
 
-draw_profile = function (editor, profile_name)
-	local is_tb_profile = NewDamageProfileTemplates[profile_name] ~= nil
-	local counterpart = vanilla_counterpart(editor, profile_name)
+--[[
+	Attack sheet: the fields that matter for tuning, one column per target, armor types named
+]]
 
-	if is_tb_profile then
+local SHEET_CELL_WIDTH = 85
+local ARMOR_NAMES = { "infantry", "armored", "monster", "player", "berserker", "super armor" }
+local SHEET_TOP_FIELDS = { "charge_value", "melee_boost_override", "shield_break", "no_stagger_damage_reduction", "no_stagger_damage_reduction_ranged" }
+local SHEET_TARGET_ROWS = {
+	{ "power: attack", { "power_distribution", "attack" } },
+	{ "power: impact", { "power_distribution", "impact" } },
+	{ "attack template", { "attack_template" } },
+	{ "boost curve", { "boost_curve_type" } },
+	{ "boost coefficient", { "boost_curve_coefficient" } },
+	{ "headshot coefficient", { "boost_curve_coefficient_headshot" } },
+	{ "headshot boost (boss)", { "headshot_boost_boss" } },
+}
+
+-- One editable value inside a sheet. relative_keys are walked from `root` (whose path is root_keys).
+local function sheet_cell(editor, root, root_keys, relative_keys)
+	local value = root
+	local keys = root_keys
+
+	for _, key in ipairs(relative_keys) do
+		if type(value) ~= "table" then
+			value = nil
+
+			break
+		end
+
+		value = value[key]
+		keys = core.append_key(keys, key)
+	end
+
+	local path = core.format_path(keys)
+	local id = "##sheet" .. path
+	local value_type = type(value)
+
+	Imgui.push_item_width(SHEET_CELL_WIDTH)
+
+	if value_type == "number" then
+		local new_value, changed = Imgui.input_float(id, value)
+
+		if changed then
+			apply(editor, keys, core.round_input(new_value))
+		end
+	elseif value_type == "boolean" then
+		local new_value = Imgui.checkbox(id, value)
+
+		if new_value ~= value then
+			apply(editor, keys, new_value)
+		end
+	elseif value_type == "string" then
+		local dropdown = dropdown_for(keys[#keys])
+		local index = dropdown and dropdown.index_of[value]
+
+		if index then
+			local new_index = Imgui.combo(id, index, dropdown.names)
+
+			if new_index ~= index and dropdown.names[new_index] then
+				apply(editor, keys, dropdown.names[new_index])
+			end
+		else
+			Imgui.text(value)
+		end
+	else
+		Imgui.text("-")
+	end
+
+	Imgui.pop_item_width()
+
+	if editor.state.edits[path] then
+		Imgui.same_line()
+		text_colored("*", EDITED_COLOR)
+	end
+end
+
+local function sheet_header(labels)
+	Imgui.columns(#labels, true)
+
+	for i, label in ipairs(labels) do
+		if i > 1 then
+			Imgui.next_column()
+		end
+
+		Imgui.text(label)
+	end
+
+	Imgui.next_column()
+	Imgui.separator()
+end
+
+-- Armor modifier rows for each column: a target's own armor_modifier, else the profile's
+local function armor_rows(editor, profile, profile_keys, columns, kind)
+	for armor_index, armor_name in ipairs(ARMOR_NAMES) do
+		Imgui.text(kind .. ": " .. armor_name)
+
+		for _, column in ipairs(columns) do
+			Imgui.next_column()
+
+			if type(column.target.armor_modifier) == "table" then
+				sheet_cell(editor, column.target, column.keys, { "armor_modifier", kind, armor_index })
+			else
+				sheet_cell(editor, profile, profile_keys, { "armor_modifier", kind, armor_index })
+			end
+		end
+
+		Imgui.next_column()
+	end
+end
+
+local function draw_attack_sheet(editor, profile_name)
+	local profile = DamageProfileTemplates[profile_name]
+	local profile_keys = { "DamageProfileTemplates", profile_name }
+
+	for _, field in ipairs(SHEET_TOP_FIELDS) do
+		if profile[field] ~= nil then
+			Imgui.text(field)
+			Imgui.same_line()
+			sheet_cell(editor, profile, profile_keys, { field })
+		end
+	end
+
+	if type(profile.cleave_distribution) == "table" then
+		Imgui.text("cleave: attack")
+		Imgui.same_line()
+		sheet_cell(editor, profile, profile_keys, { "cleave_distribution", "attack" })
+		Imgui.same_line()
+		Imgui.text("impact")
+		Imgui.same_line()
+		sheet_cell(editor, profile, profile_keys, { "cleave_distribution", "impact" })
+	end
+
+	local columns = {}
+
+	for i, target in ipairs(type(profile.targets) == "table" and profile.targets or {}) do
+		columns[#columns + 1] = {
+			label = "target " .. i,
+			target = target,
+			keys = core.append_key(core.append_key(profile_keys, "targets"), i),
+		}
+	end
+
+	if type(profile.default_target) == "table" then
+		columns[#columns + 1] = {
+			label = #columns > 0 and "default (rest)" or "default (all)",
+			target = profile.default_target,
+			keys = core.append_key(profile_keys, "default_target"),
+		}
+	end
+
+	local labels = { "" }
+
+	for _, column in ipairs(columns) do
+		labels[#labels + 1] = column.label
+	end
+
+	sheet_header(labels)
+
+	for _, row in ipairs(SHEET_TARGET_ROWS) do
+		Imgui.text(row[1])
+
+		for _, column in ipairs(columns) do
+			Imgui.next_column()
+			sheet_cell(editor, column.target, column.keys, row[2])
+		end
+
+		Imgui.next_column()
+	end
+
+	Imgui.separator()
+	armor_rows(editor, profile, profile_keys, columns, "attack")
+	Imgui.separator()
+	armor_rows(editor, profile, profile_keys, columns, "impact")
+	Imgui.columns(1)
+
+	local critical_strike = profile.critical_strike
+
+	if type(critical_strike) == "table" then
+		Imgui.separator()
+		sheet_header({ "crit power", "attack", "impact" })
+
+		for armor_index, armor_name in ipairs(ARMOR_NAMES) do
+			Imgui.text(armor_name)
+			Imgui.next_column()
+			-- "modifer" is the game's own spelling
+			sheet_cell(editor, profile, profile_keys, { "critical_strike", "attack_armor_power_modifer", armor_index })
+			Imgui.next_column()
+			sheet_cell(editor, profile, profile_keys, { "critical_strike", "impact_armor_power_modifer", armor_index })
+			Imgui.next_column()
+		end
+
+		Imgui.columns(1)
+	end
+end
+
+--[[
+	Forking
+]]
+
+-- Every field in this template that points at the profile
+local function template_profile_fields(editor, template_name, profile_name)
+	local fields = {}
+
+	for _, user in ipairs(editor.profile_users(profile_name)) do
+		if user.keys[2] == template_name then
+			fields[#fields + 1] = user.keys
+		end
+	end
+
+	return fields
+end
+
+local function suggested_fork_name(field_keys)
+	local template_name = tostring(field_keys[2]):gsub("_template_%d+$", "")
+	local base = "tb_" .. template_name .. "_" .. tostring(field_keys[5] or "attack")
+	local name = base
+	local suffix = 2
+
+	while DamageProfileTemplates[name] or NewDamageProfileTemplates[name] do
+		name = base .. "_" .. suffix
+		suffix = suffix + 1
+	end
+
+	return name
+end
+
+local function draw_fork_controls(editor, profile_name, field_keys)
+	local field_path = core.format_path(field_keys)
+	local s = editor.ui_state
+
+	s.fork_names = s.fork_names or {}
+	s.fork_names[field_path] = s.fork_names[field_path] or suggested_fork_name(field_keys)
+
+	s.fork_names[field_path] = Imgui.input_text("new name##fork_name" .. field_path, s.fork_names[field_path])
+
+	local new_name = s.fork_names[field_path]
+
+	if Imgui.small_button("fork for this attack##fork_one" .. field_path) then
+		if editor.fork_profile(profile_name, new_name, { field_keys }) then
+			s.fork_names[field_path] = nil
+		end
+	end
+
+	local siblings = template_profile_fields(editor, field_keys[2], profile_name)
+
+	if #siblings > 1 then
+		Imgui.same_line()
+
+		if Imgui.small_button(string.format("fork for all %d attacks of this weapon using it##fork_all", #siblings) .. field_path) then
+			if editor.fork_profile(profile_name, new_name, siblings) then
+				s.fork_names[field_path] = nil
+			end
+		end
+	end
+end
+
+draw_profile = function (editor, profile_name, field_keys)
+	local is_tb_profile = NewDamageProfileTemplates[profile_name] ~= nil
+	local is_fork = editor.state.forks[profile_name] ~= nil
+	local counterpart = vanilla_counterpart(editor, profile_name)
+	local profile_path = "DamageProfileTemplates." .. profile_name
+
+	if is_fork then
+		text_colored(string.format("Fork of %s - exports as a new NewDamageProfileTemplates block (vanilla: %s)", editor.state.forks[profile_name].source, counterpart or "none"), INFO_COLOR)
+		Imgui.same_line()
+
+		if Imgui.small_button("delete fork##delete_fork" .. profile_path) then
+			editor.delete_fork(profile_name)
+
+			return
+		end
+	elseif is_tb_profile then
 		text_colored(string.format("TB profile - exports as a whole NewDamageProfileTemplates block (vanilla: %s)", counterpart or "none"), INFO_COLOR)
 	else
 		text_colored("Vanilla profile - shared presets are copied into it on first edit", INFO_COLOR)
 	end
-
-	local profile_path = "DamageProfileTemplates." .. profile_name
 
 	if has_edit_under(editor, profile_path) then
 		Imgui.same_line()
@@ -299,7 +564,26 @@ draw_profile = function (editor, profile_name)
 		end
 	end
 
-	edit_table(editor, DamageProfileTemplates[profile_name], { "DamageProfileTemplates", profile_name })
+	if field_keys and Imgui.tree_node("fork into a new tb_ profile##fork" .. core.format_path(field_keys)) then
+		draw_fork_controls(editor, profile_name, field_keys)
+		Imgui.tree_pop()
+	end
+
+	if Imgui.tree_node("attack sheet##sheet" .. profile_path, true) then
+		draw_attack_sheet(editor, profile_name)
+		Imgui.tree_pop()
+	end
+
+	if Imgui.tree_node("all fields##all" .. profile_path) then
+		edit_table(editor, DamageProfileTemplates[profile_name], { "DamageProfileTemplates", profile_name })
+		Imgui.tree_pop()
+	end
+end
+
+-- After a fork is created or deleted
+function ui.invalidate_profile_caches(editor)
+	dropdowns = {}
+	editor.ui_state.counterparts = nil
 end
 
 --[[
