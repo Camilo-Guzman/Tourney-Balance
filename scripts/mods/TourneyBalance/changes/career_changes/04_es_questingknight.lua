@@ -37,6 +37,9 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		| **Cataclysm 2** | 400 | 100 |
 		| **Cataclysm 3** | 500 | 100 |
 
+		**Virtue of Stoicism**
+		- Reduced health refunded to 25% of damage taken (from 50%).
+
 		**Virtue of the Joust**
 		- Increased push and block angle to 70% (from 30%).
 		- Increased stamina regeneration to 70% (from 30%).
@@ -477,6 +480,25 @@ mod:hook_origin(PassiveAbilityQuestingKnight, "_get_side_quest_challenge", funct
 	return side_quest_challenge
 end)
 
+
+--[[
+	Virtue of Stoicism
+]]
+-- Refunds 25% of damage taken after 5 seconds (from 50%)
+mod_api.update_talent_buff_template("empire_soldier", "markus_questing_knight_health_refund_over_time", {
+	heal_amount_fraction = 0.25, -- 0.5
+})
+mod_api.update_talent("es_questingknight", 5, 1, {
+	description_values = { -- update description
+		{
+			value_type = "percent",
+			value = 0.25, -- buff_tweak_data.markus_questing_knight_health_refund_over_time.heal_amount_fraction
+		},
+		{
+			value = 5, -- buff_tweak_data.markus_questing_knight_health_refund_over_time_delayed_heal.duration
+		},
+	},
+})
 
 --[[
 	Virtue of the Joust

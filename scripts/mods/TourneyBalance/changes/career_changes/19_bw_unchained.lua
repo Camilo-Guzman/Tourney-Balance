@@ -14,7 +14,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		### Passives
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
-		- The overcharge explosion deals no friendly fire.
 		- Only grants ult cooldown when health is actually lost (none while invulnerable, e.g. inside Warrior Priest's bubble).
 
 		### Talents
@@ -277,11 +276,8 @@ mod:hook(PlayerCharacterStateOverchargeExploding, "explode", function (func, sel
 end)
 
 -- No friendly fire from Unchained's overcharge explosion or Living Bomb.
--- The overcharge templates are shared with other careers' staves, and the server receives explosions by template name,
--- so the flag is forced where every peer resolves the template: a cached copy with no_friendly_fire is passed instead.
--- Registered through the dispatcher in TourneyBalance.lua.
 local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
-	overcharge = true,
+	overcharge = false,
 	career_ability = true,
 }
 local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
