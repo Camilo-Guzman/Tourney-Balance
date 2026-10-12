@@ -20,14 +20,14 @@ local stagger_types = require("scripts/utils/stagger_types")
 		- Increased damage debuff duration to 10s (from 2s).
 		- Changes damage debuff to apply with any stagger (from melee stagger).
 		- Damage debuff is now a true 10% damage taken increase from any source (from 10% added to the stagger damage bonus, melee only).
-		- Staggering an enemy adds 1 stagger count for 10s, up to 2 stacks.
+		- Staggering an enemy adds 1 stagger count for 10s, up to 1 stacks.
 		- Stagger counts from Bulwark benefit all player.
 
 		**Mainstay**
-		- Melee hits apply 1 stagger count for 2s, up to 2 stacks.
+		- Melee hits apply 1 stagger countfor 2s, up to 1 stacks.
 		- Stagger counts from Mainstay only benefit players with Mainstay.
 		- Stagger count can not be applied by pushes or shield bash splash hits.
-		- Stagger count can only be applied to elites (not bosses/lords).
+		- Stagger count can only be applied to elites.
 
 		**Enhanced Power**
 		- Increased power to 10% (from 7.5%).
