@@ -296,9 +296,8 @@ end)
     Balance Changes
 
 ]]
--- Weapon editor (dev tool, off by default) - snapshots vanilla Weapons/DamageProfileTemplates on load
--- Placed first so the snapshot predates every change file
-mod:dofile("scripts/mods/TourneyBalance/debugging/weapon_editor/weapon_editor")
+-- Dev tool support - inactive unless the tool is enabled. Must stay before every change file.
+mod:dofile("scripts/mods/TourneyBalance/debugging/dev_tools_support")
 
 -- Misc standalone fixes not tied to any other category
 mod:dofile("scripts/mods/TourneyBalance/changes/_misc_fixes")

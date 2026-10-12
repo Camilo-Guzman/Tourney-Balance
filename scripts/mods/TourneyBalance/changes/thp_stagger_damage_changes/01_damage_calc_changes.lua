@@ -446,8 +446,7 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
--- Exposed for debug tools (breakpoint calculation without a target unit), so they use TB's
--- formula rather than vanilla's DamageUtils.custom_calculate_damage
+-- Exposed for dev tools
 mod.tb_do_damage_calculation = do_damage_calculation
 
 -- Shade's Murderous Prowess and Ruthless Precision caps: the first 2 enemies an attack hits, 1 per hand on dual
