@@ -134,9 +134,12 @@ mod:set_apply_buffs_to_damage(function(current_damage, attacked_unit, attacker_u
 					if new_damage < original_damage then
 						local damage_to_overcharge = original_damage - new_damage
 						damage_to_overcharge = buff_extension:apply_buffs_to_value(damage_to_overcharge, "reduced_overcharge_from_passive")
-						damage_to_overcharge = DamageUtils.networkify_damage(damage_to_overcharge)
+						-- Stacking multipliers aren't clamped (Fuel for the Fire's -100% plus Numb to Pain would go negative)
+						damage_to_overcharge = DamageUtils.networkify_damage(math.max(damage_to_overcharge, 0))
 
-						if attacked_player.remote then
+						if damage_to_overcharge <= 0 then
+							-- Blood Magic generates no overcharge, damage is still reduced
+						elseif attacked_player.remote then
 							local peer_id = attacked_player.peer_id
 							local unit_id = network_manager:unit_game_object_id(attacked_unit)
 							local channel_id = PEER_ID_TO_CHANNEL[peer_id]

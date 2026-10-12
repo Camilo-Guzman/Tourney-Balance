@@ -9,12 +9,12 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		## Unchained
 		### Career Ability
 		**Living Bomb**
-		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout). Not with Bomb Balm.
 		- Never deals friendly fire.
 
 		### Passives
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
+		- The overcharge explosion deals no friendly fire.
 		- Only grants ult cooldown when health is actually lost (none while invulnerable, e.g. inside Warrior Priest's bubble).
 
 		### Talents
@@ -33,6 +33,10 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Enfeebling Flames**
 		- Reduced damage reduction against burning enemies to 10% (from 30%).
+
+		**Fuel for the Fire**
+		- Living Bomb no longer vents overcharge.
+		- Added: Blood Magic generates no overcharge for 15 seconds after using Living Bomb (its damage reduction still applies).
 
 	$END_TB
 ]]
@@ -376,16 +380,20 @@ mod:hook(PlayerCharacterStateOverchargeExploding, "explode", function (func, sel
 	overcharge_extension:remove_charge(1)
 end)
 
--- No friendly fire from Living Bomb (the overcharge explosion keeps vanilla friendly fire).
--- The server receives explosions by template name, so the flag is forced where every peer resolves the template:
--- a cached copy with no_friendly_fire is passed instead.
+-- No friendly fire from Unchained's overcharge explosion or Living Bomb.
+-- The overcharge templates are shared with other careers' staves, and the server receives explosions by template name,
+-- so the flag is forced where every peer resolves the template: a cached copy with no_friendly_fire is passed instead.
 -- Registered through the dispatcher in TourneyBalance.lua.
+local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
+	overcharge = true,
+	career_ability = true,
+}
 local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
 
 mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 	local explosion_data = explosion_template and explosion_template.explosion
 
-	if explosion_data and not explosion_data.no_friendly_fire and damage_source == "career_ability" and ALIVE[attacker_unit] then
+	if explosion_data and not explosion_data.no_friendly_fire and TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES[damage_source] and ALIVE[attacker_unit] then
 		local career_extension = ScriptUnit.has_extension(attacker_unit, "career_system")
 
 		if career_extension and career_extension:career_name() == "bw_unchained" then
@@ -403,9 +411,6 @@ mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_po
 
 	return func(world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 end)
-
--- Witch Hunter Captain's shout
-local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 
 -- Only wielding is allowed while overcharge is exploding, and on the ranged weapon during Aqshy's Blaze
 local function tb_aqshys_blaze_weapon_locked(unit)
@@ -440,6 +445,11 @@ end)
 
 ]]
 mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
+
+-- WHC shout (disabled, vanilla _run_ability again)
+--[==[
+-- Witch Hunter Captain's shout
+local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 
 local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
 	local owner_unit = self._owner_unit
@@ -621,6 +631,43 @@ mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_in
 	end
 
 	self:_play_vo()
+end)
+]==]
+
+--[[
+	Fuel for the Fire
+]]
+-- Blood Magic's damage reduction stays, only the overcharge from it is removed (clamped at 0 with Numb to Pain)
+mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic", {
+	icon = "sienna_unchained_reduced_overcharge", -- the power stacks already use the talent's icon
+	duration = 15,
+	max_stacks = 1,
+	refresh_durations = true,
+	stat_buff = "reduced_overcharge_from_passive",
+	multiplier = -1,
+})
+mod_api.update_talent("bw_unchained", 6, 1, {
+	description_values = {},
+})
+mod_api.insert_text("sienna_unchained_activated_ability_power_on_enemies_hit_desc", string.format("Each enemy hit by Living Bomb increases power by 5%% for 15 seconds. Stacking up to 5 times. Living Bomb no longer vents overcharge, instead Blood Magic generates no overcharge for %d seconds.", FUEL_FOR_THE_FIRE_NO_BLOOD_MAGIC_DURATION))
+
+mod:hook(CareerAbilityBWUnchained, "_run_ability", function (func, self, ...)
+	local owner_unit = self._owner_unit
+	local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
+
+	if not talent_extension or not talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
+		return func(self, ...)
+	end
+
+	local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
+
+	overcharge_extension.reset = tb_keep_overcharge
+
+	func(self, ...)
+
+	overcharge_extension.reset = nil
+
+	Managers.state.entity:system("buff_system"):add_buff_synced(owner_unit, "tb_sienna_unchained_fuel_for_the_fire_no_blood_magic", BuffSyncType.LocalAndServer)
 end)
 
 --[[
