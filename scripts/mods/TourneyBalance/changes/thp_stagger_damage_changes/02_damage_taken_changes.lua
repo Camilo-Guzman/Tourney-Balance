@@ -99,6 +99,11 @@ mod:set_apply_buffs_to_damage(function(current_damage, attacked_unit, attacker_u
 			damage = buff_extension:apply_buffs_to_value(damage, "damage_taken_ranged")
 		end
 
+		-- Bulwark (04_stagger_talents_changes.lua): its own multiplier, from any source
+		if buff_extension:has_buff_type("tb_tank_unbalance_buff") then
+			damage = damage * (1 + BuffTemplates.tb_tank_unbalance_buff.buffs[1].multiplier)
+		end
+
 		local status_extension = attacked_player and ScriptUnit.has_extension(attacked_unit, "status_system")
 
 		if status_extension then

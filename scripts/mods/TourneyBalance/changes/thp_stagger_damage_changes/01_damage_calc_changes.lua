@@ -1,5 +1,4 @@
 local mod = get_mod("TourneyBalance")
-local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 local is_within_attack_target_cap = require("scripts/mods/TourneyBalance/_api/shared_utils").is_within_attack_target_cap
 
 -- Fixes the cannons crashing the game in "Return of the Reik"
@@ -102,30 +101,11 @@ mod:hook_origin(DamageUtils, "server_apply_hit", function (t, attacker_unit, tar
 		if is_direct_hit and is_center_hit and is_melee_hit and buff_extension and buff_extension:has_buff_perk("linesman_stagger_damage") then
 			local target_buff_extension = ScriptUnit.has_extension(target_unit, "buff_system")
 			local mainstay_target_breed = Unit.get_data(target_unit, "breed")
-			-- Mainstay stagger counts are not applied to bosses/lords
-			local is_boss_or_lord = mainstay_target_breed and (mainstay_target_breed.boss or mainstay_target_breed.lord_damage_reduction)
+			-- Mainstay stagger counts are only applied to elites (and training dummies).
+			local is_elite = mainstay_target_breed and mainstay_target_breed.elite
 
-			if target_buff_extension and not is_boss_or_lord then
+			if target_buff_extension and (is_elite or Unit.get_data(target_unit, "is_dummy")) then
 				target_buff_extension:add_buff("tb_mainstay_stagger_mark_buff")
-
-				--[[
-					Foot Knight: Have At Thee! / Inspiring Blow - Proc from Mainstay stagger count
-				]]
-				if mainstay_target_breed and mainstay_target_breed.elite then
-					local attacker_talent_extension = ScriptUnit.has_extension(attacker_unit, "talent_system")
-
-					if attacker_talent_extension then
-						if attacker_talent_extension:has_talent("markus_knight_power_level_on_stagger_elite", "empire_soldier", true) then
-							mod_api.add_buff(attacker_unit, "markus_knight_power_level_on_stagger_elite_buff")
-						end
-
-						if attacker_talent_extension:has_talent("markus_knight_cooldown_on_stagger_elite", "empire_soldier", true) then
-							-- Self only, matching the regular on_stagger proc (career_changes/03_es_knight.lua);
-							-- separate/weaker buff than that one since Mainstay procs far more often.
-							mod_api.add_buff(attacker_unit, "tb_markus_knight_cooldown_buff_mainstay")
-						end
-					end
-				end
 			end
 		end
 	elseif shield_breaking_hit then
@@ -466,6 +446,9 @@ local function do_damage_calculation(attacker_unit, damage_source, original_powe
 	return damage, heavy_armor_damage
 end
 
+-- Exposed for dev tools
+mod.tb_do_damage_calculation = do_damage_calculation
+
 -- Shade's Murderous Prowess and Ruthless Precision caps: the first 2 enemies an attack hits, 1 per hand on dual
 -- weapons (shared_utils.is_within_attack_target_cap)
 local MURDEROUS_PROWESS_MAX_TARGETS = 2
@@ -549,6 +532,7 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 	end
 
 	local calculated_damage = do_damage_calculation(attacker_unit, damage_source, original_power_level, damage_output, hit_zone_name, damage_profile, target_index, boost_curve, boost_damage_multiplier, is_critical_strike, backstab_multiplier, breed, range_scalar_multiplier, static_base_damage, is_friendly_fire, has_power_boost, difficulty_level, target_unit_armor, target_unit_primary_armor, has_crit_head_shot_killing_blow_perk, has_crit_backstab_killing_blow_perk, unit_max_health, target_unit)
+	local base_damage = calculated_damage
 
 	if damage_profile and not damage_profile.is_dot then
 		local blackboard = BLACKBOARDS[target_unit]
@@ -638,6 +622,8 @@ mod:hook_origin(DamageUtils, "calculate_damage", function (damage_output, target
 			end
 		end
 	end
+
+	mod:notify_calculate_damage(calculated_damage, base_damage, damage_output, target_unit, attacker_unit, hit_zone_name, original_power_level, boost_curve, boost_damage_multiplier, is_critical_strike, damage_profile, target_index, backstab_multiplier, damage_source)
 
 	return calculated_damage
 end)

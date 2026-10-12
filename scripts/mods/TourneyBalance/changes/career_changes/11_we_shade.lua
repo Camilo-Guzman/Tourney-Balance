@@ -63,7 +63,7 @@ local is_within_attack_target_cap = require("scripts/mods/TourneyBalance/_api/sh
 		- Extending stealth reduces ultimate cooldown by 5%.
 
 		**Hungry Wind**
-		- Melee attacks are guaranteed critical strikes for the 10 seconds after leaving Infiltrate.
+		- Each kill during the 10 seconds after leaving Infiltrate extends the movement speed, Power and pass-through by 1 second, up to 10 additional seconds.
 	$END_TB
 ]]
 
@@ -709,36 +709,43 @@ mod_api.insert_text("kerillian_shade_activated_stealth_combo_desc", "Leaving Inf
 --[[
 	Hungry Wind
 ]]
--- Reduce the post-Infiltrate movement speed/Power/pass-through window
-mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_phasing_buff", {
-	duration = 10,
-})
-mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_movespeed_buff", {
-	duration = 10,
-})
-mod_api.update_talent_buff_template("wood_elf", "kerillian_shade_power_buff", {
-	duration = 10,
-	apply_buff_func = "tb_hungry_wind_add_crit_buff",
-	reapply_buff_func = "tb_hungry_wind_add_crit_buff", -- re-ulting while the window is active refreshes the power buff
-})
--- Guaranteed melee crits for the Hungry Wind window (same approach as WHC's Fervency:
--- victor_witchhunter_activated_ability_guaranteed_crit_self_buff). Only Hungry Wind adds kerillian_shade_power_buff,
--- from vanilla on_shade_activated_ability_remove, which only runs on the owning peer
-mod_api.insert_talent_buff_template("wood_elf", "tb_hungry_wind_crit_buff", {
-	duration = 10, -- keep in sync with kerillian_shade_power_buff
-	max_stacks = 1,
-	refresh_durations = true,
-	icon = "kerillian_shade_perk_dagger_in_the_dark", -- same crit icon as Grim Fortune
-	stat_buff = "critical_strike_chance_melee",
-	bonus = 1,
-})
-mod_api.insert_buff_function("tb_hungry_wind_add_crit_buff", function (unit, buff, params, world)
-	if ALIVE[unit] then
-		ScriptUnit.extension(unit, "buff_system"):add_buff("tb_hungry_wind_crit_buff")
+-- Each kill while the post-Infiltrate window (vanilla 10s movement speed, Power and pass-through) is active extends it
+-- by 1 second, up to 10 additional seconds. The window's buffs are added on the owning peer only (vanilla
+-- on_shade_activated_ability_remove), which is also where this talent's on_kill proc runs. Only the duration grows,
+-- so the extension used is duration minus the base duration, and re-ulting (refresh_durations) resets it.
+local HUNGRY_WIND_BUFFS = {
+	"kerillian_shade_phasing_buff",
+	"kerillian_shade_movespeed_buff",
+	"kerillian_shade_power_buff",
+}
+local HUNGRY_WIND_EXTEND_PER_KILL = 1
+local HUNGRY_WIND_MAX_EXTENSION = 10
+
+mod_api.insert_proc_function("tb_hungry_wind_extend_on_kill", function (owner_unit, buff, params)
+	local buff_extension = ALIVE[owner_unit] and ScriptUnit.has_extension(owner_unit, "buff_system")
+
+	if not buff_extension then
+		return
+	end
+
+	for i = 1, #HUNGRY_WIND_BUFFS do
+		local window_buff = buff_extension:get_buff_type(HUNGRY_WIND_BUFFS[i])
+		local base_duration = window_buff and window_buff.template.duration
+
+		if base_duration and window_buff.duration then
+			window_buff.duration = math.min(window_buff.duration + HUNGRY_WIND_EXTEND_PER_KILL, base_duration + HUNGRY_WIND_MAX_EXTENSION)
+		end
 	end
 end)
-mod_api.update_talent("we_shade", 6, 2, {
-	description = "kerillian_shade_activated_ability_phasing_desc",
-	description_values = {},
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_hungry_wind_extend_on_kill", {
+	buff_func = "tb_hungry_wind_extend_on_kill",
+	event = "on_kill",
 })
-mod_api.insert_text("kerillian_shade_activated_ability_phasing_desc", "Leaving Infiltrate grants Kerillian 10% movement speed, 15% Power, guaranteed melee critical strikes and the ability to pass through enemies for 10 seconds. Infiltrate no longer grants bonus damage.")
+mod_api.update_talent("we_shade", 6, 2, {
+	description = "tb_kerillian_shade_activated_ability_phasing_desc",
+	description_values = {},
+	buffs = {
+		"tb_kerillian_shade_hungry_wind_extend_on_kill",
+	},
+})
+mod_api.insert_text("tb_kerillian_shade_activated_ability_phasing_desc", "Leaving Infiltrate grants Kerillian 10% movement speed, 15% Power and the ability to pass through enemies for 10 seconds. Each kill extends duration by 1 second, up to 10 additional seconds. Infiltrate no longer grants bonus damage.")

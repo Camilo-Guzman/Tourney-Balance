@@ -9,17 +9,18 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		## Unchained
 		### Career Ability
 		**Living Bomb**
-		- Added an AoE stagger (same as Witch Hunter Captain's Animosity shout). Not with Bomb Balm.
 		- Never deals friendly fire.
 
 		### Passives
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
+		- The overcharge explosion deals no friendly fire.
+		- Only grants ult cooldown when health is actually lost (none while invulnerable, e.g. inside Warrior Priest's bubble).
 
 		### Talents
 		**Abandon (reworked)**
 		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 2.5 seconds.
-		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks grant cooldown). Replaces the passive's lethal drain.
+		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks of health actually lost grant cooldown, so none while invulnerable, e.g. inside Warrior Priest's bubble). Replaces the passive's lethal drain.
 		- Weapons can be swapped during the explosion.
 		- Can't attack with the ranged weapon for the duration.
 		- Using Living Bomb immediately ends Aqshy's Blaze.
@@ -33,6 +34,9 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Enfeebling Flames**
 		- Reduced damage reduction against burning enemies to 10% (from 30%).
 
+		**Natural Talent**
+		- Increased overcharge reduction to 20% (from 10%).
+
 	$END_TB
 ]]
 
@@ -41,73 +45,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 	Passives
 
 ]]
---[[
-	Unstable Strength
-]]
--- Weak burn, like Sister of the Thorn's poison. Comments: vanilla push ignite (burning_dot_unchained_push) values
--- Disabled: only used by the Unstable Strength burn and Outburst, both disabled. Re-enable with either of them.
---[[
-local WEAK_BURN_BUFF = "tb_sienna_unchained_weak_burn"
-
-NewDamageProfileTemplates.tb_sienna_unchained_weak_burn = table.clone(DamageProfileTemplates.burning_dot)
-NewDamageProfileTemplates.tb_sienna_unchained_weak_burn.default_target.power_distribution = {
-	attack = 0.00375, -- 0.07 (burning_dot) -- 0.75 dmg x 10 ticks
-	impact = 0, -- 0.05 (burning_dot has no_stagger)
-}
-
-mod_api.insert_buff_template(WEAK_BURN_BUFF, {
-	apply_buff_func = "start_dot_damage",
-	damage_profile = "tb_sienna_unchained_weak_burn", -- "burning_dot"
-	damage_type = "burninating",
-	duration = 10, -- 6
-	max_stacks = 1,
-	refresh_durations = true,
-	time_between_dot_damages = 1, -- 2
-	update_func = "apply_dot_damage",
-	update_start_delay = 1, -- 2
-	perks = {
-		buff_perks.burning,
-	},
-})
-]]
-
--- All attacks apply the weak burn above 50% overcharge. Owner side, where overcharge lives. Disabled for now
---[[
-local UNSTABLE_STRENGTH_BURN_OVERCHARGE = 0.5
-local weak_burn_params = {}
-
-mod_api.insert_proc_function("tb_sienna_unchained_unstable_strength_burn", function (owner_unit, buff, params)
-	local hit_unit = params[1]
-	local owner_player = Managers.player:owner(owner_unit)
-
-	if not owner_player or owner_player.remote or not HEALTH_ALIVE[hit_unit] then
-		return
-	end
-
-	local overcharge_extension = ScriptUnit.has_extension(owner_unit, "overcharge_system")
-
-	if not overcharge_extension or overcharge_extension:overcharge_fraction() <= UNSTABLE_STRENGTH_BURN_OVERCHARGE then
-		return
-	end
-
-	table.clear(weak_burn_params)
-
-	weak_burn_params.attacker_unit = owner_unit
-	weak_burn_params.source_attacker_unit = owner_unit
-	weak_burn_params.power_level = ScriptUnit.extension(owner_unit, "career_system"):get_career_power_level()
-
-	Managers.state.entity:system("buff_system"):add_buff_synced(hit_unit, WEAK_BURN_BUFF, BuffSyncType.All, weak_burn_params)
-end)
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_unstable_strength_burn", {
-	event = "on_hit",
-	buff_func = "tb_sienna_unchained_unstable_strength_burn",
-})
-mod_api.insert_career_passives("bw_3", {
-	"tb_sienna_unchained_unstable_strength_burn",
-})
-mod_api.insert_text("career_passive_desc_bw_3c", string.format("Increased melee power on high Overcharge by up to 60%%. All attacks apply a weak burn while above %d%% Overcharge.", UNSTABLE_STRENGTH_BURN_OVERCHARGE * 100))
-]]
-
 --[[
 	Abandon (passive, vanilla talent effect)
 ]]
@@ -121,26 +58,88 @@ local function tb_has_aqshys_blaze(unit)
 	return talent_extension and talent_extension:has_talent(AQSHYS_BLAZE_TALENT) or false
 end
 
-local activate_buff_stacks_based_on_overcharge_chunks = BuffFunctionTemplates.functions.activate_buff_stacks_based_on_overcharge_chunks
+local ABANDON_TICK_INTERVAL = 0.25
+local ABANDON_MAX_HEALTH_COST = 0.05 -- of max health, per tick
+local ABANDON_COOLDOWN = 0.1 -- of ult, per tick
 
+-- Vanilla activate_buff_stacks_based_on_overcharge_chunks (owner side), but the drain stack is synced to the server,
+-- where health is. Aqshy's Blaze taken: no lethal drain, drop a stack that was already up
 mod_api.insert_buff_function("tb_abandon_activate_stacks", function (unit, buff, params)
-	if not tb_has_aqshys_blaze(unit) then
-		return activate_buff_stacks_based_on_overcharge_chunks(unit, buff, params)
+	local owner_player = Managers.player:owner(unit)
+
+	if not owner_player or owner_player.remote then
+		return
 	end
 
-	-- Aqshy's Blaze taken: no lethal drain, drop a stack that was already up
+	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	local template = buff.template
+	local buff_to_add = template.buff_to_add
+	local num_chunks = 0
+
+	if not tb_has_aqshys_blaze(unit) then
+		local overcharge = ScriptUnit.extension(unit, "overcharge_system"):current_overcharge_status()
+
+		num_chunks = math.min(math.floor(overcharge / template.chunk_size), template.max_stacks)
+	end
+
 	local stack_ids = buff.stack_ids
 
-	if stack_ids and #stack_ids > 0 then
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	if not stack_ids then
+		stack_ids = {}
+		buff.stack_ids = stack_ids
+	end
 
-		for i = #stack_ids, 1, -1 do
-			buff_extension:remove_buff(table.remove(stack_ids, i))
+	local num_buff_stacks = buff_extension:num_buff_type(buff_to_add)
+
+	if num_buff_stacks < num_chunks then
+		local buff_system = Managers.state.entity:system("buff_system")
+
+		for i = 1, num_chunks - num_buff_stacks do
+			stack_ids[#stack_ids + 1] = buff_system:add_buff_synced(unit, buff_to_add, BuffSyncType.LocalAndServer)
+		end
+	elseif num_chunks < num_buff_stacks then
+		for i = 1, num_buff_stacks - num_chunks do
+			buff_extension:remove_buff(table.remove(stack_ids, 1))
 		end
 	end
 end)
 mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to_ult", {
 	update_func = "tb_abandon_activate_stacks", -- "activate_buff_stacks_based_on_overcharge_chunks"
+})
+
+-- Vanilla sienna_unchained_health_to_cooldown_update, moved to the server: cooldown only for health actually lost
+-- (none while invulnerable, e.g. Warrior Priest's bubble)
+mod_api.insert_buff_function("tb_abandon_health_to_cooldown_update", function (unit, buff, params)
+	if not Managers.state.network.is_server or not HEALTH_ALIVE[unit] then
+		return
+	end
+
+	local t = params.t
+
+	if buff.timer and t < buff.timer then
+		return
+	end
+
+	buff.timer = t + ABANDON_TICK_INTERVAL
+
+	local career_extension = ScriptUnit.has_extension(unit, "career_system")
+	local health_extension = ScriptUnit.has_extension(unit, "health_system")
+
+	if not career_extension or not health_extension or career_extension:current_ability_cooldown_percentage() <= 0 then
+		return
+	end
+
+	local health_before = health_extension:current_health()
+	local damage = health_extension:get_max_health() * ABANDON_MAX_HEALTH_COST
+
+	DamageUtils.add_damage_network(unit, unit, damage, "torso", "life_tap", nil, Vector3(0, 0, 0), "life_tap", nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+
+	if health_extension:current_health() < health_before then
+		reduce_cooldown_percent_on_owner(unit, ABANDON_COOLDOWN)
+	end
+end)
+mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to_cooldown_buff", {
+	update_func = "tb_abandon_health_to_cooldown_update", -- "sienna_unchained_health_to_cooldown_update"
 })
 mod_api.insert_career_passives("bw_3", {
 	"sienna_unchained_health_to_ult",
@@ -180,8 +179,9 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 	local cost = health_extension:get_max_health() * AQSHYS_BLAZE_MAX_HEALTH_COST
 	local cooldown = AQSHYS_BLAZE_COOLDOWN
 
-	-- Non-lethal, only full ticks give cooldown
-	local damage = math.min(cost, health_extension:current_health() - 1)
+	-- Non-lethal, only full ticks of health actually lost give cooldown (none while invulnerable, e.g. Warrior Priest's bubble)
+	local health_before = health_extension:current_health()
+	local damage = math.min(cost, health_before - 1)
 
 	if damage <= 0 then
 		return
@@ -189,7 +189,8 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 
 	DamageUtils.add_damage_network(unit, unit, damage, "full", AQSHYS_BLAZE_DAMAGE_TYPE, nil, Vector3(0, 0, 0), AQSHYS_BLAZE_DAMAGE_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
 
-	if damage >= cost then
+	-- Damage and health are networkified (quarter steps)
+	if health_before - health_extension:current_health() >= DamageUtils.networkify_damage(cost) then
 		reduce_cooldown_percent_on_owner(unit, cooldown)
 	end
 end)
@@ -222,33 +223,6 @@ mod_api.update_talent("bw_unchained", 5, 2, {
 })
 mod_api.insert_text(AQSHYS_BLAZE_TALENT, "Abandon")
 mod_api.insert_text("sienna_unchained_health_to_ult_desc", "Damage taken from overcharging is no longer lethal.")
-
--- Natural Talent (row 5 col 3), added with the state (disabled)
---[==[
-local NATURAL_TALENT_TALENT = "sienna_unchained_reduced_overcharge"
-local NATURAL_TALENT_STATE_BUFF = "tb_sienna_unchained_natural_talent_state"
-local NATURAL_TALENT_ATTACK_SPEED = 0.4
-local NATURAL_TALENT_HEALING_RECEIVED = 0.4
-
-mod_api.insert_talent_buff_template("bright_wizard", NATURAL_TALENT_STATE_BUFF, {
-	{
-		duration = AQSHYS_BLAZE_DURATION,
-		max_stacks = 1,
-		stat_buff = "attack_speed",
-		multiplier = NATURAL_TALENT_ATTACK_SPEED,
-		event = "on_ability_activated",
-		buff_func = "tb_aqshys_blaze_end_on_own_ability",
-		remove_on_proc = true,
-	},
-	{
-		name = "tb_sienna_unchained_natural_talent_state_healing",
-		duration = AQSHYS_BLAZE_DURATION,
-		max_stacks = 1,
-		stat_buff = "healing_received",
-		multiplier = NATURAL_TALENT_HEALING_RECEIVED,
-	},
-})
-]==]
 
 -- Overcharge explosion with Aqshy's Blaze: vanilla state, shortened, then enters Aqshy's Blaze instead of damaging her.
 -- Without the talent the explosion is vanilla.
@@ -298,29 +272,24 @@ mod:hook(PlayerCharacterStateOverchargeExploding, "explode", function (func, sel
 
 	buff_system:add_buff_synced(unit, AQSHYS_BLAZE_BUFF, BuffSyncType.LocalAndServer)
 
-	-- Natural Talent (disabled)
-	--[[
-	local talent_extension = ScriptUnit.has_extension(unit, "talent_system")
-
-	if talent_extension and talent_extension:has_talent(NATURAL_TALENT_TALENT) then
-		buff_system:add_buff_synced(unit, NATURAL_TALENT_STATE_BUFF, BuffSyncType.LocalAndServer)
-	end
-	]]
-
 	-- Just below max, like a vent
 	overcharge_extension:remove_charge(1)
 end)
 
--- No friendly fire from Living Bomb (the overcharge explosion keeps vanilla friendly fire).
--- The server receives explosions by template name, so the flag is forced where every peer resolves the template:
--- a cached copy with no_friendly_fire is passed instead.
+-- No friendly fire from Unchained's overcharge explosion or Living Bomb.
+-- The overcharge templates are shared with other careers' staves, and the server receives explosions by template name,
+-- so the flag is forced where every peer resolves the template: a cached copy with no_friendly_fire is passed instead.
 -- Registered through the dispatcher in TourneyBalance.lua.
+local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
+	overcharge = true,
+	career_ability = true,
+}
 local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
 
 mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 	local explosion_data = explosion_template and explosion_template.explosion
 
-	if explosion_data and not explosion_data.no_friendly_fire and damage_source == "career_ability" and ALIVE[attacker_unit] then
+	if explosion_data and not explosion_data.no_friendly_fire and TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES[damage_source] and ALIVE[attacker_unit] then
 		local career_extension = ScriptUnit.has_extension(attacker_unit, "career_system")
 
 		if career_extension and career_extension:career_name() == "bw_unchained" then
@@ -338,9 +307,6 @@ mod:add_create_explosion_wrapper(function (func, world, attacker_unit, impact_po
 
 	return func(world, attacker_unit, impact_position, rotation, explosion_template, scale, damage_source, ...)
 end)
-
--- Witch Hunter Captain's shout
-local LIVING_BOMB_STAGGER_EXPLOSION = "victor_captain_activated_ability_stagger"
 
 -- Only wielding is allowed while overcharge is exploding, and on the ranged weapon during Aqshy's Blaze
 local function tb_aqshys_blaze_weapon_locked(unit)
@@ -371,338 +337,9 @@ end)
 
 --[[
 
-	Ultimate
-
-]]
-mod_api.insert_text("career_active_desc_bw_3", "Sienna vents all overcharge, dealing damage and staggering nearby enemies.")
-
-local function tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
-	local owner_unit = self._owner_unit
-	local network_manager = self._network_manager
-	local network_transmit = network_manager.network_transmit
-	local explosion_template = ExplosionUtils.get_template(explosion_template_name)
-	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
-	local damage_source = "career_ability"
-	local explosion_template_id = NetworkLookup.explosion_templates[explosion_template_name]
-	local damage_source_id = NetworkLookup.damage_sources[damage_source]
-	local is_server = self._is_server
-	local scale = 1
-
-	if is_server then
-		network_transmit:send_rpc_clients("rpc_create_explosion", owner_unit_go_id, false, position, rotation, explosion_template_id, scale, damage_source_id, career_power_level, false, owner_unit_go_id)
-	else
-		network_transmit:send_rpc_server("rpc_create_explosion", owner_unit_go_id, false, position, rotation, explosion_template_id, scale, damage_source_id, career_power_level, false, owner_unit_go_id)
-	end
-
-	DamageUtils.create_explosion(self._world, owner_unit, position, rotation, explosion_template, scale, damage_source, is_server, false, owner_unit, career_power_level, false, owner_unit)
-end
-
--- Vanilla _run_ability, plus WHC shout (except with Bomb Balm)
-mod:hook_origin(CareerAbilityBWUnchained, "_run_ability", function (self, new_initial_speed)
-	self:_stop_priming()
-
-	local owner_unit = self._owner_unit
-	local is_server = self._is_server
-	local local_player = self._local_player
-	local bot_player = self._bot_player
-	local position = POSITION_LOOKUP[owner_unit]
-	local network_manager = self._network_manager
-	local network_transmit = network_manager.network_transmit
-	local career_extension = self._career_extension
-	local buff_extension = self._buff_extension
-	local talent_extension = ScriptUnit.extension(owner_unit, "talent_system")
-	local buff_name = "sienna_unchained_activated_ability"
-
-	buff_extension:add_buff(buff_name, {
-		attacker_unit = owner_unit,
-	})
-
-	if is_server and bot_player or local_player then
-		local overcharge_extension = ScriptUnit.extension(owner_unit, "overcharge_system")
-
-		overcharge_extension:reset()
-
-		career_extension:set_state("sienna_activate_unchained")
-	end
-
-	local rotation = Unit.local_rotation(owner_unit, 0)
-	local explosion_template_name = "explosion_bw_unchained_ability"
-
-	if talent_extension:has_talent("sienna_unchained_activated_ability_fire_aura") then
-		explosion_template_name = "explosion_bw_unchained_ability_increased_radius"
-	end
-
-	local career_power_level = career_extension:get_career_power_level()
-	local heal_type_id = NetworkLookup.heal_types.career_skill
-	local heal_amount = TalentUtils.get_talent_attribute("sienna_unchained_activated_ability_temp_health", "heal_amount")
-
-	-- Bomb Balm's self heal, baseline (disabled)
-	--[[
-	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
-
-	if owner_unit_go_id then
-		network_transmit:send_rpc_server("rpc_request_heal", owner_unit_go_id, heal_amount, heal_type_id)
-	end
-	]]
-
-	-- Bomb Balm (vanilla: heals Sienna and nearby allies)
-	if talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
-		local radius = 10
-		local nearby_player_units = FrameTable.alloc_table()
-		local proximity_extension = Managers.state.entity:system("proximity_system")
-		local broadphase = proximity_extension.player_units_broadphase
-
-		Broadphase.query(broadphase, POSITION_LOOKUP[owner_unit], radius, nearby_player_units)
-
-		local side_manager = Managers.state.side
-
-		for _, player_unit in pairs(nearby_player_units) do
-			if --[[player_unit ~= owner_unit and]] not side_manager:is_enemy(owner_unit, player_unit) then -- allies-only exclusion disabled
-				local unit_go_id = network_manager:unit_game_object_id(player_unit)
-
-				if unit_go_id then
-					network_transmit:send_rpc_server("rpc_request_heal", unit_go_id, heal_amount, heal_type_id)
-				end
-			end
-		end
-	end
-
-	local damage_source_id = NetworkLookup.damage_sources.career_ability
-
-	tb_living_bomb_create_explosion(self, explosion_template_name, position, rotation, career_power_level)
-
-	-- No WHC shout with Bomb Balm
-	if not talent_extension:has_talent("sienna_unchained_activated_ability_temp_health") then
-		tb_living_bomb_create_explosion(self, LIVING_BOMB_STAGGER_EXPLOSION, position, rotation, career_power_level)
-	end
-
-	career_extension:start_activated_ability_cooldown()
-
-	if talent_extension:has_talent("sienna_unchained_activated_ability_fire_aura") then
-		local buffs = {
-			"sienna_unchained_activated_ability_pulse",
-		}
-		local unit_object_id = network_manager:unit_game_object_id(owner_unit)
-
-		if is_server then
-			local buff_extension = self._buff_extension
-
-			for i = 1, #buffs do
-				local buff_name = buffs[i]
-				local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
-
-				buff_extension:add_buff(buff_name, {
-					attacker_unit = owner_unit,
-				})
-				network_transmit:send_rpc_clients("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, false)
-			end
-		else
-			for i = 1, #buffs do
-				local buff_name = buffs[i]
-				local buff_template_name_id = NetworkLookup.buff_templates[buff_name]
-
-				network_transmit:send_rpc_server("rpc_add_buff", unit_object_id, buff_template_name_id, unit_object_id, 0, true)
-			end
-		end
-	end
-
-	if talent_extension:has_talent("sienna_unchained_activated_ability_power_on_enemies_hit") then
-		local attack_type_id = NetworkLookup.buff_attack_types.ability
-		local attacker_unit_id = network_manager:unit_game_object_id(owner_unit)
-		local buff_weapon_type_id = NetworkLookup.buff_weapon_types["n/a"]
-		local hit_zone_id = NetworkLookup.hit_zones.torso
-		local radius = 10
-		local nearby_enemy_units = FrameTable.alloc_table()
-		local proximity_extension = Managers.state.entity:system("proximity_system")
-		local broadphase = proximity_extension.enemy_broadphase
-
-		Broadphase.query(broadphase, position, radius, nearby_enemy_units)
-
-		local target_number = 1
-		local side_manager = Managers.state.side
-
-		for _, enemy_unit in pairs(nearby_enemy_units) do
-			if Unit.alive(enemy_unit) then
-				local hit_unit_id = network_manager:unit_game_object_id(enemy_unit)
-
-				if side_manager:is_enemy(owner_unit, enemy_unit) then
-					network_transmit:send_rpc_server("rpc_buff_on_attack", attacker_unit_id, hit_unit_id, attack_type_id, false, hit_zone_id, target_number, buff_weapon_type_id, damage_source_id)
-				end
-			end
-		end
-	end
-
-	local inventory_extension = ScriptUnit.has_extension(owner_unit, "inventory_system")
-	local lh_weapon_unit, rh_weapon_unit = inventory_extension:get_all_weapon_unit()
-	local lh_weapon_extension = lh_weapon_unit and ScriptUnit.has_extension(lh_weapon_unit, "weapon_system")
-	local rh_weapon_extension = rh_weapon_unit and ScriptUnit.has_extension(rh_weapon_unit, "weapon_system")
-	local has_action = lh_weapon_extension and lh_weapon_extension:has_current_action()
-
-	has_action = has_action or rh_weapon_extension and rh_weapon_extension:has_current_action()
-
-	if not has_action then
-		CharacterStateHelper.play_animation_event(owner_unit, "unchained_ability_explosion")
-	end
-
-	if is_server and bot_player or local_player then
-		local first_person_extension = self._first_person_extension
-
-		if not has_action then
-			first_person_extension:animation_event("unchained_ability_explosion")
-		end
-
-		first_person_extension:play_hud_sound_event("Play_career_ability_unchained_fire")
-		first_person_extension:play_remote_unit_sound_event("Play_career_ability_unchained_fire", owner_unit, 0)
-	end
-
-	self:_play_vo()
-end)
-
---[[
-
 	Talents
 
 ]]
---[[
-	Outburst (disabled)
-]]
---[==[
-local OUTBURST_HALF_PUSH_BUFF = "tb_sienna_unchained_outburst_half_push"
-local OUTBURST_PUSH_COST_MULTIPLIER = 0.5
-
--- Push ignite uses the weak burn (passive section)
-BuffTemplates.burning_dot_unchained_push = BuffTemplates[WEAK_BURN_BUFF]
-
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_outburst_stagger_power", {
-	stat_buff = "power_level_impact",
-	multiplier = 0.2,
-})
-mod_api.insert_talent_buff_template("bright_wizard", OUTBURST_HALF_PUSH_BUFF, {
-	max_stacks = 1,
-})
-
--- Owner only
-mod_api.insert_proc_function("tb_sienna_unchained_outburst_half_push_on_heavy", function (owner_unit, buff, params)
-	if params[2] ~= "heavy_attack" or not ALIVE[owner_unit] then
-		return
-	end
-
-	local owner_player = Managers.player:owner(owner_unit)
-
-	if not owner_player or owner_player.remote then
-		return
-	end
-
-	ScriptUnit.extension(owner_unit, "buff_system"):add_buff(OUTBURST_HALF_PUSH_BUFF)
-end)
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_outburst_half_push_on_heavy", {
-	event = "on_hit",
-	buff_func = "tb_sienna_unchained_outburst_half_push_on_heavy",
-})
-mod_api.update_talent("bw_unchained", 2, 2, {
-	description_values = {},
-	buffs = {
-		"sienna_unchained_burn_push",
-		"tb_sienna_unchained_outburst_stagger_power",
-		"tb_sienna_unchained_outburst_half_push_on_heavy",
-	},
-})
-mod_api.insert_text("sienna_unchained_burn_push_desc_2", "Increases stagger power by 20%. Pushing ignites enemies for 10 seconds. After a charged attack, Sienna's next push has 70% increased arc and costs half stamina.")
-
--- Read by add_fatigue_points (Dissipate) to spot push costs
-local tb_outburst_pushing_unit = nil
-
-mod:hook(ActionPushStagger, "client_owner_start_action", function (func, self, ...)
-	tb_outburst_pushing_unit = self.owner_unit
-
-	local result = func(self, ...)
-
-	tb_outburst_pushing_unit = nil
-
-	return result
-end)
-]==]
-
---[[
-	Chain Reaction (disabled)
-]]
---[==[
--- Vanilla explosion (sienna_unchained_burning_enemies_explosion: visual, sound, stagger, no damage) plus fixed damage,
--- ignoring armor, to enemies within CHAIN_REACTION_RADIUS
-local CHAIN_REACTION_DAMAGE = 50
-local CHAIN_REACTION_RADIUS = 0.25
-local CHAIN_REACTION_OVERCHARGE = 0.8 -- high overcharge (vanilla overcharge_critical_limit)
-local chain_reaction_broadphase_results = {}
-
--- Replaces vanilla's 40% chance on death: specials explode when headshot, elites when killed by a headshot, while Sienna is
--- at high overcharge. Server only (talent buffer "server"); the server reads remote players' overcharge from the husk
--- overcharge extension
-local function tb_is_headshot(hit_zone)
-	return hit_zone == "head" or hit_zone == "neck"
-end
-
-local function tb_chain_reaction_explode(owner_unit, unit)
-	local overcharge_extension = ALIVE[owner_unit] and ScriptUnit.has_extension(owner_unit, "overcharge_system")
-	local max_overcharge = overcharge_extension and overcharge_extension:get_max_value()
-
-	if not max_overcharge or max_overcharge <= 0 or overcharge_extension:get_overcharge_value() / max_overcharge < CHAIN_REACTION_OVERCHARGE then
-		return
-	end
-
-	local position = POSITION_LOOKUP[unit]
-	local career_power_level = ScriptUnit.extension(owner_unit, "career_system"):get_career_power_level()
-
-	Managers.state.entity:system("area_damage_system"):create_explosion(owner_unit, position, Quaternion.identity(), "sienna_unchained_burning_enemies_explosion", 1, "buff", career_power_level, false)
-
-	local side_manager = Managers.state.side
-	local ai_broadphase = Managers.state.entity:system("ai_system").broadphase
-
-	table.clear(chain_reaction_broadphase_results)
-
-	local num_enemies = Broadphase.query(ai_broadphase, position, CHAIN_REACTION_RADIUS, chain_reaction_broadphase_results)
-
-	for i = 1, num_enemies do
-		local enemy_unit = chain_reaction_broadphase_results[i]
-
-		if HEALTH_ALIVE[enemy_unit] and side_manager:is_enemy(owner_unit, enemy_unit) then
-			DamageUtils.add_damage_network(enemy_unit, owner_unit, CHAIN_REACTION_DAMAGE, "torso", "burn_shotgun", nil, Vector3(0, 0, 0), "buff", nil, owner_unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
-		end
-	end
-end
-
--- params: hit_unit, attack_type, hit_zone
-mod_api.insert_proc_function("tb_sienna_unchained_chain_reaction_special", function (owner_unit, buff, params)
-	local breed = AiUtils.unit_breed(params[1])
-
-	if Managers.state.network.is_server and breed and breed.special and tb_is_headshot(params[3]) then
-		tb_chain_reaction_explode(owner_unit, params[1])
-	end
-end)
--- params: killing_blow, breed_killed, killed_unit
-mod_api.insert_proc_function("tb_sienna_unchained_chain_reaction_elite", function (owner_unit, buff, params)
-	if Managers.state.network.is_server and params[2].elite and tb_is_headshot(params[1][DamageDataIndex.HIT_ZONE]) then
-		tb_chain_reaction_explode(owner_unit, params[3])
-	end
-end)
-mod_api.insert_talent_buff_template("bright_wizard", "tb_sienna_unchained_chain_reaction", {
-	{
-		event = "on_hit",
-		buff_func = "tb_sienna_unchained_chain_reaction_special",
-	},
-	{
-		name = "tb_sienna_unchained_chain_reaction_elite",
-		event = "on_kill",
-		buff_func = "tb_sienna_unchained_chain_reaction_elite",
-	},
-})
-mod_api.update_talent("bw_unchained", 2, 3, {
-	buffs = {
-		"tb_sienna_unchained_chain_reaction",
-	},
-})
-mod_api.insert_text("sienna_unchained_exploding_burning_enemies_desc", string.format("While at %d%% Overcharge or higher, headshots on specials and headshot kills on elites cause them to explode, dealing %d damage and staggering nearby enemies.", CHAIN_REACTION_OVERCHARGE * 100, CHAIN_REACTION_DAMAGE))
-]==]
-
 --[[
 	Dissipate
 ]]
@@ -748,19 +385,6 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 	local max_fatigue = PlayerUnitStatusSettings.MAX_FATIGUE
 	local max_fatigue_points = self.max_fatigue_points
 	local fatigue_cost = amount * (max_fatigue / max_fatigue_points) * (fatigue_point_costs_multiplier or 1)
-
-	-- Outburst (disabled)
-	--[[
-	if tb_outburst_pushing_unit == self.unit and not blocking_weapon_unit then
-		local half_push_buff = buff_extension:get_buff_type(OUTBURST_HALF_PUSH_BUFF)
-
-		if half_push_buff then
-			fatigue_cost = fatigue_cost * OUTBURST_PUSH_COST_MULTIPLIER
-
-			buff_extension:remove_buff(half_push_buff.id)
-		end
-	end
-	]]
 
 	if is_timed_block then
 		fatigue_cost = buff_extension:apply_buffs_to_value(fatigue_cost, "timed_block_cost")
@@ -856,21 +480,18 @@ mod_api.update_talent("bw_unchained", 5, 1, { -- update description
 })
 
 --[[
-	Natural Talent (disabled)
+	Natural Talent
 ]]
---[==[
-mod_api.update_talent("bw_unchained", 5, 3, {
-	description_values = {},
+mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_reduced_overcharge", {
+	multiplier = -0.2, -- -0.1
 })
-mod_api.insert_text("sienna_unchained_reduced_overcharge_desc", string.format("Reduces overcharge generated by 10%%. During Aqshy's Blaze, Sienna gains %d%% attack speed and %d%% increased healing received.", NATURAL_TALENT_ATTACK_SPEED * 100, NATURAL_TALENT_HEALING_RECEIVED * 100))
-]==]
+mod_api.update_talent("bw_unchained", 5, 3, { -- update description
+	description_values = {
+		{
+			value_type = "percent",
+			value = -0.2, -- buff_tweak_data.sienna_unchained_reduced_overcharge.multiplier
+		},
+	},
+})
 
---[[
-	Bomb Balm (disabled, vanilla again)
-]]
---[[
-mod_api.update_talent("bw_unchained", 6, 3, {
-	description_values = {},
-})
-mod_api.insert_text("sienna_unchained_activated_ability_temp_health_desc", "Living Bomb also grants 30 temporary health to nearby allies.")
-]]
+

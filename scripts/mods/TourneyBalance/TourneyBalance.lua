@@ -192,6 +192,21 @@ mod:hook(DamageUtils, "create_explosion", function (func, ...)
     return _create_explosion_chain(...)
 end)
 
+--- DamageUtils.calculate_damage observers
+-- 01_damage_calc_changes.lua replaces calculate_damage with mod:hook_origin, so nothing else can hook it.
+-- Debug tools that need to see each calculated hit register through mod:add_calculate_damage_observer(fn).
+-- fn(final_damage, base_damage, ...) runs after the calculation, where base_damage is before the stagger
+-- multiplier and ... are calculate_damage's own arguments (damage_output, target_unit, attacker_unit, ...).
+local _calculate_damage_observers = {}
+function mod.add_calculate_damage_observer(self, func)
+    _calculate_damage_observers[#_calculate_damage_observers + 1] = func
+end
+function mod.notify_calculate_damage(self, ...)
+    for i = 1, #_calculate_damage_observers do
+        _calculate_damage_observers[i](...)
+    end
+end
+
 --- ActionMeleeStart.client_owner_post_update dispatcher
 -- Same hook-collision problem as IngameHud above: features that need to run after it (02_career_changes.lua,
 -- Timed Block Long) register through mod:add_melee_start_post_update_function(fn)
@@ -281,6 +296,9 @@ end)
     Balance Changes
 
 ]]
+-- Dev tool support - inactive unless the tool is enabled. Must stay before every change file.
+mod:dofile("scripts/mods/TourneyBalance/debugging/dev_tools_support")
+
 -- Misc standalone fixes not tied to any other category
 mod:dofile("scripts/mods/TourneyBalance/changes/_misc_fixes")
 
@@ -302,9 +320,6 @@ mod:dofile("scripts/mods/TourneyBalance/debugging/balance_diff_export")
 
 -- Weapon Changes
 mod:dofile("scripts/mods/TourneyBalance/changes/04_weapon_changes")
-
--- Fun Features (opt-in, settings-gated movement tech)
-mod:dofile("scripts/mods/TourneyBalance/changes/05_fun_changes")
 
 
 --[[

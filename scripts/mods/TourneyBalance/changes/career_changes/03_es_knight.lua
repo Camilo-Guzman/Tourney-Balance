@@ -7,7 +7,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		## Foot Knight
 		### Career Ability
 		= Charge cleave (attack and impact) increased to 4 (from 2)
-		- Ult blast radius buffed to 5 (from 3) for all ults.
+		- Ult blast radius buffed to 4 (from 3) for all ults.
 
 		### Passives
 		**Protective Presence**
@@ -22,9 +22,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**That's Bloody Teamwork!**
 		- Grants 3.33% damage reduction per nearby ally (up to 3).
-
-		**Have At Thee!**
-		- Also procs when Mainstay marks an elite with a stagger count, even if the hit doesn't actually stagger it.
 
 		**Crowd Clearer**
 		- Duration increased to 5s (from 3s).
@@ -45,17 +42,12 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		
 		**Inspiring Blow**
 		- Now only affects the Foot Knight himself (no longer nearby allies).
-		- Also procs when Mainstay marks an elite with a stagger count, even if the hit doesn't actually stagger it.
-		- Mainstay grants effect at 20% cooldown regeneration for 0.5s
 
 		**Numb to Pain**
 		- Invulnerability duration on ult increased to 5s (from 3s).
 
 		**Battering Ram**
 		- Battering Ram charge width reduced to 4 (from 5).
-
-		**Bull of Ostland**
-		- Attack speed buff from ult hits lasts 15s (from 10s).
 	$END_TB
 ]]
 
@@ -64,6 +56,8 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 	Ultimate
 
 ]]
+--mod_api.update_career_ability_cooldown("es_2", 60) -- 30
+
 -- Charge + blast damage/stagger cleave. Edited in place: damage profiles resolve their cleave_distribution name to
 -- this exact table at load (damage_profile_templates.lua), so swapping in a new table at runtime has no effect.
 local charge_cleave_distribution = PowerLevelTemplates.cleave_distribution_markus_knight_charge
@@ -77,7 +71,7 @@ mod:hook(CareerAbilityESKnight, "_run_ability", function (func, self, ...)
 
 	local lunge_damage = self._status_extension.do_lunge.damage
 
-	lunge_damage.on_interrupt_blast.radius = 5 -- 3
+	lunge_damage.on_interrupt_blast.radius = 4 -- 3
 
 	local talent_extension = ScriptUnit.extension(self._owner_unit, "talent_system")
 
@@ -498,17 +492,6 @@ mod_api.update_talent("es_knight", 2, 1, {
 })
 
 --[[
-	Have At Thee!
-	Proc from Mainstay stagger count on an elite
-	thp_stagger_damage_changes/01_damage_calc_changes.lua > mod:hook_origin(DamageUtils, "server_apply_hit", ...)
-]]
-mod_api.update_talent("es_knight", 2, 2, { -- update description
-	description_values = {
-	},
-})
-mod_api.insert_text("markus_knight_power_level_on_stagger_elite_desc", "Inflicting stagger counts on an elite enemy increases power by 15.0% for 10 seconds.")
-
---[[
 	Crowd Clearer
 ]]
 -- Duration increased to 5s (from 3s)
@@ -665,8 +648,6 @@ end)
 
 --[[
 	Inspiring Blow - self only (not nearby allies)
-	Proc from Mainstay stagger count on an elite
-	thp_stagger_damage_changes/01_damage_calc_changes.lua > mod:hook_origin(DamageUtils, "server_apply_hit", ...)
 ]]
 -- Vanilla's own buff_func (markus_knight_reduce_cooldown_on_stagger) applies to nearby allies in
 -- range; buff_on_stagger_enemy (same one Have At Thee uses) is self-only.
@@ -678,17 +659,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_cooldown_bu
 	multiplier = 2, -- 2
 	icon = "markus_knight_improved_passive_defence_aura"
 })
-mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy (with Mainstay) accelerates your own cooldown by 200%% (20%%) for 0.5 seconds.")
-
--- Separate, weaker buff for the Mainstay stagger-count proc
-mod_api.insert_buff_template("tb_markus_knight_cooldown_buff_mainstay", {
-	max_stacks = 1,
-	refresh_durations = true,
-	stat_buff = "cooldown_regen",
-	duration = 0.5,
-	multiplier = 0.2,
-	icon = "markus_knight_improved_passive_defence_aura",
-})
+mod_api.insert_text("markus_knight_cooldown_on_stagger_elite_desc", "Staggering an elite enemy accelerates your own cooldown by 200%% for 0.5 seconds.")
 
 --[[
 	Numb to Pain
@@ -711,7 +682,7 @@ mod_api.insert_text("markus_knight_ability_invulnerability_desc", "Valiant Charg
 ]]
 -- Attack speed buff from ult hits lasts 15s (from 10s)
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_ability_attack_speed_enemy_hit_buff", {
-	duration = 15 -- 10
+	duration = 10 -- 10
 })
 mod_api.update_talent("es_knight", 6, 3, { -- update description (update_talent replaces the whole list, so all three values are listed)
 	description_values = {
@@ -720,7 +691,7 @@ mod_api.update_talent("es_knight", 6, 3, { -- update description (update_talent 
 			value = 0.03, -- buff_tweak_data.markus_knight_ability_attack_speed_enemy_hit_buff.multiplier
 		},
 		{
-			value = 15, -- 10, buff_tweak_data.markus_knight_ability_attack_speed_enemy_hit_buff.duration
+			value = 10, -- 10, buff_tweak_data.markus_knight_ability_attack_speed_enemy_hit_buff.duration
 		},
 		{
 			value = 10, -- buff_tweak_data.markus_knight_ability_attack_speed_enemy_hit_buff.max_stacks
