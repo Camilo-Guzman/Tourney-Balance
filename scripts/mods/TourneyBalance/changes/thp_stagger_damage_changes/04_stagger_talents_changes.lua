@@ -19,6 +19,7 @@ local stagger_types = require("scripts/utils/stagger_types")
 		- Added 10% Stagger Power.
 		- Increased damage debuff duration to 10s (from 2s).
 		- Changes damage debuff to apply with any stagger (from melee stagger).
+		- Damage debuff is now a true 10% damage taken increase from any source (from 10% added to the stagger damage bonus, melee only).
 		- Staggering an enemy adds 1 stagger count for 10s, up to 2 stacks.
 		- Stagger counts from Bulwark benefit all player.
 
@@ -55,14 +56,13 @@ mod_api.insert_buff_template("tb_finesse_unbalance", {
 --[[
 	Bulwark
 ]]
--- Bulwark Damage Debuff
+-- Bulwark Damage Debuff: a separate 10% damage taken multiplier from any source, applied in
+-- 02_damage_taken_changes.lua (vanilla's unbalanced_damage_taken was only added to the melee stagger bonus)
 mod_api.insert_buff_template("tb_tank_unbalance_buff", {
 	refresh_durations = true,
-	name = "tank_unbalance_buff",
-	stat_buff = "unbalanced_damage_taken",
 	max_stacks = 1,
 	duration = 10,
-	bonus = 0.10,
+	multiplier = 0.10, -- read by apply_buffs_to_damage, not a stat_buff
 })
 -- Bulwark stagger marks (tank_stagger_counts), counted by stacks via num_buff_type in 01_damage_calc_changes.lua.
 -- Visible to all players, includes bosses/lords.
