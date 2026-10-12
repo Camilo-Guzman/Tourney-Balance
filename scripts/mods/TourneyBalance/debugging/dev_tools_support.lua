@@ -45,6 +45,31 @@ local function deep_copy(value, seen)
 	return copy
 end
 
+-- The DoT templates out of BuffTemplates, the only part of it the editor edits. Same rule as the
+-- editor's core.is_dot_template: listed in DotTypeLookup, or ticking via "apply_dot_damage".
+local function dot_templates()
+	local dots = {}
+	local lookup = rawget(_G, "DotTypeLookup")
+
+	for name, template in pairs(BuffTemplates) do
+		if type(name) == "string" and type(template) == "table" and type(template.buffs) == "table" then
+			local is_dot = lookup and lookup[name] ~= nil
+
+			for _, sub_buff in ipairs(template.buffs) do
+				if type(sub_buff) == "table" and sub_buff.update_func == "apply_dot_damage" then
+					is_dot = true
+				end
+			end
+
+			if is_dot then
+				dots[name] = template
+			end
+		end
+	end
+
+	return dots
+end
+
 if not rawget(_G, "WEAPON_EDITOR_STATE") and not rawget(_G, "WEAPON_EDITOR_VANILLA_SNAPSHOT") and weapon_editor_enabled() then
 	local seen = {}
 
@@ -56,6 +81,7 @@ if not rawget(_G, "WEAPON_EDITOR_STATE") and not rawget(_G, "WEAPON_EDITOR_VANIL
 			PowerLevelTemplates = deep_copy(PowerLevelTemplates, seen),
 			ExplosionTemplates = deep_copy(ExplosionTemplates, seen),
 			SpreadTemplates = deep_copy(SpreadTemplates, seen),
+			BuffTemplates = deep_copy(dot_templates(), seen),
 		},
 	})
 end
