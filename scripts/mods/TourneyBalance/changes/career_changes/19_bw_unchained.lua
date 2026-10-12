@@ -23,6 +23,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Weapons can be swapped during the explosion.
 		- Can't attack with the ranged weapon for the duration.
 		- Using Living Bomb immediately ends Aqshy's Blaze.
+		- Overcharge explosion deals no friendly fire.
 
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
@@ -277,7 +278,7 @@ end)
 
 -- No friendly fire from Unchained's overcharge explosion or Living Bomb.
 local TB_UNCHAINED_NO_FRIENDLY_FIRE_SOURCES = {
-	overcharge = false,
+	overcharge = true,
 	career_ability = true,
 }
 local tb_no_friendly_fire_templates = setmetatable({}, { __mode = "k" })
