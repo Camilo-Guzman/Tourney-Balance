@@ -404,23 +404,6 @@ local localization = {
 			.. "\n이 옵션은 이벤트 중 자동으로 활성화됩니다.",
 	},
 
-	-- Fun Features
-	fun_features = {
-		en = "Fun Features",
-	},
-	jump_cancel_dodges_title = {
-		en = "Jump-Cancel Dodges",
-	},
-	jump_cancel_dodges_description = {
-		en = "Jumping near the end of a dodge cancels it into a jump, carrying the dodge's momentum. Works for every career, not just Handmaiden.",
-	},
-	jump_cancel_dashes_title = {
-		en = "Jump-Cancel Dashes",
-	},
-	jump_cancel_dashes_description = {
-		en = "Jumping while dashing (career skills that lunge you forward, e.g. Handmaiden's Dash) cancels the dash into a jump, carrying its momentum. Works for every career with a dash-type skill.",
-	},
-
 	tb_color_preset_default_title = {
 		en = "Default",
 	},

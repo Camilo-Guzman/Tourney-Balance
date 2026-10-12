@@ -122,26 +122,6 @@ return {
 				tooltip = "performance_logging_description",
 			},
 			{
-				setting_id = "fun_features",
-				type = "group",
-				sub_widgets = {
-					{
-						type = "checkbox",
-						setting_id = "jump_cancel_dodges",
-						default_value = false,
-						title = "jump_cancel_dodges_title",
-						tooltip = "jump_cancel_dodges_description",
-					},
-					{
-						type = "checkbox",
-						setting_id = "jump_cancel_dashes",
-						default_value = false,
-						title = "jump_cancel_dashes_title",
-						tooltip = "jump_cancel_dashes_description",
-					},
-				},
-			},
-			{
 				setting_id = "debugging",
 				type = "group",
 				sub_widgets = {

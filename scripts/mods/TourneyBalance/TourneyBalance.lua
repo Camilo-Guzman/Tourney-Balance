@@ -321,9 +321,6 @@ mod:dofile("scripts/mods/TourneyBalance/debugging/balance_diff_export")
 -- Weapon Changes
 mod:dofile("scripts/mods/TourneyBalance/changes/04_weapon_changes")
 
--- Fun Features (opt-in, settings-gated movement tech)
-mod:dofile("scripts/mods/TourneyBalance/changes/05_fun_changes")
-
 
 --[[
 

@@ -70,7 +70,7 @@ mod:hook(CareerAbilityWEMaidenGuard, "_run_ability", function (func, self, ...)
 
 end)
 
--- General fix for the same underlying whereabouts-tracking crash the set_jumped hooks in 05_fun_changes.lua also guard against
+-- General fix for a whereabouts-tracking crash when jump/fall and landing inputs are queued in the same frame
 mod:hook(PlayerWhereaboutsExtension, "update", function (func, self, unit, input, dt, context, t)
     local queued_input = self._input
 
