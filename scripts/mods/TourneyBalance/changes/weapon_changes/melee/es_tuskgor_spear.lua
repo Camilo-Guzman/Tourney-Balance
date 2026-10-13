@@ -9,6 +9,14 @@ local mod = get_mod("TourneyBalance")
 --- 10% Chaos & 10% Infantry:
 -- 2-SHS Marauders => Light 1-Light 2
 ]]
+
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_left.additional_critical_strike_chance = 5
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_1.additional_critical_strike_chance = 10
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_right.additional_critical_strike_chance = 15
+Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_2.additional_critical_strike_chance = 20
+Weapons.two_handed_heavy_spears_template.actions.action_one.heavy_attack_left.additional_critical_strike_chance = 5
+Weapons.two_handed_heavy_spears_template.actions.action_one.heavy_attack_tank.additional_critical_strike_chance = 15
+
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_left.damage_profile 	= "tusk_spear_light_1"
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_1.damage_profile 	= "tusk_spear_light_2"
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_right.damage_profile 	= "tusk_spear_light_3"
