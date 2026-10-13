@@ -428,14 +428,18 @@ end)
 --[[
 	Fervency
 ]]
+-- The talent tree's icon: the source dump's icon name isn't in the live atlas and crashes BuffUI ("Material not found in Gui")
+local FERVENCY_ICON = TalentUtils.get_talent("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff").icon
+
 -- Extend durationto 10s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
 	duration = 10, -- 6
+	icon = FERVENCY_ICON,
 })
 
 -- Additionall 20 stacks of guaranteed melee crit hits on ult use
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
-	icon = "victor_witchhunter_activated_ability_guaranteed_crit_self_buff",
+	icon = FERVENCY_ICON,
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
 	max_stacks = 20,
