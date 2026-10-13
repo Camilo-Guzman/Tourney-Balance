@@ -428,14 +428,44 @@ end)
 --[[
 	Fervency
 ]]
+-- The live build's icon atlas can lack Fervency's own icon, and BuffUI then draws the name as a missing material
+-- (script error). Use the first icon the atlas actually has, starting with the one the talent tree shows.
+local fervency_talent = TalentIDLookup.victor_witchhunter_activated_ability_guaranteed_crit_self_buff and TalentUtils.get_talent("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff")
+local fervency_talent_icon = fervency_talent and fervency_talent.icon
+local FERVENCY_ICON_CANDIDATES = {
+	"victor_witchhunter_activated_ability_guaranteed_crit_self_buff",
+	"victor_witchhunter_guaranteed_crit_on_timed_block",
+	"icons_placeholder",
+}
+
+if fervency_talent_icon then
+	table.insert(FERVENCY_ICON_CANDIDATES, 1, fervency_talent_icon)
+end
+
+local FERVENCY_ICON = FERVENCY_ICON_CANDIDATES[#FERVENCY_ICON_CANDIDATES]
+
+for i = 1, #FERVENCY_ICON_CANDIDATES do
+	if UIAtlasHelper.has_atlas_settings_by_texture_name(FERVENCY_ICON_CANDIDATES[i]) then
+		FERVENCY_ICON = FERVENCY_ICON_CANDIDATES[i]
+
+		break
+	end
+end
+
+-- Temporary: which icon the talent tree uses and which one was picked (console / log)
+mod:info("Fervency icon: talent=%s, in atlas=%s, standalone=%s, picked=%s", tostring(fervency_talent_icon),
+	tostring(fervency_talent_icon and UIAtlasHelper.has_atlas_settings_by_texture_name(fervency_talent_icon)),
+	tostring(fervency_talent_icon and UIAtlasHelper.has_texture_by_name(fervency_talent_icon)), FERVENCY_ICON)
+
 -- Extend durationto 10s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
 	duration = 10, -- 6
+	icon = FERVENCY_ICON,
 })
 
 -- Additionall 20 stacks of guaranteed melee crit hits on ult use
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
-	icon = "victor_witchhunter_activated_ability_guaranteed_crit_self_buff",
+	icon = FERVENCY_ICON,
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
 	max_stacks = 20,
