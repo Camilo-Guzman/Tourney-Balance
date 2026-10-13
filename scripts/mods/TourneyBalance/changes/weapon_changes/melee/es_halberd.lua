@@ -4,6 +4,14 @@ local mod = get_mod("TourneyBalance")
 	Halberd
 ]]
 
+-- two_handed_halberds_template_1
+Weapons.two_handed_halberds_template_1.actions.action_one.heavy_attack_left.damage_profile = "tb_halberd_heavy_slash"
+Weapons.two_handed_halberds_template_1.actions.action_one.heavy_attack_stab.damage_profile = "tb_halberd_heavy_stab"
+Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_last.damage_profile = "tb_halberd_light_chop"
+Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_left.damage_profile = "tb_halberd_light_slash"
+Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_stab.damage_profile = "tb_halberd_light_stab"
+Weapons.two_handed_halberds_template_1.actions.action_one.light_attack_down.damage_profile = "tb_halberd_push_attack"
+
 -- changed: targets[1].boost_curve_coefficient_headshot 1.75 -> 1
 NewDamageProfileTemplates.tb_halberd_heavy_slash = { -- official: heavy_slashing_linesman_polearm
 	armor_modifier = "armor_modifier_linesman_H",
@@ -95,7 +103,6 @@ NewDamageProfileTemplates.tb_halberd_heavy_slash = { -- official: heavy_slashing
 		},
 	},
 }
-
 -- changed: targets[1].boost_curve_coefficient_headshot 2.8 -> 2
 NewDamageProfileTemplates.tb_halberd_heavy_stab = { -- official: heavy_slashing_smiter_stab_polearm
 	armor_modifier = {
@@ -179,7 +186,6 @@ NewDamageProfileTemplates.tb_halberd_heavy_stab = { -- official: heavy_slashing_
 	},
 }
 
-
 NewDamageProfileTemplates.tb_halberd_light_chop = { -- official: medium_slashing_smiter_2h
 	armor_modifier = {
 		attack = {
@@ -234,7 +240,6 @@ NewDamageProfileTemplates.tb_halberd_light_chop = { -- official: medium_slashing
 		-- removed: armor_modifier (official: <table>)
 	},
 }
-
 
 NewDamageProfileTemplates.tb_halberd_light_slash = { -- official: medium_slashing_axe_linesman
 	armor_modifier = "armor_modifier_axe_linesman_M",
@@ -306,7 +311,6 @@ NewDamageProfileTemplates.tb_halberd_light_slash = { -- official: medium_slashin
 		},
 	},
 }
-
 
 NewDamageProfileTemplates.tb_halberd_light_stab = { -- official: medium_slashing_smiter_stab
 	armor_modifier = {
@@ -417,3 +421,5 @@ NewDamageProfileTemplates.tb_halberd_push_attack = { -- official: medium_slashin
 		-- removed: [2] (official: <table>)
 	},
 }
+
+
