@@ -139,6 +139,25 @@ mod_api.update_talent("es_knight", 4, 1, {
 mod_api.insert_text("tb_markus_knight_rock_of_reikland_desc", "Protective Presence is always active and grants 30% block cost reduction and 30% stamina regeneration.")
 
 --[[
+	That's Bloody Teamwork - Adjustment from Passive
+]]
+mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity", {
+	buff_to_add = "markus_knight_damage_taken_ally_proximity_buff",
+	range = 20, -- 5
+	update_func = "activate_party_buff_stacks_on_ally_proximity", -- TODO: Check - Removed proc function, might break, replaced buff.range replaced w/ template.range
+	chunk_size = 1,
+	max_stacks = 3,
+	remove_buff_func = "remove_party_buff_stacks"
+})
+mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
+	multiplier = -0.0333 -- -0.05
+})
+mod_api.update_talent("es_knight", 4, 2, { -- update description
+	description_values = {},
+})
+mod_api.insert_text("markus_knight_damage_taken_ally_proximity_desc_2", "Reduces damage taken by 3.33% for each nearby.")
+
+--[[
 	Comrades in Arms - Adjustment from Passive
 
 	Weapon Inspect (action_inspect) while holding block cycles who receives Comrades in Arms:
@@ -443,25 +462,6 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_guard", {
 	update_func = "tb_activate_buff_on_selected_or_closest",
 	range = 20 -- 5
 })
-
---[[
-	That's Bloody Teamwork - Adjustment from Passive
-]]
-mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity", {
-	buff_to_add = "markus_knight_damage_taken_ally_proximity_buff",
-	range = 20, -- 5
-	update_func = "activate_party_buff_stacks_on_ally_proximity", -- TODO: Check - Removed proc function, might break, replaced buff.range replaced w/ template.range
-	chunk_size = 1,
-	max_stacks = 3,
-	remove_buff_func = "remove_party_buff_stacks"
-})
-mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity_buff", {
-	multiplier = -0.0333 -- -0.05
-})
-mod_api.update_talent("es_knight", 4, 2, { -- update description
-	description_values = {},
-})
-mod_api.insert_text("markus_knight_damage_taken_ally_proximity_desc_2", "Reduces damage taken by 3.33% for each nearby ally within 20 meters, up to 3 allies.")
 
 --[[
 	Unlisted: Ult CD on Taking Damage
