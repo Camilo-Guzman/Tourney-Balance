@@ -45,6 +45,7 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 
 		**Indiscriminate Blast**
 		- Increased cooldown reduction to 60% (from 25%).
+		- Every pellet causes massive (explosion) stagger, armored enemies included.
 	$END_TB
 ]]
 
@@ -323,14 +324,27 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_bountyhunter_activat
     multiplier = -0.6, -- -0.25
 })
 mod_api.update_talent("wh_bountyhunter", 6, 3, {
-	description_values = {
-		{
-			value_type = "percent",
-			value = 0.6, -- 0.25
-		},
-		{
-			value = 20,
-		},
-	},
+	description_values = {},
 })
+mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Reduces the cooldown of Locked and Loaded by 60%. Each pellet causes massive stagger. Each enemy slain by Locked and Loaded adds an additional pellet to the next blast, up to 20.")
+
+-- Massive stagger: both shotgun barrels fire with the Indiscriminate Blast pellet profile
+local INDISCRIMINATE_BLAST_PELLET_PROFILE = "tb_shot_shotgun_ability_blast"
+local tb_indiscriminate_blast_actions = setmetatable({}, { __mode = "k" })
+
+mod:hook(ActionCareerWHBountyhunter, "client_owner_start_action", function (func, self, new_action, ...)
+	if self.talent_extension:has_talent("victor_bountyhunter_activated_ability_blast_shotgun") then
+		local blast_action = tb_indiscriminate_blast_actions[new_action]
+
+		if not blast_action then
+			blast_action = table.shallow_copy(new_action)
+			blast_action.damage_profile = INDISCRIMINATE_BLAST_PELLET_PROFILE
+			tb_indiscriminate_blast_actions[new_action] = blast_action
+		end
+
+		new_action = blast_action
+	end
+
+	return func(self, new_action, ...)
+end)
 
