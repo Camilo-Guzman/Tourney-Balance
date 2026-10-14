@@ -318,10 +318,8 @@ mod_api.insert_buff_function("tb_isjya_aura_pulse", function (unit, buff, params
 	apply_isjya_radius_debuff(unit, position, buff.range, has_templars_knowledge)
 end)
 local ISJYA_AURA_DURATION = 6
--- talent icon got renamed during geheimnisnacht 2026
-local ISJYA_ICON = TalentUtils.get_talent("witch_hunter", "victor_captain_activated_ability_stagger_ping_debuff").icon
 mod_api.insert_talent_buff_template("witch_hunter", "tb_isjya_aura", {
-	icon = ISJYA_ICON,
+	icon = "wh_6_1",
 	duration = ISJYA_AURA_DURATION,
 	range = 10, -- Animosity's explosion radius
 	update_func = "tb_isjya_aura_pulse",
@@ -430,18 +428,15 @@ end)
 --[[
 	Fervency
 ]]
--- talent icon got renamed during geheimnisnacht 2026
-local FERVENCY_ICON = TalentUtils.get_talent("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff").icon
-
 -- Extend durationto 10s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
 	duration = 10, -- 6
-	icon = FERVENCY_ICON,
+	icon = "wh_6_2",
 })
 
 -- Additionall 20 stacks of guaranteed melee crit hits on ult use
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
-	icon = FERVENCY_ICON,
+	icon = "wh_6_2",
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
 	max_stacks = 20,
