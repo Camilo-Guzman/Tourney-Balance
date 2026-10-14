@@ -15,15 +15,9 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Blood Magic / Abandon**
 		- Vanilla Abandon is now part of the passive (listed in the passive description next to Blood Magic): at high overcharge, health is drained into ult cooldown (can be lethal).
 		- Only grants ult cooldown when health is actually lost (none while invulnerable, e.g. inside Warrior Priest's bubble).
+		- The overcharge explosion deals no friendly fire.
 
 		### Talents
-		**Abandon (reworked)**
-		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 2.5 seconds.
-		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (non-lethal; only full ticks of health actually lost grant cooldown, so none while invulnerable, e.g. inside Warrior Priest's bubble). Replaces the passive's lethal drain.
-		- Weapons can be swapped during the explosion.
-		- Can't attack with the ranged weapon for the duration.
-		- Using Living Bomb immediately ends Aqshy's Blaze.
-		- Overcharge explosion deals no friendly fire.
 
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
@@ -33,6 +27,13 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Enfeebling Flames**
 		- Reduced damage reduction against burning enemies to 10% (from 30%).
+		
+		**Abandon (reworked)**
+		- Overcharge explosion is near instant (0.1s), deals no damage to Sienna and keeps her overcharge. She then enters Aqshy's Blaze for 2.5 seconds.
+		- Converts 5% of maximum health into 10% ult cooldown 4 times per second (lethal; only full ticks of health actually lost grant cooldown, so none while invulnerable, e.g. inside Warrior Priest's bubble). Replaces the passive's lethal drain.
+		- Weapons can be swapped during the explosion.
+		- Can't attack with the ranged weapon for the duration.
+		- Using Living Bomb immediately ends Aqshy's Blaze.
 
 		**Natural Talent**
 		- Increased overcharge reduction to 20% (from 10%).
@@ -144,10 +145,10 @@ mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_health_to
 mod_api.insert_career_passives("bw_3", {
 	"sienna_unchained_health_to_ult",
 })
-mod_api.insert_text("career_passive_desc_bw_3a", "Blood Magic: 50% damage taken transferred to Overcharge. When overcharging, Sienna's health is drained to rapidly reduce the cooldown of Living Bomb.")
+mod_api.insert_text("career_passive_desc_bw_3a", "50% damage taken transferred to Overcharge. When overcharging, Sienna drains 5% health for 10% cooldown reduction every 0.25 seconds.")
 
 --[[
-	Abandon talent (row 5 col 2): Aqshy's Blaze state
+	Abandon: Aqshy's Blaze state
 ]]
 local AQSHYS_BLAZE_BUFF = "tb_sienna_unchained_unchained_state"
 local AQSHYS_BLAZE_DURATION = 2.5
@@ -179,15 +180,10 @@ mod_api.insert_buff_function("tb_aqshys_blaze_health_to_cooldown_tick", function
 	local cost = health_extension:get_max_health() * AQSHYS_BLAZE_MAX_HEALTH_COST
 	local cooldown = AQSHYS_BLAZE_COOLDOWN
 
-	-- Non-lethal, only full ticks of health actually lost give cooldown (none while invulnerable, e.g. Warrior Priest's bubble)
+	-- Lethal, only full ticks of health actually lost give cooldown (none while invulnerable, e.g. Warrior Priest's bubble)
 	local health_before = health_extension:current_health()
-	local damage = math.min(cost, health_before - 1)
 
-	if damage <= 0 then
-		return
-	end
-
-	DamageUtils.add_damage_network(unit, unit, damage, "full", AQSHYS_BLAZE_DAMAGE_TYPE, nil, Vector3(0, 0, 0), AQSHYS_BLAZE_DAMAGE_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
+	DamageUtils.add_damage_network(unit, unit, cost, "full", AQSHYS_BLAZE_DAMAGE_TYPE, nil, Vector3(0, 0, 0), AQSHYS_BLAZE_DAMAGE_SOURCE, nil, unit, nil, nil, nil, nil, nil, nil, nil, nil, 1)
 
 	-- Damage and health are networkified (quarter steps)
 	if health_before - health_extension:current_health() >= DamageUtils.networkify_damage(cost) then
@@ -222,7 +218,7 @@ mod_api.update_talent("bw_unchained", 5, 2, {
 	buffs = {},
 })
 mod_api.insert_text(AQSHYS_BLAZE_TALENT, "Abandon")
-mod_api.insert_text("sienna_unchained_health_to_ult_desc", "Damage taken from overcharging is no longer lethal.")
+mod_api.insert_text("sienna_unchained_health_to_ult_desc", "When overcharging, Sienna explodes immediately and can continue combat without her staff until overcharging ends. Overcharging ends after 2.5 seconds.")
 
 -- Overcharge explosion with Aqshy's Blaze: vanilla state, shortened, then enters Aqshy's Blaze instead of damaging her.
 -- Without the talent the explosion is vanilla.

@@ -147,9 +147,9 @@ mod:hook(PassiveAbilityQuestingKnight, "_get_possible_challenges", function (fun
 end)
 
 -- The quest HUD shows Localize(<challenge template name>)
-mod_api.insert_text("find_grimoire", "Find a Grimoire or gain health")
-mod_api.insert_text("find_tome", "Find a Tome or land headshots")
-mod_api.insert_text("tb_team_use_ultimates", "Kill a Monster or use career abilities")
+mod_api.insert_text("find_grimoire", 			"Find Grimoire or gain health")
+mod_api.insert_text("find_tome", 				"Find Tome or land headshots")
+mod_api.insert_text("tb_team_use_ultimates", 	"Kill Monster or use abilities")
 
 -- Cooldown regeneration reward: 20% base, 30% with Virtue of the Grail (improved rewards)
 BuffTemplates.markus_questing_knight_passive_cooldown_reduction.buffs[1].multiplier = 0.2 -- 0.1
@@ -547,7 +547,6 @@ mod_api.insert_talent_buff_template("empire_soldier", "tb_grail_no_knockback", {
 	duration = 25,
 	max_stacks = 1,
 	refresh_durations = true,
-	icon = "markus_questing_knight_ability_buff_on_kill"
 })
 -- Both applied on the Grail Knight's own career skill use. on_ability_activated procs on every local player's buffs
 -- whenever anyone ults (params[1] is the activating unit), so check it's the owner, like vanilla add_buff_reff_buff_stack.

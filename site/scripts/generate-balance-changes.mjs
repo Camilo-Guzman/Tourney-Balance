@@ -1,6 +1,7 @@
 // Generates site/src/content/balance-changes/*.md from the $BEGIN_TB/$END_TB
-// comment blocks in scripts/mods/TourneyBalance/changes/career_changes/ and
-// .../thp_stagger_damage_changes/. Each block's content is already plain
+// comment blocks in scripts/mods/TourneyBalance/changes/career_changes/,
+// .../thp_stagger_damage_changes/ and .../weapon_changes/{melee,ranged,
+// career_ability}/ (grouped under a "# Melee" etc. heading). Each block's content is already plain
 // markdown - this extracts it, dedents it, and (for career changes) groups
 // careers under a "# Hero Name" heading derived from the file's two-letter
 // hero prefix, so each output page renders as one document with a clean
@@ -14,6 +15,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANGES_ROOT = path.resolve(__dirname, '../../scripts/mods/TourneyBalance/changes');
 const CAREER_DIR = path.join(CHANGES_ROOT, 'career_changes');
 const THP_DIR = path.join(CHANGES_ROOT, 'thp_stagger_damage_changes');
+const WEAPON_DIR = path.join(CHANGES_ROOT, 'weapon_changes');
+
+// weapon_changes/ subfolders, in page order, and their group headings
+const WEAPON_CATEGORIES = [
+  ['melee', 'Melee'],
+  ['ranged', 'Ranged'],
+  ['career_ability', 'Career Abilities'],
+];
 const OUTPUT_DIR = path.resolve(__dirname, '../src/content/balance-changes');
 
 const HEROES = {
@@ -110,14 +119,52 @@ function generateThpStaggerChanges() {
   return sections.length;
 }
 
+// One block per weapon file ("## Weapon Name" headings inside, as the Weapon Editor's
+// /we_sweep_weapons drafts them), grouped under "# Melee" / "# Ranged" / "# Career Abilities"
+// so the sidebar lists category > weapon like it lists hero > career.
+function generateWeaponChanges() {
+  const sections = [];
+  let weaponFileCount = 0;
+
+  for (const [folder, heading] of WEAPON_CATEGORIES) {
+    const dir = path.join(WEAPON_DIR, folder);
+    let files;
+
+    try {
+      files = readdirSync(dir)
+        .filter((f) => f.endsWith('.lua'))
+        .sort();
+    } catch {
+      continue;
+    }
+
+    const bodies = [];
+    for (const file of files) {
+      const body = extractBody(path.join(dir, file));
+      if (body) bodies.push(body);
+    }
+
+    if (bodies.length === 0) continue;
+
+    weaponFileCount += bodies.length;
+    sections.push(`***\n\n# ${heading}\n\n${bodies.join('\n\n')}`);
+  }
+
+  if (sections.length === 0) return 0;
+
+  writePage('weapon-changes.md', 3, 'Weapon Changes', sections.join('\n\n'));
+  return weaponFileCount;
+}
+
 function main() {
   rmSync(OUTPUT_DIR, { recursive: true, force: true });
   mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const heroCount = generateCareerChanges();
   const thpCount = generateThpStaggerChanges();
+  const weaponCount = generateWeaponChanges();
 
-  console.log(`Generated career-changes.md (${heroCount} heroes) and thp-stagger-changes.md (${thpCount} sections) into ${path.relative(process.cwd(), OUTPUT_DIR)}`);
+  console.log(`Generated career-changes.md (${heroCount} heroes), thp-stagger-changes.md (${thpCount} sections) and weapon-changes.md (${weaponCount} weapon files) into ${path.relative(process.cwd(), OUTPUT_DIR)}`);
 }
 
 main();
