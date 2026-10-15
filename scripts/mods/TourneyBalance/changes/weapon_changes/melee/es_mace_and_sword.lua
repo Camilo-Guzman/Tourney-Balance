@@ -80,8 +80,147 @@ NewDamageProfileTemplates.tb_1h_hammer_light_1_2 = {
 }
 
 --lights 3,4
-Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_left.damage_profile = "tb_1h_sword_light_1_2"
-Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_right_diagonal.damage_profile = "tb_1h_sword_light_1_2"
+Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_left.damage_profile = "tb_mace_and_sword_light_4" -- official: "light_slashing_linesman", prev TB: "tb_1h_sword_light_1_2"
+Weapons.dual_wield_hammer_sword_template.actions.action_one.light_attack_right_diagonal.damage_profile = "tb_mace_and_sword_light_3" -- official: "light_slashing_linesman", prev TB: "tb_1h_sword_light_1_2"
+
+-- Effectively the same as tb_1h_sword_light_1_2 for now.
+NewDamageProfileTemplates.tb_mace_and_sword_light_3 = { -- official: light_slashing_linesman
+	armor_modifier = {
+		attack = {
+			1,
+			0,
+			2,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.3,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2.5,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1,
+		},
+	},
+	cleave_distribution = {
+		attack = 0.35,
+		impact = 0.2,
+	},
+	default_target = {
+		attack_template = "light_slashing_linesman",
+		boost_curve_type = "linesman_curve",
+		power_distribution = {
+			attack = 0.125, -- official: 0.075
+			impact = 0.05,
+		},
+	},
+	targets = {
+		{
+			attack_template = "light_slashing_linesman_hs",
+			boost_curve_type = "ninja_curve", -- official: "linesman_curve"
+			boost_curve_coefficient_headshot = 2, -- official: 1.5
+			boost_curve_coefficient = 2,
+			power_distribution = {
+				attack = 0.2, -- official: 0.175
+				impact = 0.1,
+			},
+		},
+		{
+			attack_template = "light_slashing_linesman",
+			boost_curve_type = "ninja_curve", -- official: "linesman_curve"
+			boost_curve_coefficient_headshot = 2, -- official: 1.5
+			power_distribution = {
+				attack = 0.15, -- official: 0.125
+				impact = 0.075,
+			},
+		},
+	},
+}
+
+NewDamageProfileTemplates.tb_mace_and_sword_light_4 = { -- official: light_slashing_linesman
+	armor_modifier = {
+		attack = {
+			1,
+			0,
+			2,
+			1,
+			1,
+		},
+		impact = {
+			1,
+			0.3,
+			0.5,
+			1,
+			1,
+		},
+	},
+	charge_value = "light_attack",
+	critical_strike = {
+		attack_armor_power_modifer = {
+			1,
+			0.5,
+			2.5,
+			1,
+			1,
+		},
+		impact_armor_power_modifer = {
+			1,
+			0.5,
+			0.5,
+			1,
+			1,
+		},
+	},
+	cleave_distribution = {
+		attack = 0.35,
+		impact = 0.2,
+	},
+	default_target = {
+		attack_template = "light_slashing_linesman",
+		boost_curve_type = "linesman_curve",
+		power_distribution = {
+			attack = 0.125, -- official: 0.075
+			impact = 0.05,
+		},
+	},
+	targets = {
+		{
+			attack_template = "light_slashing_linesman_hs",
+			boost_curve_type = "ninja_curve", -- official: "linesman_curve"
+			boost_curve_coefficient_headshot = 2, -- official: 1.5
+			boost_curve_coefficient = 2,
+			power_distribution = {
+				attack = 0.2, -- official: 0.175
+				impact = 0.1,
+			},
+		},
+		{
+			attack_template = "light_slashing_linesman",
+			boost_curve_type = "ninja_curve", -- official: "linesman_curve"
+			boost_curve_coefficient_headshot = 2, -- official: 1.5
+			power_distribution = {
+				attack = 0.15, -- official: 0.125
+				impact = 0.075,
+			},
+		},
+	},
+}
 
 --Heavy
 Weapons.dual_wield_hammer_sword_template.actions.action_one.heavy_attack.hit_mass_count = LINESMAN_HIT_MASS_COUNT
