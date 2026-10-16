@@ -160,6 +160,7 @@ mod:add_all_mods_loaded_function(function ()
 		profile_prefix = "tb_",
 		authored_profiles_global = "NewDamageProfileTemplates",
 		export_key_order = EXPORT_KEY_ORDER,
+		patch_notes_markers = { "$BEGIN_TB", "$END_TB" },
 		damage_calculation = mod.tb_do_damage_calculation,
 		stagger_multiplier = stagger_multiplier,
 		add_calculate_damage_observer = function (observer)

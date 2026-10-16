@@ -151,82 +151,24 @@ mod_api.insert_text("victor_captain_activated_ability_stagger_ping_debuff_desc",
 local PING_DURATION = 15
 local marked_enemies = {}
 
--- Mirrors AccessibilityOptions' "Dangerous Enemy" outline color exactly
--- isn't installed/enabled.
-local function get_dangerous_enemy_color()
-	local accessibility_options = get_mod("AccessibilityOptions")
-	local marker_color = accessibility_options and OutlineSettings.colors.accessibility_dangerous_enemy_marker
-
-	if not marker_color then
-		return 227, 4, 4
-	end
-
-	local color = marker_color.color
-
-	return color[2], color[3], color[4]
-end
-
-do
-	local r, g, b = get_dangerous_enemy_color()
-
-	OutlineSettings.colors.tb_judged_special = {
-		pulsate = false,
-		pulse_multiplier = 50,
-		color = { 255, r, g, b }, -- alpha, r, g, b
-	}
-end
-OutlineSettings.templates.tb_judged_special = {
+-- Outline in the game's dangerous enemy color. With AccessibilityOptions, its own "Dangerous Enemy" color table is used
+-- instead: its add_outline hook then tracks these outlines and recolors them (presets, custom, rainbow).
+-- File locals, not OutlineSettings entries: outline_settings.lua reassigning those tables wiped them (nil index crash).
+local JUDGED_SPECIAL_DEFAULT_COLOR = {
+	pulsate = false,
+	pulse_multiplier = 50,
+	color = { 255, 227, 4, 4 }, -- alpha, r, g, b
+}
+local JUDGED_SPECIAL_OUTLINE = {
 	method = "ai_alive",
 	priority = 15,
-	outline_color = OutlineSettings.colors.tb_judged_special,
+	outline_color = JUDGED_SPECIAL_DEFAULT_COLOR,
 	flag = OutlineSettings.flags.non_wall_occluded,
 }
 
--- Force every currently-tagged special's outline to redraw
-local function refresh_judged_special_outlines()
-	local color_table = OutlineSettings.colors.tb_judged_special
-
-	for enemy_unit, data in pairs(marked_enemies) do
-		if ALIVE[enemy_unit] and data.outline_id then
-			local outline_extension = ScriptUnit.has_extension(enemy_unit, "outline_system")
-
-			if outline_extension then
-				outline_extension:update_outline({
-					outline_color = table.clone(color_table),
-				}, data.outline_id)
-			end
-		end
-	end
-end
-
--- Update outline color whenever AccessibilityOptions' Dangerous Enemy color changes.
-mod:add_all_mods_loaded_function(function()
-	local accessibility_options = get_mod("AccessibilityOptions")
-
-	if not accessibility_options then
-		return
-	end
-
-	accessibility_options:add_setting_changed_function(function ()
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-
-		refresh_judged_special_outlines()
-	end)
-end)
-
 -- Reveals/re-reveals every special within radius of position and applies Witch Hunt (+ Templar's Knowledge)
 local function apply_isjya_special_marks(attacker_unit, position, radius, has_templars_knowledge)
-	-- Re-sync from AccessibilityOptions here too (not just on setting-changed) so mark color is
-	-- correct the first time it's actually used, regardless of mod load order.
-	do
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-	end
+	JUDGED_SPECIAL_OUTLINE.outline_color = get_mod("AccessibilityOptions") and OutlineSettings.colors.accessibility_dangerous_enemy_marker or JUDGED_SPECIAL_DEFAULT_COLOR
 
 	local proximity_system = Managers.state.entity:system("proximity_system")
 	local t = Managers.time:time("game")
@@ -247,7 +189,7 @@ local function apply_isjya_special_marks(attacker_unit, position, radius, has_te
 					ping_extension:set_pinged(true, false, attacker_unit, false)
 
 					local outline_extension = ScriptUnit.has_extension(enemy_unit, "outline_system")
-					local outline_id = outline_extension and outline_extension:add_outline(OutlineSettings.templates.tb_judged_special)
+					local outline_id = outline_extension and outline_extension:add_outline(JUDGED_SPECIAL_OUTLINE)
 
 					marked_enemies[enemy_unit] = {
 						owner_unit = attacker_unit,
@@ -383,20 +325,6 @@ mod:add_ingame_hud_update_function(function (self)
 	end
 
 	local t = Managers.time:time("game")
-	local accessibility_options = get_mod("AccessibilityOptions")
-
-	-- Keep animating every frame while Dangerous Enemy is set to Rainbow. Fetched fresh here (not
-	-- from a cached file-scope local) since get_mod is cheap and this sidesteps any mod-load-order
-	-- assumptions entirely - see the on_all_mods_loaded registration above for why a cached
-	-- reference is risky.
-	if accessibility_options and accessibility_options:get("outline_dangerous_color_group") == "rainbow" then
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-
-		refresh_judged_special_outlines()
-	end
 
 	if t < next_mark_expiry_check_t then
 		return

@@ -16,43 +16,42 @@ local color_presets = require("scripts/mods/TourneyBalance/debugging/_color_pres
 
 ]]
 
-OutlineSettings.colors.tb_stagger_green = {
+-- File locals, not OutlineSettings.colors/templates entries: outline_settings.lua reassigns those tables whenever it
+-- runs again, which wipes added entries. Outlines take the settings table directly.
+local STAGGER_GREEN = {
 	pulsate = false,
 	pulse_multiplier = 50,
 	color = { 255, 0, 255, 0 }, -- alpha, r, g, b (green)
 }
-OutlineSettings.colors.tb_stagger_yellow = {
+local STAGGER_YELLOW = {
 	pulsate = false,
 	pulse_multiplier = 50,
 	color = { 255, 255, 255, 0 }, -- alpha, r, g, b (yellow)
 }
-OutlineSettings.colors.tb_stagger_red = {
+local STAGGER_RED = {
 	pulsate = false,
 	pulse_multiplier = 50,
 	color = { 255, 255, 0, 0 }, -- alpha, r, g, b (red)
 }
-OutlineSettings.templates.tb_stagger_1 = {
-	method = "ai_alive",
-	priority = 50,
-	outline_color = OutlineSettings.colors.tb_stagger_green,
-	flag = OutlineSettings.flags.non_wall_occluded,
-}
-OutlineSettings.templates.tb_stagger_2 = {
-	method = "ai_alive",
-	priority = 50,
-	outline_color = OutlineSettings.colors.tb_stagger_yellow,
-	flag = OutlineSettings.flags.non_wall_occluded,
-}
-OutlineSettings.templates.tb_stagger_3 = {
-	method = "ai_alive",
-	priority = 50,
-	outline_color = OutlineSettings.colors.tb_stagger_red,
-	flag = OutlineSettings.flags.non_wall_occluded,
-}
 local STAGGER_OUTLINE_TEMPLATES = {
-	[1] = OutlineSettings.templates.tb_stagger_1,
-	[2] = OutlineSettings.templates.tb_stagger_2,
-	[3] = OutlineSettings.templates.tb_stagger_3,
+	[1] = {
+		method = "ai_alive",
+		priority = 50,
+		outline_color = STAGGER_GREEN,
+		flag = OutlineSettings.flags.non_wall_occluded,
+	},
+	[2] = {
+		method = "ai_alive",
+		priority = 50,
+		outline_color = STAGGER_YELLOW,
+		flag = OutlineSettings.flags.non_wall_occluded,
+	},
+	[3] = {
+		method = "ai_alive",
+		priority = 50,
+		outline_color = STAGGER_RED,
+		flag = OutlineSettings.flags.non_wall_occluded,
+	},
 }
 
 local function get_stagger_state(total)
@@ -102,17 +101,17 @@ local outlined_units = {}
 -- Adjustable from Debugging -> Stagger State Visualizer -> Count 1/2/3+ in the mod menu
 local function apply_stagger_colors()
 	local r1, g1, b1 = color_presets.resolve_color("tb_stagger_count_1_color_group", "tb_stagger_count_1_color_r", "tb_stagger_count_1_color_g", "tb_stagger_count_1_color_b", 0, 255, 0)
-	local color_1 = OutlineSettings.colors.tb_stagger_green.color
+	local color_1 = STAGGER_GREEN.color
 
 	color_1[2], color_1[3], color_1[4] = r1, g1, b1
 
 	local r2, g2, b2 = color_presets.resolve_color("tb_stagger_count_2_color_group", "tb_stagger_count_2_color_r", "tb_stagger_count_2_color_g", "tb_stagger_count_2_color_b", 255, 255, 0)
-	local color_2 = OutlineSettings.colors.tb_stagger_yellow.color
+	local color_2 = STAGGER_YELLOW.color
 
 	color_2[2], color_2[3], color_2[4] = r2, g2, b2
 
 	local r3, g3, b3 = color_presets.resolve_color("tb_stagger_count_3_color_group", "tb_stagger_count_3_color_r", "tb_stagger_count_3_color_g", "tb_stagger_count_3_color_b", 255, 0, 0)
-	local color_3 = OutlineSettings.colors.tb_stagger_red.color
+	local color_3 = STAGGER_RED.color
 
 	color_3[2], color_3[3], color_3[4] = r3, g3, b3
 
