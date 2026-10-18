@@ -326,7 +326,7 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_bountyhunter_activat
 mod_api.update_talent("wh_bountyhunter", 6, 3, {
 	description_values = {},
 })
-mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Reduces the cooldown of Locked and Loaded by 60%. Each pellet causes massive stagger. Each enemy slain by Locked and Loaded adds an additional pellet to the next blast, up to 20.")
+mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Reduces the cooldown of Locked and Loaded by 60%. Each pellet causes massive stagger. Each enemy slain adds an additional pellet to the next blast, up to 20.")
 
 -- Massive stagger: both shotgun barrels fire with the Indiscriminate Blast pellet profile
 local INDISCRIMINATE_BLAST_PELLET_PROFILE = "tb_shot_shotgun_ability_blast"

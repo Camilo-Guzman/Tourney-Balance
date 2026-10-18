@@ -303,7 +303,7 @@ mod:hook(ActionChargedProjectileUtility, "fire_charged_projectile", function (fu
 	return result
 end)
 -- 5% engineer bomb drop on Survivalist drops: see bardin_ranger_scavenge_proc above
-mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Does not stack. Survivalist gains a 5%% chance to drop an engineer bomb.")
+mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Does not stack. Survivalist gains a 5% chance to drop an engineer bomb.")
 
 --[[
 	Exhilarating Vapours
