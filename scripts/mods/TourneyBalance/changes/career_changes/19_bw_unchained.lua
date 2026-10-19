@@ -22,7 +22,7 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		**Dissipate**
 		- Reduced overcharge vented from blocking to 50% (from 100%).
 
-		**Numb to Pain**
+		**Numb to Flames** (renamed from Numb to Pain)
 		- Now also grants a stack on any damage taken (from only venting).
 
 		**Enfeebling Flames**
@@ -37,6 +37,12 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 
 		**Natural Talent**
 		- Increased overcharge reduction to 20% (from 10%).
+
+		**Fuel for the Fire**
+		- Reduced power per stack to 3% (from 5%).
+
+		**Bomb Balm**
+		- Reduced temporary health restored to allies to 15 (from 30).
 
 	$END_TB
 ]]
@@ -432,8 +438,9 @@ mod:hook_origin(GenericStatusExtension, "add_fatigue_points", function (self, fa
 end)
 
 --[[
-	Numb to Pain
+	Numb to Flames (renamed from Numb to Pain)
 ]]
+mod_api.insert_text("sienna_unchained_reduced_damage_taken_after_venting_2", "Numb to Flames")
 -- Any damage taken, not only venting (server)
 mod_api.insert_proc_function("tb_sienna_unchained_add_buffs_on_damage_taken", function (owner_unit, buff, params)
 	if not ALIVE[owner_unit] then
@@ -487,4 +494,39 @@ mod_api.update_talent("bw_unchained", 5, 3, { -- update description
 	},
 })
 
+--[[
+	Fuel for the Fire
+]]
+mod_api.update_talent_buff_template("bright_wizard", "sienna_unchained_activated_ability_power_on_enemies_hit_buff", {
+	multiplier = 0.03, -- 0.05
+})
+mod_api.update_talent("bw_unchained", 6, 1, { -- update description
+	description_values = {
+		{
+			value_type = "percent",
+			value = 0.03, -- buff_tweak_data.sienna_unchained_activated_ability_power_on_enemies_hit_buff.multiplier
+		},
+		{
+			value = 15, -- buff_tweak_data.sienna_unchained_activated_ability_power_on_enemies_hit_buff.duration
+		},
+		{
+			value = 5, -- buff_tweak_data.sienna_unchained_activated_ability_power_on_enemies_hit_buff.max_stacks
+		},
+	},
+})
+
+--[[
+	Bomb Balm
+]]
+-- Temp health restored to everyone in range on Living Bomb, read through TalentUtils.get_talent_attribute
+mod_api.update_talent("bw_unchained", 6, 3, {
+	description_values = {
+		{
+			value = 15, -- 30
+		},
+	},
+	attributes = {
+		heal_amount = 15, -- 30
+	},
+})
 

@@ -27,11 +27,6 @@ local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/se
 		- Increased power to 10% (from 5%).
 		- Additionally increases melee power by 10%.
 
-		**Crusade**
-		- Additionally grants a chance to avoid damage from enemy hits equal to the movement speed bonus (5% per stack, up to 30%).
-		- Devotion's 30% movement speed after taking damage increases this chance by another 30% while active.
-		- Movement speed trinkets (5%) and speed potions (50%) also add to this chance, up to 100%.
-
 		**Holy Fortitude**
 		- Reduced healing received to 10% per stack (from 15%).
 
@@ -174,6 +169,8 @@ mod_api.insert_text("zealot_unbending_purpose_desc", "Increases power by 10.0% a
 --[[
     Crusade
 ]]
+-- Dodge mechanic disabled
+--[[
 -- Chance to avoid an enemy hit equal to the movement speed bonus from Crusade (5% per stack), Devotion (30%), movement speed trinket (5%), speed potion (50%), so 100% is reachable when stacked.
 local CRUSADE_TALENT = "victor_zealot_passive_move_speed"
 local CRUSADE_MOVE_SPEED_BUFF = "victor_zealot_passive_move_speed_buff"
@@ -292,6 +289,7 @@ mod_api.update_talent("wh_zealot", 4, 1, {
     description_values = {},
 })
 mod_api.insert_text("tb_victor_zealot_passive_move_speed_desc", "Each stack of Fiery Faith also increases movement speed by 5.0%. Chance to avoid damage based on movement speed bonus.")
+]]
 
 --[[
     Holy Fortitude
