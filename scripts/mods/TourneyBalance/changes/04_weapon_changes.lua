@@ -64,6 +64,8 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/wh_griffin
 	and only fill in a default where weapon_changes left a field unset. Reordering these
 	ahead of weapon_changes will silently break or overwrite its customizations.
 ]]
-mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup")
+-- The old version does not overwrite and causes NetworkLookup overflows much faster for DamageProfileTemplates
+-- mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup_old")
+mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup_overwrite")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_weapon_defaults_setup")
 

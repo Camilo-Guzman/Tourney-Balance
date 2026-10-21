@@ -22,4 +22,6 @@ blast_pellets.armor_modifier_near.impact = { 100, 100, 200, 0, 100, 100 } -- { 1
 blast_pellets.armor_modifier_far.impact = { 100, 100, 200, 0, 100, 100 } -- { 1, 0.5, 200, 0, 1, 0 }
 blast_pellets.default_target.power_distribution_near.impact = 100 -- 0.5
 blast_pellets.default_target.power_distribution_far.impact = 100 -- 0.25
+-- Infinite cleave: pellets pass through every enemy in line (armored and shield-blocked hits still stop them)
+blast_pellets.cleave_distribution = { attack = 200, impact = 200 } -- { attack = 0.3, impact = 0.3 }
 

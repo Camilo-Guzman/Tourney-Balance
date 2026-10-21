@@ -11,7 +11,7 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		### Passives
 		**Protective Presence**
-		- Aura radius increased to 20 (from 5).
+		- Aura radius increased to 10 (from 5).
 
 		**CDR on Damage Taken**
 		- Reduced ult cooldown gain on damage taken to 0.35 (from 0.5).
@@ -20,22 +20,24 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 		**Staggering Force**
 		- Stagger power decreased to 20% (from 35%).
 
-		**That's Bloody Teamwork!**
-		- Grants 3.33% damage reduction per nearby ally (up to 3).
-
 		**Crowd Clearer**
 		- Duration increased to 5s (from 3s).
 
 		**Rock of Reikland**
-		- Global team passive; allies keep it while the Foot Knight is dead. Shows a buff icon.
+		- Removes range limit for Protective Presence
 		- Increased block cost reduction to 30% (from 20%)
 		- Added 30% stamina recovery
-		- Added 10% damage reduction
+
+		**That's Bloody Teamwork!**
+		- Grants 3.33% damage reduction per nearby ally (up to 3).
+		- Range increased to 10 (from 5).
 
 		**Comrades in Arms**
+		- Range increased to 10 (from 5).
 		- Closest player mode (green outline).
-		- Guard select team mate mode (red outline with number); no range limit.
-		- Press weapon_inspect while blocking to cycle between modes and team mates.
+		- Guard select team mate mode (green outline with number).
+		- If the selected team mate leaves the range, the closest ally is guarded instead (red outline with number) until they return.
+		- Press weapon_inspect to cycle between modes and team mates.
 
 		**It's Hero Time**
 		- Added 15s internal cooldown.
@@ -90,7 +92,7 @@ end)
 ]]
 -- Increase aura range - Repeat for all lvl 20 talents, because game creates snapshot of original values at load time
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_passive", {
-	range = 20 -- 5
+	range = 10 -- 5
 })
 -- Nerf of aura damage reduction - Repeat for all lvl 20 talents, because game creates snapshot of original values at load time
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_passive_defence_aura", {
@@ -143,7 +145,7 @@ mod_api.insert_text("tb_markus_knight_rock_of_reikland_desc", "Protective Presen
 ]]
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_damage_taken_ally_proximity", {
 	buff_to_add = "markus_knight_damage_taken_ally_proximity_buff",
-	range = 20, -- 5
+	range = 10, -- 5
 	update_func = "activate_party_buff_stacks_on_ally_proximity", -- TODO: Check - Removed proc function, might break, replaced buff.range replaced w/ template.range
 	chunk_size = 1,
 	max_stacks = 3,
@@ -160,21 +162,23 @@ mod_api.insert_text("markus_knight_damage_taken_ally_proximity_desc_2", "Reduces
 --[[
 	Comrades in Arms - Adjustment from Passive
 
-	Weapon Inspect (action_inspect) while holding block cycles who receives Comrades in Arms:
+	Weapon Inspect (action_inspect) cycles who receives Comrades in Arms:
 	closest ally (vanilla) -> teammate 2 -> teammate 3 -> ... -> back to closest.
 	The Foot Knight himself is never a valid recipient in either mode.
-	Manual mode ignores range entirely (whoever is selected gets it regardless of distance)
+	Manual mode uses the same range as closest mode: while the selected teammate is out of range the closest
+	ally in range is guarded instead, and the selected teammate gets it back when they return.
 
 	Indicator (self-only, shown on the Knight's own buff bar):
 	  - Closest mode: no icon at all (the default).
-	  - Manual mode: tb_markus_knight_guard_mode_manual, debuff=true (red outline), stack count
-	    = the selected teammate's number (2..N, matching "players besides FK numbered from 2 to N").
+	  - Manual mode, target in range: tb_markus_knight_guard_mode_manual (green outline).
+	  - Manual mode, target out of range: tb_markus_knight_guard_mode_manual_out_of_range, debuff=true (red outline).
+	  Stack count = the selected teammate's number (2..N, matching "players besides FK numbered from 2 to N").
 ]]
 mod_api.update_talent("es_knight", 4, 3, { -- update description
 	description_values = {
 	},
 })
-mod_api.insert_text("markus_knight_guard_desc", "Kruber gains 10.0% increased power. The closest ally to Kruber gains 50.0% damage reduction and 10.0% increased power. Passive aura from Protective Presence no longer affects allies.\n\nUse weapon inspect while holding block to cycle between guarding a select team mate or the closest one.")
+mod_api.insert_text("markus_knight_guard_desc", "Kruber gains 10.0% increased power. The closest ally to Kruber gains 50.0% damage reduction and 10.0% increased power. Passive aura from Protective Presence no longer affects allies.\n\nUse weapon inspect to cycle between guarding a select team mate or the closest one. While the selected team mate is out of range, the closest ally is guarded instead.")
 
 -- owner_unit -> { mode = "closest" | "manual", index = N (1-based into teammate_indices), indicator_stack_ids }
 local comrades_in_arms_cycle = {}
@@ -219,9 +223,11 @@ local function tb_update_comrades_in_arms_indicator(owner_unit, state)
 	if state.mode == "manual" then
 		local desired_count = state.index + 1 -- teammates are numbered 2..N
 		local new_stack_ids = {}
+		-- Green while the selected teammate is in range, red while they're out of range and the closest ally is guarded instead
+		local indicator_buff = state.target_in_range == false and "tb_markus_knight_guard_mode_manual_out_of_range" or "tb_markus_knight_guard_mode_manual"
 
 		for _ = 1, desired_count do
-			new_stack_ids[#new_stack_ids + 1] = buff_system:add_buff(owner_unit, "tb_markus_knight_guard_mode_manual", owner_unit, true)
+			new_stack_ids[#new_stack_ids + 1] = buff_system:add_buff(owner_unit, indicator_buff, owner_unit, true)
 		end
 
 		state.indicator_stack_ids = new_stack_ids
@@ -245,6 +251,9 @@ mod_api.insert_buff_function("tb_cycle_comrades_in_arms_target", function (owner
 		state = { mode = "closest", index = 0 }
 		comrades_in_arms_cycle[owner_unit] = state
 	end
+
+	-- Assume the new pick is in range; the guard update corrects it on its next tick
+	state.target_in_range = true
 
 	if state.mode == "closest" then
 		state.mode = "manual"
@@ -272,6 +281,10 @@ mod_api.insert_buff_template("tb_markus_knight_guard_cycle_pulse", {
 })
 mod_api.insert_buff_template("tb_markus_knight_guard_mode_manual", {
 	max_stacks = 99, -- 4
+	icon = "markus_knight_passive_power_increase",
+})
+mod_api.insert_buff_template("tb_markus_knight_guard_mode_manual_out_of_range", {
+	max_stacks = 99, -- 4
 	debuff = true,
 	icon = "markus_knight_passive_power_increase",
 })
@@ -298,7 +311,8 @@ local function tb_announce_comrades_in_arms_target(owner_unit, t)
 		return
 	end
 
-	local count = buff_extension:num_buff_type("tb_markus_knight_guard_mode_manual")
+	-- Either indicator colour, so a range change alone doesn't print anything
+	local count = buff_extension:num_buff_type("tb_markus_knight_guard_mode_manual") + buff_extension:num_buff_type("tb_markus_knight_guard_mode_manual_out_of_range")
 
 	-- New unit (spawn/respawn/talent swap): take the current state silently.
 	if tb_guard_announced_unit ~= owner_unit then
@@ -363,14 +377,6 @@ mod:add_update_function(function (dt)
 
 	tb_announce_comrades_in_arms_target(owner_unit, t)
 
-	local status_extension = ScriptUnit.has_extension(owner_unit, "status_system")
-
-	if not status_extension or not status_extension:is_blocking() then
-		tb_action_inspect_was_pressed = false
-
-		return
-	end
-
 	local input_extension = ScriptUnit.extension(owner_unit, "input_system")
 	local is_pressed = input_extension:get("action_inspect")
 
@@ -429,6 +435,29 @@ mod_api.insert_buff_function("tb_activate_buff_on_selected_or_closest", function
 		return
 	end
 
+	local range = buff.range
+	local in_range = Vector3.distance_squared(POSITION_LOOKUP[owner_unit], POSITION_LOOKUP[target_unit]) < range * range
+
+	-- Both guard buffs run this with the same range, so only the first one to see the change refreshes the indicator
+	if in_range ~= state.target_in_range then
+		state.target_in_range = in_range
+
+		tb_update_comrades_in_arms_indicator(owner_unit, state)
+	end
+
+	-- Selected teammate out of range: guard the closest ally instead until they come back
+	if not in_range then
+		if current_unit == target_unit then
+			tb_remove_guard_buff(buff_system, current_unit, buff_to_add)
+
+			buff.current_unit = nil
+		end
+
+		BuffFunctionTemplates.functions.activate_buff_on_closest_distance(owner_unit, buff, params)
+
+		return
+	end
+
 	if current_unit and current_unit ~= target_unit then
 		tb_remove_guard_buff(buff_system, current_unit, buff_to_add)
 	end
@@ -452,7 +481,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_guard_defen
 	stat_buff = "damage_taken",
 	update_func = "tb_activate_buff_on_selected_or_closest",
 	remove_buff_func = "remove_aura_buff",
-	range = 20 -- 5
+	range = 10 -- 5
 })
 mod_api.update_talent_buff_template("empire_soldier", "markus_knight_guard", {
 	buff_to_add = "markus_knight_passive_power_increase_buff",
@@ -460,7 +489,7 @@ mod_api.update_talent_buff_template("empire_soldier", "markus_knight_guard", {
 	remove_buff_func = "remove_aura_buff",
 	icon = "markus_knight_passive_power_increase",
 	update_func = "tb_activate_buff_on_selected_or_closest",
-	range = 20 -- 5
+	range = 10 -- 5
 })
 
 --[[

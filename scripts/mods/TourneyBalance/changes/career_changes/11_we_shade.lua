@@ -47,6 +47,7 @@ local is_within_attack_target_cap = require("scripts/mods/TourneyBalance/_api/sh
 		**Blur** (moved from the passive, replaces Blood Drinker)
 		- Parrying an attack and quickly dodging grants Kerillian stealth for a short period.
 		- Increased parry window to 0.75s (from 0.5s).
+		- Keeps Blood Drinker's effect: critical hits reduce damage taken by 20% for 5s.
 
 		**Khaine's Counter** (new, replaces Spring-Heeled Assassin)
 		- Parrying an attack makes all melee attacks count as backstabs for 6s within the normal 0.5s parry window, scaling down to 3s at the end of Shade's extended 0.75s window.
@@ -445,15 +446,28 @@ mod_api.insert_text("kerillian_shade_backstabs_replenishes_ammunition_desc", "Ba
 --[[
 	Blur (moved from the passive, replaces Blood Drinker)
 ]]
--- Vanilla Blur, applied on both sides like the vanilla passive buff
+-- Vanilla Blur, applied on both sides like the vanilla passive buff, plus Blood Drinker's damage reduction on crit.
+-- Blood Drinker is a server talent in vanilla, but on_critical_hit procs on both the owner and the server here, so its
+-- trigger only adds the buff on the server (vanilla add_buff from the client would add it a second time via RPC)
+mod_api.insert_proc_function("tb_shade_add_buff_on_server", function (owner_unit, buff, params)
+	if Managers.state.network.is_server then
+		ProcFunctions.add_buff(owner_unit, buff, params)
+	end
+end)
+mod_api.insert_talent_buff_template("wood_elf", "tb_kerillian_shade_blur_damage_reduction_on_critical_hit", {
+	buff_func = "tb_shade_add_buff_on_server",
+	buff_to_add = "kerillian_shade_damage_reduction_on_critical_hit_buff", -- vanilla: 20% for 5s
+	event = "on_critical_hit",
+})
 mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
 	buffer = "both",
 	icon = "kerillian_shade_perk_blur",
 	buffs = {
 		"kerillian_shade_passive_stealth_parry",
+		"tb_kerillian_shade_blur_damage_reduction_on_critical_hit",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for 1.5 seconds.")
+mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for 1.5 seconds. Critical hits reduce damage taken by 20% for 5 seconds.")
 
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)

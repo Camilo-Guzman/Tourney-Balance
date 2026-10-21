@@ -22,7 +22,7 @@ local is_local = shared_utils.is_local
 		- Headshotting Witch-Hunted enemies extends the aura duration by 2s.
 
 		**Fervency**
-		- Increased duration to 9s (from 6s).
+		- Increased duration to 8s (from 6s).
 
 		**The Unending Hunt**
 		- Decreased crit chance granted to team to 15% (from 25%)
@@ -364,7 +364,7 @@ end)
 ]]
 -- Extend durationto 9s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
-	duration = 9, -- 6
+	duration = 8, -- 6
 	icon = "wh_6_2",
 })
 
@@ -397,7 +397,7 @@ mod_api.update_talent("wh_captain", 6, 2, {
 	},
 })
 ]]
-mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 10 seconds and the next 20 melee hits. No longer affects teammates and ranged attacks.")
+mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 8 seconds. No longer affects teammates and ranged attacks.")
 
 --[[
 	Unending Hunt
