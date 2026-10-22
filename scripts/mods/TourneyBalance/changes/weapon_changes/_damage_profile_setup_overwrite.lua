@@ -24,6 +24,8 @@
 
 local REPLACE_WHOLE_PROFILE = false
 
+-- NetworkLookup tables error on a missing key (metatable set in network_lookup.lua),
+-- so every read of a possibly-missing name or index below must go through rawget.
 local lookup = NetworkLookup.damage_profiles
 local max_entries = NetworkConstants.damage_profile.max
 
@@ -55,7 +57,7 @@ for name, template in pairs(NewDamageProfileTemplates) do
 		DamageProfileTemplates[name] = table.clone(template)
 	end
 
-	if not lookup[name] then
+	if not rawget(lookup, name) then
 		new_names[#new_names + 1] = name
 	end
 end
@@ -70,7 +72,7 @@ if overflow > 0 and DamageProfileNetworkSlotsToFree then
 			break
 		end
 
-		local index = lookup[name]
+		local index = rawget(lookup, name)
 
 		if index and not touched_names[name] then
 			free_indices[#free_indices + 1] = index
