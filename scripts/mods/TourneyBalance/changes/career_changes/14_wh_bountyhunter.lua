@@ -44,9 +44,8 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 		- Increased cooldown reduction to 80% (from 60%).
 
 		**Indiscriminate Blast**
-		- Increased cooldown reduction to 60% (from 25%).
-		- Every pellet causes massive (explosion) stagger, armored enemies included.
-		- Pellets have infinite cleave (stopped only by armor and shields).
+		- Every pellet has massively increased stagger and cleave.
+		- Pellets now penetrate armor and shields.
 	$END_TB
 ]]
 
@@ -319,7 +318,7 @@ mod_api.insert_text("victor_bountyhunter_activated_ability_railgun_desc_2", "Mod
 
 
 --[[
-	Indisctiminate blast cdr upped to 60%
+	Indisctiminate Blast
 ]]
 mod_api.update_talent_buff_template("witch_hunter", "victor_bountyhunter_activated_ability_blast_shotgun", {
     multiplier = -0.25, -- -0.25
@@ -327,7 +326,7 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_bountyhunter_activat
 mod_api.update_talent("wh_bountyhunter", 6, 3, {
 	description_values = {},
 })
-mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Modifies Victor's sidearm to fire two blasts of shield-penetrating pellets with massive stagger and cleave. Each kill increases the pellets in the next blast, to a max of 20. Victor also gains 25% cooldown reduction.")
+mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Modifies Victor's sidearm to fire two blasts of penetrating pellets with massive stagger. Each kill increases the pellets in the next blast, to a max of 20. Victor also gains 25% cooldown reduction.")
 
 -- Massive stagger: both shotgun barrels fire with the Indiscriminate Blast pellet profile
 local INDISCRIMINATE_BLAST_PELLET_PROFILE = "tb_shot_shotgun_ability_blast"
@@ -347,5 +346,109 @@ mod:hook(ActionCareerWHBountyhunter, "client_owner_start_action", function (func
 	end
 
 	return func(self, new_action, ...)
+end)
+
+-- Pellets also pass through armored and shielded enemies
+local RAYCAST_INDEX_ACTOR = 4
+local tb_blast_remaining_hits = {}
+local tb_blast_processed_units = {}
+
+-- The unit a raycast hit counts as, with shield hits redirected to the shield's owner like ActionUtils.redirect_shield_hit
+local function tb_blast_hit_unit(hit)
+	local actor = hit[RAYCAST_INDEX_ACTOR]
+	local unit = actor and Actor.unit(actor)
+
+	if not unit or not Unit.alive(unit) then
+		return nil
+	end
+
+	local shield_owner_unit = Unit.get_data(unit, "shield_owner_unit")
+
+	return HEALTH_ALIVE[shield_owner_unit] and shield_owner_unit or unit
+end
+
+mod:hook(DamageUtils, "process_projectile_hit", function (func, world, damage_source, owner_unit, is_server, raycast_result, current_action, direction, check_buffs, target, ignore_list, ...)
+	local hit_data = func(world, damage_source, owner_unit, is_server, raycast_result, current_action, direction, check_buffs, target, ignore_list, ...)
+
+	if not hit_data.stop or not current_action or current_action.damage_profile ~= INDISCRIMINATE_BLAST_PELLET_PROFILE then
+		return hit_data
+	end
+
+	-- raycast_result belongs to the caller (it reads the last hit for the bullet trail), so work on a copy
+	local remaining = tb_blast_remaining_hits
+	local processed = tb_blast_processed_units
+	local num_remaining = #raycast_result
+
+	table.clear(remaining)
+	table.clear(processed)
+
+	for i = 1, num_remaining do
+		remaining[i] = raycast_result[i]
+	end
+
+	local buffs_checked = hit_data.buffs_checked
+	local blocked_by_unit = hit_data.blocked_by_unit
+
+	while hit_data.stop do
+		local stopped_unit = hit_data.hit_unit
+
+		-- Only continue past enemies (not walls, props or players)
+		if not stopped_unit or not ScriptUnit.has_extension(stopped_unit, "ai_system") then
+			break
+		end
+
+		-- Every unit up to the enemy it stopped on was already handled by that call
+		local stop_index
+
+		for i = 1, num_remaining do
+			local unit = tb_blast_hit_unit(remaining[i])
+
+			if unit then
+				processed[unit] = true
+			end
+
+			if unit == stopped_unit then
+				stop_index = i
+
+				break
+			end
+		end
+
+		if not stop_index then
+			break
+		end
+
+		-- Compact in place, dropping the handled part and any other hitbox of an already handled unit
+		local num_kept = 0
+
+		for i = stop_index + 1, num_remaining do
+			local hit = remaining[i]
+			local unit = tb_blast_hit_unit(hit)
+
+			if not unit or not processed[unit] then
+				num_kept = num_kept + 1
+				remaining[num_kept] = hit
+			end
+		end
+
+		for i = num_kept + 1, num_remaining do
+			remaining[i] = nil
+		end
+
+		num_remaining = num_kept
+
+		if num_remaining == 0 then
+			break
+		end
+
+		hit_data = func(world, damage_source, owner_unit, is_server, remaining, current_action, direction, check_buffs and not buffs_checked, target, ignore_list, ...)
+		buffs_checked = buffs_checked or hit_data.buffs_checked
+		blocked_by_unit = blocked_by_unit or hit_data.blocked_by_unit
+	end
+
+	hit_data.buffs_checked = buffs_checked
+	hit_data.blocked_by_unit = blocked_by_unit
+
+	return hit_data
 end)
 
