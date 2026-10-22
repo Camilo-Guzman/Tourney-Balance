@@ -327,7 +327,7 @@ mod_api.update_talent_buff_template("witch_hunter", "victor_bountyhunter_activat
 mod_api.update_talent("wh_bountyhunter", 6, 3, {
 	description_values = {},
 })
-mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Modifies Victor's sidearm to fire two blasts of shield-penetrating pellets with massive stagger and infinite cleave. Each kill increases the pellets in the next blast, to a max of 20. Victor also gains 25% cooldown reduction.")
+mod_api.insert_text("victor_bountyhunter_activated_ability_blast_shotgun_desc", "Modifies Victor's sidearm to fire two blasts of shield-penetrating pellets with massive stagger and cleave. Each kill increases the pellets in the next blast, to a max of 20. Victor also gains 25% cooldown reduction.")
 
 -- Massive stagger: both shotgun barrels fire with the Indiscriminate Blast pellet profile
 local INDISCRIMINATE_BLAST_PELLET_PROFILE = "tb_shot_shotgun_ability_blast"
