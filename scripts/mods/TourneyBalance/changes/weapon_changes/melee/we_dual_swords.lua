@@ -403,8 +403,8 @@ NewDamageProfileTemplates.tb_dual_swords_heavy_1 = {
 	},
 	charge_value = "heavy_attack",
 	cleave_distribution = {
-		attack = 0.225, -- 0.45,
-		impact = 0.2 -- 0.4
+		attack = 0.45, -- 0.45, 0.225
+		impact = 0.4 -- 0.4, 0.2
 	},
 	default_target = {
 		boost_curve_type = "linesman_curve",
@@ -497,8 +497,8 @@ NewDamageProfileTemplates.tb_dual_swords_heavy_2 = {
 	},
 	charge_value = "heavy_attack",
 	cleave_distribution = {
-		attack = 0.225, -- 0.45,
-		impact = 0.2 -- 0.4
+		attack = 0.45, -- 0.45, 0.225
+		impact = 0.4 -- 0.4, 0.2
 	},
 	default_target = {
 		boost_curve_type = "linesman_curve",
