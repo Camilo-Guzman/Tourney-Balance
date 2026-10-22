@@ -15,8 +15,10 @@
         share, changing every other profile that uses the same template.
       * "_no_damage" variants are rebuilt for every profile this run touched. The original
         only creates missing ones, so an overridden profile keeps a stale variant.
-      * Optional: if new names would push past the network limit, frees unused slots from
-        DamageProfileNetworkSlotsToFree (a global list of profile names, set before this runs).
+      * If new names would push past the network limit, frees unused slots: from
+        DamageProfileNetworkSlotsToFree (a global list of profile names, set before this runs),
+        or, when that is unset, from the versus-only "*_vs_no_damage" profiles (this breaks
+        nothing in adventure mode, but those profiles are gone in versus). Logs what it does.
 
     Set REPLACE_WHOLE_PROFILE to true if an override should replace the profile outright
     rather than only change the fields it lists.
@@ -27,7 +29,22 @@ local REPLACE_WHOLE_PROFILE = false
 -- NetworkLookup tables error on a missing key (metatable set in network_lookup.lua),
 -- so every read of a possibly-missing name or index below must go through rawget.
 local lookup = NetworkLookup.damage_profiles
-local max_entries = NetworkConstants.damage_profile.max
+
+-- Mods load during boot, before network_constants.lua defines NetworkConstants, so ask the
+-- engine for the limit directly and only fall back to the known value if that fails.
+local max_entries = 1024
+local network_constants = rawget(_G, "NetworkConstants")
+local network_api = rawget(_G, "Network")
+
+if network_constants and network_constants.damage_profile then
+	max_entries = network_constants.damage_profile.max
+elseif network_api and network_api.type_info then
+	local ok, info = pcall(network_api.type_info, "damage_profile")
+
+	if ok and info and info.max then
+		max_entries = info.max
+	end
+end
 
 -- Highest used index, found without # in case freed slots left holes.
 local top = 0
@@ -66,8 +83,26 @@ end
 local free_indices = {}
 local overflow = top + #new_names - max_entries
 
-if overflow > 0 and DamageProfileNetworkSlotsToFree then
-	for _, name in ipairs(DamageProfileNetworkSlotsToFree) do
+printf("[TB damage profiles] lookup top=%d, new names=%d, max=%d, overflow=%d", top, #new_names, max_entries, overflow)
+
+if overflow > 0 then
+	local candidates = DamageProfileNetworkSlotsToFree
+
+	if not candidates then
+		-- Default: the versus-only "<profile>_vs_no_damage" variants nothing in adventure
+		-- mode uses (Class Balance frees the same kind of entries). Sorted for a stable order.
+		candidates = {}
+
+		for key in pairs(lookup) do
+			if type(key) == "string" and key:sub(-("_vs_no_damage"):len()) == "_vs_no_damage" then
+				candidates[#candidates + 1] = key
+			end
+		end
+
+		table.sort(candidates)
+	end
+
+	for _, name in ipairs(candidates) do
 		if overflow <= 0 then
 			break
 		end
@@ -79,6 +114,8 @@ if overflow > 0 and DamageProfileNetworkSlotsToFree then
 			lookup[index] = nil
 			lookup[name] = nil
 			overflow = overflow - 1
+
+			printf("[TB damage profiles] freed network slot %d (%s)", index, name)
 		end
 	end
 end
