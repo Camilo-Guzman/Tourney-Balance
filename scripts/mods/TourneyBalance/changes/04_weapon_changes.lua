@@ -47,7 +47,7 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/bw_firebal
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/bw_soulstealer")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/crossbows")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/dr_pistol")
---mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/dr_throwing_axes")
+mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/dr_throwing_axes")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/dr_trollhammer")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/es_manbow")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/we_hagbane")
@@ -64,6 +64,8 @@ mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/ranged/wh_griffin
 	and only fill in a default where weapon_changes left a field unset. Reordering these
 	ahead of weapon_changes will silently break or overwrite its customizations.
 ]]
-mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup")
+-- The old version does not overwrite and causes NetworkLookup overflows much faster for DamageProfileTemplates
+-- mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup_old")
+mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_damage_profile_setup_overwrite")
 mod:dofile("scripts/mods/TourneyBalance/changes/weapon_changes/_weapon_defaults_setup")
 

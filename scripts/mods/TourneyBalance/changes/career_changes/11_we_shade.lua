@@ -467,7 +467,7 @@ mod_api.insert_talent("we_shade", 5, 1, "tb_kerillian_shade_blur", {
 		"tb_kerillian_shade_blur_damage_reduction_on_critical_hit",
 	},
 })
-mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for a short period. Critical hits reduce damage taken by 20% for 5 seconds.")
+mod_api.insert_talent_text("tb_kerillian_shade_blur", "Blur", "Parrying an attack and quickly dodging grants Kerillian stealth for 1.5 seconds. Critical hits reduce damage taken by 20% for 5 seconds.")
 
 --[[
 	Khaine's Counter (new, replaces Spring-Heeled Assassin, keeping its icon in that slot)

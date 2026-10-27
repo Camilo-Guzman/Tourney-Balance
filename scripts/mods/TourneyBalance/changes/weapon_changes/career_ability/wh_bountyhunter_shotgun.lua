@@ -10,3 +10,18 @@ DamageProfileTemplates.shot_shotgun_ability.armor_modifier_near.impact = { 1, 0.
 DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.attack = { 1, 0, 0.2, 0, 1, 0 }
 DamageProfileTemplates.shot_shotgun_ability.armor_modifier_far.impact = { 1, 0.5, 200, 0, 1, 0 }
 
+--[[
+    Indiscriminate Blast pellets: massive (explosion) stagger on every pellet
+]]
+NewDamageProfileTemplates.tb_shot_shotgun_ability_blast = table.clone(DamageProfileTemplates.shot_shotgun_ability)
+
+local blast_pellets = NewDamageProfileTemplates.tb_shot_shotgun_ability_blast
+
+blast_pellets.critical_strike.impact_armor_power_modifer = { 100, 100, 200, 0, 100, 100 } -- { 1, 0.5, 200, 0, 1, 0.05 }
+blast_pellets.armor_modifier_near.impact = { 100, 100, 200, 0, 100, 100 } -- { 1, 0.5, 200, 0, 1, 0 }
+blast_pellets.armor_modifier_far.impact = { 100, 100, 200, 0, 100, 100 } -- { 1, 0.5, 200, 0, 1, 0 }
+blast_pellets.default_target.power_distribution_near.impact = 100 -- 0.5
+blast_pellets.default_target.power_distribution_far.impact = 100 -- 0.25
+-- Infinite cleave: pellets pass through every enemy in line (armored and shielded enemies via the process_projectile_hit hook in 14_wh_bountyhunter.lua)
+blast_pellets.cleave_distribution = { attack = 100, impact = 100 } -- { attack = 0.3, impact = 0.3 }
+

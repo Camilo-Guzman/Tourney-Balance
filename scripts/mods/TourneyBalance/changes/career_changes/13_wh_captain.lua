@@ -18,12 +18,11 @@ local is_local = shared_utils.is_local
 		- Elites and specials take 25% more direct damage from Saltzpyre.
 
 		**I Shall Judge You All**
-		- Creates and aura that continuously applies Witch Hunt and reveals all specials within Animosity's range.
+		- Creates and aura that applies Witch Hunt within Animosity's range every second.
 		- Headshotting Witch-Hunted enemies extends the aura duration by 2s.
 
 		**Fervency**
-		- Increased duration to 10s (from 6s).
-		- Added ult makes first 20 hits guaranteed melee crits.
+		- Increased duration to 8s (from 6s).
 
 		**The Unending Hunt**
 		- Decreased crit chance granted to team to 15% (from 25%)
@@ -145,88 +144,33 @@ mod_api.update_talent("wh_captain", 6, 1, {
 		"tb_isjya_refresh_animosity_on_headshot",
 	},
 })
-mod_api.insert_text("victor_captain_activated_ability_stagger_ping_debuff_desc", "Animosity also grants an aura applying Witch Hunt and marking all enemies. Headshotting Witch-Hunted enemies extends the aura duration by 2 seconds.")
+mod_api.insert_text("victor_captain_activated_ability_stagger_ping_debuff_desc", "Applies Witch Hunt to enemies within range of Animosity every second. Headshotting Witch-Hunted enemies extends this effect by 2 seconds.")
 
 --[[ Ping Specials within ult radius on WHC ISJYA ULT ]]
 local PING_DURATION = 15
+-- Special reveal/outline disabled
+--[[
 local marked_enemies = {}
 
--- Mirrors AccessibilityOptions' "Dangerous Enemy" outline color exactly
--- isn't installed/enabled.
-local function get_dangerous_enemy_color()
-	local accessibility_options = get_mod("AccessibilityOptions")
-	local marker_color = accessibility_options and OutlineSettings.colors.accessibility_dangerous_enemy_marker
-
-	if not marker_color then
-		return 227, 4, 4
-	end
-
-	local color = marker_color.color
-
-	return color[2], color[3], color[4]
-end
-
-do
-	local r, g, b = get_dangerous_enemy_color()
-
-	OutlineSettings.colors.tb_judged_special = {
-		pulsate = false,
-		pulse_multiplier = 50,
-		color = { 255, r, g, b }, -- alpha, r, g, b
-	}
-end
-OutlineSettings.templates.tb_judged_special = {
+-- Outline in the game's dangerous enemy color. With AccessibilityOptions, its own "Dangerous Enemy" color table is used
+-- instead: its add_outline hook then tracks these outlines and recolors them (presets, custom, rainbow).
+-- File locals, not OutlineSettings entries: outline_settings.lua reassigning those tables wiped them (nil index crash).
+local JUDGED_SPECIAL_DEFAULT_COLOR = {
+	pulsate = false,
+	pulse_multiplier = 50,
+	color = { 255, 227, 4, 4 }, -- alpha, r, g, b
+}
+local JUDGED_SPECIAL_OUTLINE = {
 	method = "ai_alive",
 	priority = 15,
-	outline_color = OutlineSettings.colors.tb_judged_special,
+	outline_color = JUDGED_SPECIAL_DEFAULT_COLOR,
 	flag = OutlineSettings.flags.non_wall_occluded,
 }
+]]
 
--- Force every currently-tagged special's outline to redraw
-local function refresh_judged_special_outlines()
-	local color_table = OutlineSettings.colors.tb_judged_special
-
-	for enemy_unit, data in pairs(marked_enemies) do
-		if ALIVE[enemy_unit] and data.outline_id then
-			local outline_extension = ScriptUnit.has_extension(enemy_unit, "outline_system")
-
-			if outline_extension then
-				outline_extension:update_outline({
-					outline_color = table.clone(color_table),
-				}, data.outline_id)
-			end
-		end
-	end
-end
-
--- Update outline color whenever AccessibilityOptions' Dangerous Enemy color changes.
-mod:add_all_mods_loaded_function(function()
-	local accessibility_options = get_mod("AccessibilityOptions")
-
-	if not accessibility_options then
-		return
-	end
-
-	accessibility_options:add_setting_changed_function(function ()
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-
-		refresh_judged_special_outlines()
-	end)
-end)
-
--- Reveals/re-reveals every special within radius of position and applies Witch Hunt (+ Templar's Knowledge)
+-- Applies Witch Hunt (+ Templar's Knowledge) to every special within radius of position (reveal/outline disabled)
 local function apply_isjya_special_marks(attacker_unit, position, radius, has_templars_knowledge)
-	-- Re-sync from AccessibilityOptions here too (not just on setting-changed) so mark color is
-	-- correct the first time it's actually used, regardless of mod load order.
-	do
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-	end
+	-- JUDGED_SPECIAL_OUTLINE.outline_color = get_mod("AccessibilityOptions") and OutlineSettings.colors.accessibility_dangerous_enemy_marker or JUDGED_SPECIAL_DEFAULT_COLOR
 
 	local proximity_system = Managers.state.entity:system("proximity_system")
 	local t = Managers.time:time("game")
@@ -238,6 +182,7 @@ local function apply_isjya_special_marks(attacker_unit, position, radius, has_te
 		local enemy_position = is_special and POSITION_LOOKUP[enemy_unit]
 
 		if ALIVE[enemy_unit] and enemy_position and Vector3.distance_squared(position, enemy_position) <= radius_sq then
+			--[[
 			if marked_enemies[enemy_unit] then
 				marked_enemies[enemy_unit].expire_t = t + PING_DURATION
 			else
@@ -247,7 +192,7 @@ local function apply_isjya_special_marks(attacker_unit, position, radius, has_te
 					ping_extension:set_pinged(true, false, attacker_unit, false)
 
 					local outline_extension = ScriptUnit.has_extension(enemy_unit, "outline_system")
-					local outline_id = outline_extension and outline_extension:add_outline(OutlineSettings.templates.tb_judged_special)
+					local outline_id = outline_extension and outline_extension:add_outline(JUDGED_SPECIAL_OUTLINE)
 
 					marked_enemies[enemy_unit] = {
 						owner_unit = attacker_unit,
@@ -256,6 +201,7 @@ local function apply_isjya_special_marks(attacker_unit, position, radius, has_te
 					}
 				end
 			end
+			]]
 
 			if Managers.state.network.is_server then
 				local buff_system = Managers.state.entity:system("buff_system")
@@ -318,14 +264,12 @@ mod_api.insert_buff_function("tb_isjya_aura_pulse", function (unit, buff, params
 	apply_isjya_radius_debuff(unit, position, buff.range, has_templars_knowledge)
 end)
 local ISJYA_AURA_DURATION = 6
--- talent icon got renamed during geheimnisnacht 2026
-local ISJYA_ICON = TalentUtils.get_talent("witch_hunter", "victor_captain_activated_ability_stagger_ping_debuff").icon
 mod_api.insert_talent_buff_template("witch_hunter", "tb_isjya_aura", {
-	icon = ISJYA_ICON,
+	icon = "wh_6_1",
 	duration = ISJYA_AURA_DURATION,
 	range = 10, -- Animosity's explosion radius
 	update_func = "tb_isjya_aura_pulse",
-	update_frequency = 3,
+	update_frequency = 1,
 })
 
 -- Register outline colors
@@ -376,7 +320,8 @@ mod:add_create_explosion_wrapper(function (func, ...)
 	return result
 end)
 
--- Clean up expired outlines
+-- Clean up expired outlines (disabled with the special reveal/outline)
+--[[
 local MARK_EXPIRY_CHECK_INTERVAL = 1
 local next_mark_expiry_check_t = 0
 mod:add_ingame_hud_update_function(function (self)
@@ -385,20 +330,6 @@ mod:add_ingame_hud_update_function(function (self)
 	end
 
 	local t = Managers.time:time("game")
-	local accessibility_options = get_mod("AccessibilityOptions")
-
-	-- Keep animating every frame while Dangerous Enemy is set to Rainbow. Fetched fresh here (not
-	-- from a cached file-scope local) since get_mod is cheap and this sidesteps any mod-load-order
-	-- assumptions entirely - see the on_all_mods_loaded registration above for why a cached
-	-- reference is risky.
-	if accessibility_options and accessibility_options:get("outline_dangerous_color_group") == "rainbow" then
-		local color = OutlineSettings.colors.tb_judged_special.color
-		local r, g, b = get_dangerous_enemy_color()
-
-		color[2], color[3], color[4] = r, g, b
-
-		refresh_judged_special_outlines()
-	end
 
 	if t < next_mark_expiry_check_t then
 		return
@@ -426,22 +357,21 @@ mod:add_ingame_hud_update_function(function (self)
 		end
 	end
 end)
+]]
 
 --[[
 	Fervency
 ]]
--- talent icon got renamed during geheimnisnacht 2026
-local FERVENCY_ICON = TalentUtils.get_talent("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff").icon
-
--- Extend durationto 10s
+-- Extend durationto 9s
 mod_api.update_talent_buff_template("witch_hunter", "victor_witchhunter_activated_ability_guaranteed_crit_self_buff", {
-	duration = 10, -- 6
-	icon = FERVENCY_ICON,
+	duration = 8, -- 6
+	icon = "wh_6_2",
 })
 
--- Additionall 20 stacks of guaranteed melee crit hits on ult use
+--[[
+-- Additional 20 stacks of guaranteed melee crit hits on ult use
 mod_api.insert_talent_buff_template("witch_hunter", "tb_fervency_crit_stacks", { -- 20 stacks of melee crits buff
-	icon = FERVENCY_ICON,
+	icon = "wh_6_2",
 	stat_buff = "critical_strike_chance_melee",
 	bonus = 1,
 	max_stacks = 20,
@@ -466,7 +396,8 @@ mod_api.update_talent("wh_captain", 6, 2, {
 		"tb_fervency_stack_consumer"
 	},
 })
-mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 10 seconds and the next 20 melee hits. No longer affects teammates and ranged attacks.")
+]]
+mod_api.insert_text("victor_witchhunter_activated_ability_guaranteed_crit_self_buff_desc", "Animosity grants Victor guaranteed melee critical strikes for 8 seconds. No longer affects teammates and ranged attacks.")
 
 --[[
 	Unending Hunt
@@ -496,7 +427,7 @@ do
 	-- Distinct name so num_buff_type/max_stacks don't collide with the vanilla sub-buff
 	local unending_hunt_sub_buff = table.clone(vanilla_sub_buff)
 	unending_hunt_sub_buff.name = "tb_unending_hunt_crit_buff"
-	unending_hunt_sub_buff.bonus = 0.15 -- 0.25
+	unending_hunt_sub_buff.bonus = 0.1 -- 0.25
 	unending_hunt_sub_buff.apply_condition = function (unit, template, params)
 		return is_unending_hunt_ally(unit, params)
 	end
@@ -508,5 +439,5 @@ mod_api.update_talent("wh_captain", 6, 3, {
 	description = "victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc",
 	description_values = {},
 })
-mod_api.insert_text("victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc", "Hitting at least 10 enemies with Animosity refunds 40.0% of its cooldown. Critical strike chance bonus for allies is reduced to 15.0%.")
+mod_api.insert_text("victor_witchhunter_activated_ability_refund_cooldown_on_enemies_hit_desc", "Hitting at least 10 enemies with Animosity refunds 40.0% of its cooldown. Critical hit chance bonus for allies is reduced to 10.0%.")
 

@@ -41,8 +41,9 @@ local random_utils = require("scripts/mods/TourneyBalance/_api/random_utils")
 		- Added 30% cooldown reduction.
 
 		**Ranger's Parting Gift**
+		- Free bomb buff can stack 3 times.
 		- Free bomb only applies to engineer bombs.
-		- Added pseudo-random 5% chance to drop engineer bombs with every Survivalist drop (bag size 100 with 5 winning tickets).
+		- Added pseudo-random 12% chance to drop engineer bombs with every Survivalist drop (bag size 100 with 12 winning tickets).
 	$END_TB
 ]]
 
@@ -74,7 +75,6 @@ mod_api.insert_proc_function("bardin_ranger_scavenge_proc", function (owner_unit
 
 	local offset_position_1 = Vector3(0, 0.25, 0)
 	local offset_position_2 = Vector3(0, -0.25, 0)
-	local offset_position_3 = Vector3(0.25, 0, 0)
 
 	if ALIVE[owner_unit] then
 		local drop_chance = buff.template.drop_chance
@@ -86,12 +86,10 @@ mod_api.insert_proc_function("bardin_ranger_scavenge_proc", function (owner_unit
 			local raycast_down = true
 			local pickup_system = Managers.state.entity:system("pickup_system")
 
-			-- Ranger's Parting Gift: 5% chance for engineer bomb
-			if talent_extension:has_talent("bardin_ranger_ability_free_grenade") and random_utils.roll_virtual_bag(bomb_bag_state, 100, 5) then
-				pickup_system:buff_spawn_pickup("engineer_grenade_t1", player_pos + offset_position_3, raycast_down)
-			end
-
-			if talent_extension:has_talent("bardin_ranger_passive_spawn_potions_or_bombs") then
+			-- Ranger's Parting Gift: 12% chance for engineer bomb
+			if talent_extension:has_talent("bardin_ranger_ability_free_grenade") and random_utils.roll_virtual_bag(bomb_bag_state, 100, 12) then
+				pickup_system:buff_spawn_pickup("engineer_grenade_t1", player_pos, raycast_down)
+			elseif talent_extension:has_talent("bardin_ranger_passive_spawn_potions_or_bombs") then
 				-- 6% chance for random potion
 				if random_utils.roll_virtual_bag(potion_spawn_bag_state, 50, 3) then
 					pickup_system:buff_spawn_pickup(draw_ranger_potion(), player_pos, raycast_down)
@@ -259,53 +257,6 @@ mod_api.update_talent("dr_ranger", 5, 2, {
 mod_api.insert_text("bardin_ranger_reduced_damage_taken_headshot_desc_2", "Bardin takes 20.0% less damage from behind. Whenever he scores a headshots, this bonus applies to all damage taken for 7 seconds.")
 
 --[[
-	Parting Gift
-]]
--- Remove free grenade perk
-mod_api.update_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_grenade_buff", {
-	perks = {},
-})
--- Free engineer grenade
-mod:hook(ActionChargedProjectileUtility, "fire_charged_projectile", function (func, projectile_context, ...)
-	if not (projectile_context.is_grenade and not projectile_context.grenade_thrown) then
-		return func(projectile_context, ...)
-	end
-
-	local buff_extension = projectile_context.buff_extension
-
-	if not buff_extension:get_non_stacking_buff("bardin_ranger_ability_free_grenade_buff") then
-		return func(projectile_context, ...)
-	end
-
-	-- item_name is the ItemMasterList key ("grenade_engineer")
-	-- not the pickup/weapon template name ("engineer_grenade_t1")
-	local is_engineer_bomb = projectile_context.item_name == "grenade_engineer"
-	local real_has_buff_perk = buff_extension.has_buff_perk
-
-	buff_extension.has_buff_perk = function (self, perk_name)
-		if perk_name == "free_grenade" and is_engineer_bomb then
-			return true
-		end
-
-		return real_has_buff_perk(self, perk_name)
-	end
-
-	-- Forwards errors in hooked function, and its return value (trigger_wield) - dropping
-	-- the latter was why the weapon never rewielded after a free throw.
-	local ok, result = pcall(func, projectile_context, ...)
-
-	buff_extension.has_buff_perk = real_has_buff_perk
-
-	if not ok then
-		error(result, 0)
-	end
-
-	return result
-end)
--- 5% engineer bomb drop on Survivalist drops: see bardin_ranger_scavenge_proc above
-mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Does not stack. Survivalist gains a 5%% chance to drop an engineer bomb.")
-
---[[
 	Exhilarating Vapours
 ]]
 -- Fix: Increased thp gain by stepping in and out of the smoke repeatedly.
@@ -352,3 +303,62 @@ mod_api.update_talent_buff_template("dwarf_ranger", "bardin_ranger_activated_abi
 })
 mod_api.insert_text("bardin_ranger_activated_ability_stealth_outside_of_smoke_desc", "Disengage's stealth does not break on moving beyond the smoke cloud. Reduces the cooldown of Disengage by 30%.")
 
+--[[
+	Ranger's Parting Gift
+]]
+-- Each Disengage adds a stack. Every stack procs on the same grenade use (and remove_on_proc would drop them all),
+-- so only the first one in a trigger succeeds: trigger_procs passes the same params table to all of them.
+mod_api.insert_proc_function("tb_ranger_free_grenade_consume_one_stack", function (owner_unit, buff, params)
+	if params.tb_free_grenade_consumed then
+		return false
+	end
+
+	params.tb_free_grenade_consumed = true
+
+	return true
+end)
+-- Remove free grenade perk
+mod_api.update_talent_buff_template("dwarf_ranger", "bardin_ranger_ability_free_grenade_buff", {
+	perks = {},
+	max_stacks = 3, -- 1
+	buff_func = "tb_ranger_free_grenade_consume_one_stack",
+})
+-- Free engineer grenade
+mod:hook(ActionChargedProjectileUtility, "fire_charged_projectile", function (func, projectile_context, ...)
+	if not (projectile_context.is_grenade and not projectile_context.grenade_thrown) then
+		return func(projectile_context, ...)
+	end
+
+	local buff_extension = projectile_context.buff_extension
+
+	if not buff_extension:has_buff_type("bardin_ranger_ability_free_grenade_buff") then
+		return func(projectile_context, ...)
+	end
+
+	-- item_name is the ItemMasterList key ("grenade_engineer")
+	-- not the pickup/weapon template name ("engineer_grenade_t1")
+	local is_engineer_bomb = projectile_context.item_name == "grenade_engineer"
+	local real_has_buff_perk = buff_extension.has_buff_perk
+
+	buff_extension.has_buff_perk = function (self, perk_name)
+		if perk_name == "free_grenade" and is_engineer_bomb then
+			return true
+		end
+
+		return real_has_buff_perk(self, perk_name)
+	end
+
+	-- Forwards errors in hooked function, and its return value (trigger_wield) - dropping
+	-- the latter was why the weapon never rewielded after a free throw.
+	local ok, result = pcall(func, projectile_context, ...)
+
+	buff_extension.has_buff_perk = real_has_buff_perk
+
+	if not ok then
+		error(result, 0)
+	end
+
+	return result
+end)
+-- 12% engineer bomb drop on Survivalist drops: see bardin_ranger_scavenge_proc above
+mod_api.insert_text("bardin_ranger_ability_free_grenade_desc", "Activating Disengage causes the next engineer bomb Bardin throws to not be consumed. Max 3 stacks. Survivalist gains a 12% chance to drop an engineer bomb.")
