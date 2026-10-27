@@ -1,8 +1,8 @@
 local mod = get_mod("TourneyBalance")
 
 --[[ Open Beta ]]
-Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
-Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_02.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+--Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_01.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
+--Weapons.two_handed_hammer_priest_template.actions.action_one.heavy_attack_02.hit_mass_count = HEAVY_LINESMAN_HIT_MASS_COUNT
 
 --[[
 	Holy Hammer

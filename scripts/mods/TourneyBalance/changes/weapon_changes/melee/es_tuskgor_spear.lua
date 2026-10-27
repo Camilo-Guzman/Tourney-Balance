@@ -10,7 +10,6 @@ local mod = get_mod("TourneyBalance")
 -- 2-SHS Marauders => Light 1-Light 2
 ]]
 
---[[ Open Beta ]]
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_left.additional_critical_strike_chance = 0.05
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_stab_1.additional_critical_strike_chance = 0.10
 Weapons.two_handed_heavy_spears_template.actions.action_one.light_attack_right.additional_critical_strike_chance = 0.15

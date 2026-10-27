@@ -4,7 +4,6 @@ local mod = get_mod("TourneyBalance")
 	Halberd
 ]]
 
---[[ Open Beta ]]
 -- two_handed_halberds_template_1
 Weapons.two_handed_halberds_template_1.actions.action_one.heavy_attack_left.damage_profile = "tb_halberd_heavy_slash"
 Weapons.two_handed_halberds_template_1.actions.action_one.heavy_attack_stab.damage_profile = "tb_halberd_heavy_stab"
