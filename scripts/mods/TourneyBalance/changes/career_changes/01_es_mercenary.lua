@@ -30,6 +30,8 @@ local is_local = require("scripts/mods/TourneyBalance/_api/shared_utils").is_loc
 
 		**On Yer Feet, Mates!**
 		- Ultimate cooldown is instantly refunded when an ally is knocked down.
+		- Doubled revive range to 30 (from 15). Healing range unchanged.
+		- Players can be revived while disabled.
 	$END_TB
 ]]
 
@@ -243,6 +245,55 @@ mod:add_career_update_function(function (self, unit, input, dt, context, t)
 		self:reduce_activated_ability_cooldown_percent(1)
 	end
 end)
-mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost aslo revives knocked down allies. Resets cooldown on Moral Boost when an ally is knocked down.")
+-- Revive range doubled to 30 (from 15). Revives ignore disblaed status
+local ON_YER_FEET_VANILLA_RADIUS = 15
+local ON_YER_FEET_REVIVE_RADIUS = 30
+
+mod:hook_safe(CareerAbilityESMercenary, "_run_ability", function (self)
+	local owner_unit = self._owner_unit
+	local talent_extension = ScriptUnit.has_extension(owner_unit, "talent_system")
+
+	if not talent_extension or not talent_extension:has_talent("markus_mercenary_activated_ability_revive") then
+		return
+	end
+
+	local position = POSITION_LOOKUP[owner_unit]
+	local broadphase = Managers.state.entity:system("proximity_system").player_units_broadphase
+	local vanilla_units = FrameTable.alloc_table()
+	local nearby_units = FrameTable.alloc_table()
+
+	Broadphase.query(broadphase, position, ON_YER_FEET_VANILLA_RADIUS, vanilla_units)
+	Broadphase.query(broadphase, position, ON_YER_FEET_REVIVE_RADIUS, nearby_units)
+
+	local already_handled = FrameTable.alloc_table()
+
+	for _, unit in pairs(vanilla_units) do
+		already_handled[unit] = true
+	end
+
+	local side_manager = Managers.state.side
+	local network_manager = self._network_manager
+	local network_transmit = network_manager.network_transmit
+	local owner_unit_go_id = network_manager:unit_game_object_id(owner_unit)
+
+	for _, friendly_unit in pairs(nearby_units) do
+		local status_extension = not side_manager:is_enemy(owner_unit, friendly_unit) and ScriptUnit.has_extension(friendly_unit, "status_system")
+
+		if status_extension and status_extension:is_knocked_down() and not status_extension:is_grabbed_by_tentacle() and not status_extension:is_grabbed_by_chaos_spawn() then
+			local is_free = status_extension:is_available_for_career_revive()
+
+			-- Free allies within 15 were already revived by vanilla
+			if not is_free or not already_handled[friendly_unit] then
+				network_transmit:send_rpc_server("rpc_request_revive", network_manager:unit_game_object_id(friendly_unit), owner_unit_go_id)
+
+				-- No get-up animation while still pinned or grabbed
+				if is_free then
+					CharacterStateHelper.play_animation_event(friendly_unit, "revive_complete")
+				end
+			end
+		end
+	end
+end)
+mod_api.insert_text("markus_mercenary_activated_ability_revive_desc", "Morale Boost also revives knocked down allies within 30 metres. Resets cooldown on Moral Boost when an ally is knocked down.")
 
 

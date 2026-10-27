@@ -27,9 +27,6 @@ local mod_api = require("scripts/mods/TourneyBalance/_api/_mod_api")
 
 		**Immersive Immolation**
 		- Decreased required targets for attack speed to 1 (from 4).
-
-		**Kaboom!**
-		- Added 20% cooldown reduction.
 	$END_TB
 ]]
 
@@ -147,19 +144,5 @@ mod_api.update_talent("bw_adept", 5, 3, {
         },
     },
 })
-
---[[
-    Kaboom!
-]]
-mod_api.insert_talent_buff_template("bright_wizard", "sienna_adept_activated_ability_explosion_buff", {
-    stat_buff = "activated_cooldown",
-	multiplier = -0.2
-})
-mod_api.update_talent("bw_adept", 6, 2, {
-	buffs = {
-        "sienna_adept_activated_ability_explosion_buff"
-    },
-})
-mod_api.insert_text("sienna_adept_activated_ability_explosion_desc", "Fire Walk explosion radius and burn damage increased. No longer leaves a burning trail. Cooldown of Fire Walk reduced by 20%.")
 
 
